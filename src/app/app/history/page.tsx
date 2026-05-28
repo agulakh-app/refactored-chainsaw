@@ -1,7 +1,10 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+export const dynamic = 'force-dynamic'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Order } from '@/lib/types'
+
+declare const XLSX: any
 
 function fmtYM(ym: string) { const [y,m] = ym.split('-'); return `${y}оны ${parseInt(m)}р сар` }
 function fmt(n: number) { return n.toLocaleString() }
@@ -10,11 +13,15 @@ export default function HistoryPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [phone, setPhone] = useState('')
   const [status, setStatus] = useState('all')
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data:{ user } } = await supabase.auth.getUser()
     if (!user) return
-    const { data } = await supabase.from('orders').select('*, order_items(*)').eq('user_id', user.id).order('date', { ascending: false }).order('day_seq', { ascending: false })
+    const { data } = await supabase.from('orders').select('*, order_items(*)').eq('user_id', user.id)
+      .order('date', { ascending: false }).order('day_seq', { ascending: false })
     setOrders(data || [])
   }, [])
 
@@ -23,6 +30,92 @@ export default function HistoryPage() {
   async function setOrderStatus(id: string, s: string) {
     await supabase.from('orders').update({ status: s }).eq('id', id)
     load()
+  }
+
+  async function handleExcelImport(file: File) {
+    setImporting(true)
+    setImportMsg('Файл уншиж байна...')
+    const { data:{ user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const script = document.createElement('script')
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+        script.onload = async () => {
+          const data = new Uint8Array(e.target!.result as ArrayBuffer)
+          const wb = (window as any).XLSX.read(data, { type: 'array' })
+
+          // Read orders sheet
+          const oSheet = wb.Sheets['Захиалга'] || wb.Sheets[wb.SheetNames[0]]
+          const rows: any[] = oSheet ? (window as any).XLSX.utils.sheet_to_json(oSheet, { defval: '' }) : []
+
+          // Read inventory sheet
+          const iSheet = wb.Sheets['Агуулах'] || wb.Sheets[wb.SheetNames[1]]
+          const invRows: any[] = iSheet ? (window as any).XLSX.utils.sheet_to_json(iSheet, { defval: '' }) : []
+
+          let importedOrders = 0
+          let importedProds = 0
+
+          // Import inventory
+          for (const r of invRows) {
+            const name = (r['Барааны нэр'] || '').toString().trim()
+            const qty = parseInt(r['Тоо ширхэг (үлдэгдэл)']) || 0
+            const price = parseInt(r['Нэгж үнэ (₮)']) || 0
+            if (!name) continue
+            const { data: existing } = await supabase.from('products').select('id').eq('user_id', user.id).eq('name', name).single()
+            if (existing) {
+              await supabase.from('products').update({ stock: qty, unit_price: price }).eq('id', existing.id)
+            } else {
+              await supabase.from('products').insert({ user_id: user.id, name, stock: qty, unit_price: price })
+            }
+            importedProds++
+          }
+
+          // Group order rows by date + seq
+          const grouped: Record<string, any> = {}
+          for (const r of rows) {
+            const date = (r['Огноо\n(YYYY-MM-DD)'] || r['Огноо'] || '').toString().trim()
+            const seq = String(r['Захиалгын\nДугаар'] || r['Захиалгын Дугаар'] || '1')
+            const phone = (r['Утасны\nДугаар'] || r['Утасны Дугаар'] || r['Утас'] || '').toString().trim()
+            const addr = (r['Хаяг'] || '').toString().trim()
+            const prod = (r['Барааны нэр'] || '').toString().trim()
+            const qty = parseInt(r['Тоо ширхэг']) || 1
+            const price = parseInt(r['Нэгж үнэ (₮)']) || 0
+            const delv = parseInt(r['Хүргэлтийн үнэ (₮)\n(нэг удаа)'] || r['Хүргэлт'] || '0') || 0
+            const rawStatus = (r['Хүргэлтийн\nСтатус'] || r['Статус'] || '').toString()
+            const status = rawStatus.includes('Хүргэгдсэн') ? 'delivered' : 'pending'
+            if (!date || !phone || !prod) continue
+            const key = `${date}__${seq}__${phone}`
+            if (!grouped[key]) grouped[key] = { date, seq: parseInt(seq) || 1, phone, addr, items: [], delv, status }
+            grouped[key].items.push({ product_name: prod, quantity: qty, unit_price: price })
+            if (addr) grouped[key].addr = addr
+          }
+
+          for (const g of Object.values(grouped)) {
+            const { data: ord } = await supabase.from('orders').insert({
+              user_id: user.id, date: g.date, day_seq: g.seq,
+              phone: g.phone, address: g.addr || '-', delivery_fee: g.delv, status: g.status
+            }).select().single()
+            if (ord) {
+              await supabase.from('order_items').insert(g.items.map((it: any) => ({ order_id: ord.id, ...it })))
+            }
+            importedOrders++
+          }
+
+          setImportMsg(`✓ ${importedOrders} захиалга, ${importedProds} бараа оруулагдлаа`)
+          setImporting(false)
+          load()
+        }
+        if (!document.querySelector('script[src*="xlsx"]')) document.head.appendChild(script)
+        else script.onload!(new Event('load'))
+      } catch (err) {
+        setImportMsg('Алдаа гарлаа. Загвар файл ашиглана уу.')
+        setImporting(false)
+      }
+    }
+    reader.readAsArrayBuffer(file)
   }
 
   function exportCSV() {
@@ -53,6 +146,24 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-5">
+      {/* Excel Import Card */}
+      <div className="card">
+        <h2 className="font-semibold text-gray-800 mb-3 text-base flex items-center gap-2">
+          📊 Хуучин бүртгэл оруулах (Эксел)
+        </h2>
+        <p className="text-xs text-gray-500 mb-3">Өмнө хөтлөж байсан Excel файлаа оруулахад захиалга болон барааны бүртгэл автоматаар нэмэгдэнэ.</p>
+        <div className="flex items-center gap-3 flex-wrap">
+          <input type="file" accept=".xlsx,.xls" ref={fileRef} className="hidden"
+            onChange={e => e.target.files?.[0] && handleExcelImport(e.target.files[0])} />
+          <button onClick={() => fileRef.current?.click()} disabled={importing}
+            className="btn btn-primary disabled:opacity-60">
+            {importing ? '⏳ Оруулж байна...' : '📂 Эксел файл сонгох'}
+          </button>
+          <a href="/agulakh_template.xlsx" className="btn btn-ghost text-xs">⬇ Загвар татах</a>
+          {importMsg && <span className={`text-sm font-medium ${importMsg.startsWith('✓') ? 'text-emerald-600' : 'text-red-500'}`}>{importMsg}</span>}
+        </div>
+      </div>
+
       <div className="card">
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
           <h2 className="font-semibold text-gray-800 text-base">📜 Захиалгын түүх</h2>
@@ -80,16 +191,9 @@ export default function HistoryPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left whitespace-nowrap">№</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left">Огноо</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left">Утас</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left">Хаяг</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left">Бараа</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-right">Барааны дүн</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-right">Хүргэлт</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-right">Цэвэр</th>
-                      <th className="px-3 py-2 text-xs font-medium text-gray-500 text-left">Статус</th>
-                      <th className="px-3 py-2"></th>
+                      {['№','Огноо','Утас','Хаяг','Бараа','Барааны дүн','Хүргэлт','Цэвэр','Статус',''].map(h=>(
+                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -101,22 +205,22 @@ export default function HistoryPage() {
                           <td className="px-3 py-2 font-bold text-gray-700">{o.day_seq}</td>
                           <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{o.date}</td>
                           <td className="px-3 py-2 whitespace-nowrap">{o.phone}</td>
-                          <td className="px-3 py-2 text-gray-500 max-w-[120px] truncate">{o.address}</td>
-                          <td className="px-3 py-2 text-xs text-gray-600">{(o.order_items||[]).map((i:any)=>`${i.product_name}×${i.quantity}`).join(', ')}</td>
+                          <td className="px-3 py-2 text-gray-500 max-w-[110px] truncate">{o.address}</td>
+                          <td className="px-3 py-2 text-xs">{(o.order_items||[]).map((i:any)=>`${i.product_name}×${i.quantity}`).join(', ')}</td>
                           <td className="px-3 py-2 text-right whitespace-nowrap">{fmt(gross)}₮</td>
                           <td className="px-3 py-2 text-right text-gray-400 whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</td>
                           <td className="px-3 py-2 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
                           <td className="px-3 py-2">{sbadge(o.status)}</td>
                           <td className="px-3 py-2">
                             <div className="flex gap-1">
-                              {o.status !== 'cancelled' && (
-                                <button onClick={() => setOrderStatus(o.id, o.status==='delivered'?'pending':'delivered')}
+                              {o.status!=='cancelled' && (
+                                <button onClick={()=>setOrderStatus(o.id,o.status==='delivered'?'pending':'delivered')}
                                   className={`btn bs text-xs ${o.status==='delivered'?'btn-ghost':'btn-primary'}`}>
                                   {o.status==='delivered'?'↩':'✓'}
                                 </button>
                               )}
-                              {o.status === 'pending' && (
-                                <button onClick={() => setOrderStatus(o.id,'cancelled')} className="btn btn-danger text-xs px-2 py-1">✕</button>
+                              {o.status==='pending' && (
+                                <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="btn btn-danger text-xs px-2 py-1">✕</button>
                               )}
                             </div>
                           </td>
