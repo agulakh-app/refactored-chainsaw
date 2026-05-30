@@ -11,23 +11,30 @@ export default function SettingsPage() {
   const [newEmail, setNewEmail] = useState('')
   const [adding, setAdding] = useState(false)
   const [flash, setFlash] = useState('')
+  const [userEmail, setUserEmail] = useState('')
 
-  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
+  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),3000) }
 
   useEffect(()=>{
+    supabase.auth.getUser().then(({data})=>{
+      if (data.user) setUserEmail(data.user.email||'')
+    })
     supabase.from('profiles').select('business_name,default_delivery_fee').single().then(({data})=>{
       if (data) { setBizName(data.business_name||''); setDeliveryFee(String(data.default_delivery_fee||'')) }
     })
-    // Load viewers (shared access)
-    supabase.from('shared_access').select('*').then(({data})=>setViewers(data||[]))
+    loadViewers()
   },[])
+
+  async function loadViewers() {
+    const { data } = await supabase.from('shared_access').select('*').order('created_at',{ascending:false})
+    setViewers(data||[])
+  }
 
   async function saveSettings() {
     const { data:{ user } } = await supabase.auth.getUser()
     await supabase.from('profiles').update({
-      business_name: bizName,
-      default_delivery_fee: Number(deliveryFee)||0
-    }).eq('id', user!.id)
+      business_name:bizName, default_delivery_fee:Number(deliveryFee)||0
+    }).eq('id',user!.id)
     setSaved(true); setTimeout(()=>setSaved(false),2000)
   }
 
@@ -35,29 +42,47 @@ export default function SettingsPage() {
     if (!newEmail.trim()) return
     setAdding(true)
     const { data:{ user } } = await supabase.auth.getUser()
-    await supabase.from('shared_access').insert({
-      owner_id: user!.id,
-      viewer_email: newEmail.trim(),
-      role: 'viewer'
+
+    // Check if already exists
+    const { data: ex } = await supabase.from('shared_access').select('id')
+      .eq('owner_id',user!.id).eq('viewer_email',newEmail.trim()).maybeSingle()
+    if (ex) { showFlash('Энэ хэрэглэгч аль хэдийн нэмэгдсэн байна'); setAdding(false); return }
+
+    const { error } = await supabase.from('shared_access').insert({
+      owner_id:user!.id, viewer_email:newEmail.trim(), role:'viewer'
     })
+    if (error) { showFlash('Алдаа: '+error.message); setAdding(false); return }
+
+    // Send invite email via Supabase Auth (magic link)
+    try {
+      await supabase.auth.signInWithOtp({
+        email: newEmail.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/app`,
+          data: { invited_by: userEmail, role: 'viewer' }
+        }
+      })
+      showFlash('✓ Урилга илгээгдлээ: '+newEmail)
+    } catch(e) {
+      showFlash('✓ Зочин нэмэгдлээ (имэйл илгээгдээгүй байж магадгүй)')
+    }
+
     setNewEmail('')
-    const {data} = await supabase.from('shared_access').select('*')
-    setViewers(data||[])
+    loadViewers()
     setAdding(false)
-    showFlash('Зочин нэмэгдлээ ✓')
   }
 
   async function removeViewer(id: string) {
-    await supabase.from('shared_access').delete().eq('id', id)
+    await supabase.from('shared_access').delete().eq('id',id)
     setViewers(v=>v.filter(x=>x.id!==id))
     showFlash('Устгагдлаа')
   }
 
   return (
     <div className="space-y-5">
-      {flash && <div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
+      {flash&&<div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
 
-      {/* General settings */}
+      {/* General */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-4 text-base">⚙️ Ерөнхий тохиргоо</h2>
         <div className="space-y-4">
@@ -76,7 +101,8 @@ export default function SettingsPage() {
           </div>
         </div>
         <div className="flex justify-end mt-5">
-          <button onClick={saveSettings} className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved?'bg-gray-100 text-gray-500':'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+          <button onClick={saveSettings}
+            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${saved?'bg-gray-100 text-gray-500':'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
             {saved?'✓ Хадгалагдлаа':'Хадгалах'}
           </button>
         </div>
@@ -85,31 +111,48 @@ export default function SettingsPage() {
       {/* Viewer access */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">👁 Зочин хандалт</h2>
-        <p className="text-xs text-gray-500 mb-4">Зочин хэрэглэгч зөвхөн харах боломжтой — засвар хийх, захиалга нэмэх боломжгүй.</p>
+        <p className="text-xs text-gray-500 mb-4">
+          Зочин хэрэглэгч зөвхөн харах боломжтой — захиалга нэмэх, засах боломжгүй.<br/>
+          Имэйл оруулахад тухайн хаягаар нэвтрэх урилга автоматаар илгээгдэнэ.
+        </p>
         <div className="flex gap-2 mb-4">
           <input className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            placeholder="Зочины имэйл эсвэл утас..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&addViewer()} />
+            placeholder="Зочины имэйл хаяг..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&addViewer()} type="email" />
           <button onClick={addViewer} disabled={adding||!newEmail.trim()}
-            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
-            + Нэмэх
+            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 whitespace-nowrap">
+            {adding?'...':'+ Урих'}
           </button>
         </div>
         {viewers.length>0 ? (
           <div className="space-y-2">
             {viewers.map(v=>(
-              <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5">
+              <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
                 <div>
                   <div className="text-sm font-medium text-gray-700">{v.viewer_email}</div>
-                  <div className="text-xs text-gray-400">Зөвхөн харах</div>
+                  <div className="text-xs text-gray-400 mt-0.5">Зөвхөн харах эрх</div>
                 </div>
-                <button onClick={()=>removeViewer(v.id)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Устгах</button>
+                <button onClick={()=>removeViewer(v.id)}
+                  className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">
+                  Устгах
+                </button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-4">Зочин хэрэглэгч нэмэгдээгүй байна</p>
+          <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">
+            Зочин хэрэглэгч нэмэгдээгүй байна
+          </p>
         )}
+      </div>
+
+      {/* Account info */}
+      <div className="card">
+        <h2 className="font-semibold text-gray-800 mb-3 text-base">👤 Бүртгэлийн мэдээлэл</h2>
+        <div className="bg-gray-50 rounded-lg px-4 py-3">
+          <div className="text-xs text-gray-500 mb-1">Бүртгэлийн имэйл / утас</div>
+          <div className="text-sm font-medium text-gray-700">{userEmail}</div>
+        </div>
       </div>
     </div>
   )
