@@ -62,7 +62,7 @@ export default function AdminPage() {
       subscription_ends_at: periodEnd
     }).eq('id', userId)
 
-    showFlash('✓ Төлбөр баталгаажлаа — хэрэглэгчийн эрх идэвхжлээ')
+    showFlash("✓ Төлбөр баталгаажлаа — имэйл илгээгдлээ")
     load()
   }
 
