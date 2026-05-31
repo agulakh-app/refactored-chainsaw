@@ -42,7 +42,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
             <div className="flex items-center gap-2">
               <span className="text-lg">📦</span>
-              <span className="font-semibold text-gray-800 text-sm">{bizName||'Агуулах'}</span>
+              <span className="font-semibold text-gray-800 text-sm">{bizName||'OLULA'}</span>
               {subStatus==='trial'&&<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Туршилт</span>}
               {subStatus==='active'&&<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Идэвхтэй</span>}
               {subStatus==='expired'&&<span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Дууссан</span>}
