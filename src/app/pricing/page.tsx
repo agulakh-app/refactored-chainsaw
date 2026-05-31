@@ -9,10 +9,10 @@ const BANK = { name:'Хаан банк', account:'5173027542', owner:'Алтан
 const FB_URL = 'https://www.facebook.com/profile.php?id=61588363850286'
 
 const PLANS = [
-  { id:'demo',    label:'1 өдөр',  days:1,   price:0,      display:'Үнэгүй',    desc:'Туршиж үзэх үү?' },
+  { id:'demo',    label:'1 өдөр',  days:1,   price:0,      display:'Үнэгүй',    desc:'Бүх боломжийг туршиж үзэх' },
   { id:'month',   label:'1 сар',   days:30,  price:25000,  display:'25,000₮',   desc:'Сар бүр сунгах' },
-  { id:'quarter', label:'3 сар',   days:90,  price:69900,  display:'69,900₮',   desc:'23,300₮/сар — 7% хямдрал', badge:'Боломжийн санал' },
-  { id:'year',    label:'1 жил',   days:365, price:255000, display:'255,000₮',  desc:'21,250₮/сар — 15% хямдрал', badge:'Тогтвортой' },
+  { id:'quarter', label:'3 сар',   days:90,  price:69900,  display:'69,900₮',   desc:'23,300₮/сар — 7% хямдрал', badge:'Алдартай' },
+  { id:'year',    label:'1 жил',   days:365, price:255000, display:'255,000₮',  desc:'21,250₮/сар — 15% хямдрал', badge:'Хэмнэлттэй' },
 ]
 
 export default function PricingPage() {
