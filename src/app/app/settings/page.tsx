@@ -3,6 +3,9 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const ADMIN_PHONE_EMAIL = '88118270@agulakh.app'
+const ADMIN_EMAIL = 'hardworkingfmly@gmail.com'
+
 export default function SettingsPage() {
   const [deliveryFee, setDeliveryFee] = useState('')
   const [bizName, setBizName] = useState('')
@@ -12,12 +15,16 @@ export default function SettingsPage() {
   const [adding, setAdding] = useState(false)
   const [flash, setFlash] = useState('')
   const [userEmail, setUserEmail] = useState('')
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),3000) }
 
   useEffect(()=>{
     supabase.auth.getUser().then(({data})=>{
-      if (data.user) setUserEmail(data.user.email||'')
+      if (data.user) {
+        setUserEmail(data.user.email||'')
+        setIsAdmin(data.user.email===ADMIN_PHONE_EMAIL||data.user.email===ADMIN_EMAIL)
+      }
     })
     supabase.from('profiles').select('business_name,default_delivery_fee').single().then(({data})=>{
       if (data) { setBizName(data.business_name||''); setDeliveryFee(String(data.default_delivery_fee||'')) }
@@ -42,34 +49,22 @@ export default function SettingsPage() {
     if (!newEmail.trim()) return
     setAdding(true)
     const { data:{ user } } = await supabase.auth.getUser()
-
-    // Check if already exists
     const { data: ex } = await supabase.from('shared_access').select('id')
       .eq('owner_id',user!.id).eq('viewer_email',newEmail.trim()).maybeSingle()
-    if (ex) { showFlash('Энэ хэрэглэгч аль хэдийн нэмэгдсэн байна'); setAdding(false); return }
-
-    const { error } = await supabase.from('shared_access').insert({
+    if (ex) { showFlash('Энэ хэрэглэгч аль хэдийн байна'); setAdding(false); return }
+    await supabase.from('shared_access').insert({
       owner_id:user!.id, viewer_email:newEmail.trim(), role:'viewer'
     })
-    if (error) { showFlash('Алдаа: '+error.message); setAdding(false); return }
-
-    // Send invite email via Supabase Auth (magic link)
     try {
       await supabase.auth.signInWithOtp({
         email: newEmail.trim(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/app`,
-          data: { invited_by: userEmail, role: 'viewer' }
-        }
+        options: { emailRedirectTo: `${window.location.origin}/app` }
       })
       showFlash('✓ Урилга илгээгдлээ: '+newEmail)
     } catch(e) {
-      showFlash('✓ Зочин нэмэгдлээ (имэйл илгээгдээгүй байж магадгүй)')
+      showFlash('✓ Зочин нэмэгдлээ')
     }
-
-    setNewEmail('')
-    loadViewers()
-    setAdding(false)
+    setNewEmail(''); loadViewers(); setAdding(false)
   }
 
   async function removeViewer(id: string) {
@@ -81,6 +76,21 @@ export default function SettingsPage() {
   return (
     <div className="space-y-5">
       {flash&&<div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
+
+      {/* Admin link - зөвхөн эзэмшигчид харагдана */}
+      {isAdmin && (
+        <a href="/admin"
+          className="flex items-center justify-between bg-gray-900 text-white rounded-2xl px-5 py-4 hover:bg-gray-800 transition-all">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">🔐</span>
+            <div>
+              <div className="font-semibold text-sm">Admin самбар</div>
+              <div className="text-xs text-gray-400">Хэрэглэгч, төлбөр, статистик удирдах</div>
+            </div>
+          </div>
+          <span className="text-gray-400">→</span>
+        </a>
+      )}
 
       {/* General */}
       <div className="card">
@@ -108,17 +118,14 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Viewer access */}
+      {/* Viewer */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">👁 Зочин хандалт</h2>
-        <p className="text-xs text-gray-500 mb-4">
-          Зочин хэрэглэгч зөвхөн харах боломжтой — захиалга нэмэх, засах боломжгүй.<br/>
-          Имэйл оруулахад тухайн хаягаар нэвтрэх урилга автоматаар илгээгдэнэ.
-        </p>
+        <p className="text-xs text-gray-500 mb-4">Зочин хэрэглэгч зөвхөн харах боломжтой — захиалга нэмэх, засах боломжгүй.</p>
         <div className="flex gap-2 mb-4">
-          <input className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+          <input type="email" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
             placeholder="Зочины имэйл хаяг..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&addViewer()} type="email" />
+            onKeyDown={e=>e.key==='Enter'&&addViewer()} />
           <button onClick={addViewer} disabled={adding||!newEmail.trim()}
             className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 whitespace-nowrap">
             {adding?'...':'+ Урих'}
@@ -132,21 +139,16 @@ export default function SettingsPage() {
                   <div className="text-sm font-medium text-gray-700">{v.viewer_email}</div>
                   <div className="text-xs text-gray-400 mt-0.5">Зөвхөн харах эрх</div>
                 </div>
-                <button onClick={()=>removeViewer(v.id)}
-                  className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">
-                  Устгах
-                </button>
+                <button onClick={()=>removeViewer(v.id)} className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Устгах</button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">
-            Зочин хэрэглэгч нэмэгдээгүй байна
-          </p>
+          <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-lg">Зочин хэрэглэгч нэмэгдээгүй байна</p>
         )}
       </div>
 
-      {/* Account info */}
+      {/* Account */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-3 text-base">👤 Бүртгэлийн мэдээлэл</h2>
         <div className="bg-gray-50 rounded-lg px-4 py-3">
