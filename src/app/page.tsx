@@ -70,8 +70,8 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">📦</div>
-          <h1 className="text-2xl font-bold text-gray-800">Агуулахын систем</h1>
-          <p className="text-gray-500 text-sm mt-1">Захиалга, бараа, тооцоог нэг дор</p>
+          <h1 className="text-2xl font-bold text-gray-800">OLULA</h1>
+          <p className="text-gray-500 text-sm mt-1">Агуулахаа гартаа атга</p>
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
