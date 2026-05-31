@@ -1,12 +1,15 @@
 'use client'
-export const dynamic = 'force-dynamic'
+// src/app/page.tsx  ← ROOT хуудас (нэвтрэх)
+// ✅ export dynamic нь use client-тэй файлд ажиллахгүй тул ХАСАВ
+// Vercel-д dynamic rendering хэрэгтэй бол next.config.js-д тохируулна
+
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login'|'register'|'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -18,7 +21,7 @@ export default function AuthPage() {
   const [password2, setPassword2] = useState('')
 
   function phoneToEmail(p: string) {
-    return p.replace(/\D/g,'') + '@agulakh.app'
+    return p.replace(/\D/g, '') + '@agulakh.app'
   }
 
   async function handleSubmit() {
@@ -37,7 +40,7 @@ export default function AuthPage() {
         password,
         options: {
           data: {
-            phone: phone.replace(/\D/g,''),
+            phone: phone.replace(/\D/g, ''),
             contact_email: email.trim(),
           }
         }
@@ -78,12 +81,12 @@ export default function AuthPage() {
 
           {mode !== 'forgot' && (
             <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-5">
-              {(['login','register'] as const).map(m => (
+              {(['login', 'register'] as const).map(m => (
                 <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                    mode===m?'bg-white shadow-sm text-gray-800':'text-gray-500 hover:text-gray-700'
+                    mode === m ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'
                   }`}>
-                  {m==='login'?'Нэвтрэх':'Бүртгүүлэх'}
+                  {m === 'login' ? 'Нэвтрэх' : 'Бүртгүүлэх'}
                 </button>
               ))}
             </div>
@@ -100,7 +103,6 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Утасны дугаар - нэвтрэх + бүртгүүлэх */}
           {mode !== 'forgot' && (
             <>
               <label className="block text-xs text-gray-500 mb-1">
@@ -111,13 +113,12 @@ export default function AuthPage() {
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 placeholder="99001234"
                 value={phone}
-                onChange={e=>setPhone(e.target.value)}
+                onChange={e => setPhone(e.target.value)}
                 inputMode="numeric"
               />
             </>
           )}
 
-          {/* Имэйл - бүртгүүлэх + нууц үг сэргээх */}
           {(mode === 'register' || mode === 'forgot') && (
             <>
               <label className="block text-xs text-gray-500 mb-1">
@@ -129,53 +130,51 @@ export default function AuthPage() {
                 className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                 placeholder="example@gmail.com"
                 value={email}
-                onChange={e=>setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
               />
             </>
           )}
 
-          {/* Нууц үг */}
           {mode !== 'forgot' && (
             <>
               <label className="block text-xs text-gray-500 mb-1">Нууц үг</label>
               <div className="relative mb-3">
                 <input
-                  type={showPw?'text':'password'}
+                  type={showPw ? 'text' : 'password'}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm pr-14 focus:outline-none focus:ring-2 focus:ring-emerald-400"
                   placeholder="••••••••"
                   value={password}
-                  onChange={e=>setPassword(e.target.value)}
-                  onKeyDown={e=>mode==='login'&&e.key==='Enter'&&handleSubmit()}
+                  onChange={e => setPassword(e.target.value)}
+                  onKeyDown={e => mode === 'login' && e.key === 'Enter' && handleSubmit()}
                 />
-                <button type="button" onClick={()=>setShowPw(v=>!v)}
+                <button type="button" onClick={() => setShowPw(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
-                  {showPw?'Нуух':'Харах'}
+                  {showPw ? 'Нуух' : 'Харах'}
                 </button>
               </div>
             </>
           )}
 
-          {/* Нууц үг давтах - зөвхөн бүртгүүлэхэд */}
           {mode === 'register' && (
             <>
               <label className="block text-xs text-gray-500 mb-1">Нууц үг давтах</label>
               <div className="relative mb-3">
                 <input
-                  type={showPw2?'text':'password'}
+                  type={showPw2 ? 'text' : 'password'}
                   className={`w-full px-3 py-2.5 rounded-lg border text-sm pr-14 focus:outline-none focus:ring-2 focus:ring-emerald-400 ${
-                    password2&&password!==password2?'border-red-300 bg-red-50':'border-gray-200'
+                    password2 && password !== password2 ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                   placeholder="••••••••"
                   value={password2}
-                  onChange={e=>setPassword2(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&handleSubmit()}
+                  onChange={e => setPassword2(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 />
-                <button type="button" onClick={()=>setShowPw2(v=>!v)}
+                <button type="button" onClick={() => setShowPw2(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600">
-                  {showPw2?'Нуух':'Харах'}
+                  {showPw2 ? 'Нуух' : 'Харах'}
                 </button>
               </div>
-              {password2&&password!==password2&&(
+              {password2 && password !== password2 && (
                 <p className="text-xs text-red-500 -mt-2 mb-3">Нууц үг таарахгүй байна</p>
               )}
               <div className="bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs p-3 rounded-lg mb-3">
@@ -184,7 +183,6 @@ export default function AuthPage() {
             </>
           )}
 
-          {/* Нэвтрэх - нууц үг мартсан холбоос */}
           {mode === 'login' && (
             <div className="text-right mb-3 -mt-1">
               <button onClick={() => { setMode('forgot'); setError(''); setSuccess('') }}
@@ -199,10 +197,10 @@ export default function AuthPage() {
 
           <button onClick={handleSubmit} disabled={loading}
             className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all disabled:opacity-60">
-            {loading?'Уншиж байна...'
-              :mode==='login'?'Нэвтрэх →'
-              :mode==='register'?'Бүртгүүлэх →'
-              :'Сэргээх холбоос илгээх →'}
+            {loading ? 'Уншиж байна...'
+              : mode === 'login' ? 'Нэвтрэх →'
+              : mode === 'register' ? 'Бүртгүүлэх →'
+              : 'Сэргээх холбоос илгээх →'}
           </button>
         </div>
 
