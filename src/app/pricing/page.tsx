@@ -4,9 +4,8 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-const QR_IMAGE = "/qr.png"
 
-const BANK = { name:'Хаан банк', account:'5173027542', owner:'Алтаннар' }
+const BANK = { name:'Хаан банк', account:'517307542', owner:'Алтаннар' }
 const FB_URL = 'https://www.facebook.com/profile.php?id=61588363850286'
 
 const PLANS = [
