@@ -55,8 +55,8 @@ export default function PricingPage() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-10">
           <div className="text-4xl mb-3">📦</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Агуулахын систем</h1>
-          <p className="text-gray-500 text-sm">Захиалга, бараа, тооцоог нэг дор бүртгэнэ</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">OLULA</h1>
+          <p className="text-gray-500 text-sm">Агуулахаа гартаа атга</p>
         </div>
 
         {step==='plans' && (<>
