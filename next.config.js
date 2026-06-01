@@ -6,5 +6,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  // Force dynamic rendering for all pages
+  output: 'standalone',
 }
 module.exports = nextConfig
