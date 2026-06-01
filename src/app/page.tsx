@@ -1,7 +1,5 @@
 'use client'
 export const dynamic = 'force-dynamic'
-// ✅ export dynamic нь use client-тэй файлд ажиллахгүй тул ХАСАВ
-// Vercel-д dynamic rendering хэрэгтэй бол next.config.js-д тохируулна
 
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
