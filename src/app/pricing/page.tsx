@@ -8,8 +8,8 @@ const BANK = { name:'Хаан банк', account:'5173027542', owner:'Алтан
 const FB_URL = 'https://www.facebook.com/profile.php?id=61588363850286'
 
 const PLANS = [
-  { id:'trial', label:'7 хоног', days:7,   price:0,      display:'Үнэгүй',  desc:'Бүх боломжийг туршиж үзэх' },
-  { id:'month', label:'1 сар',   days:30,  price:25000,  display:'25,000₮', desc:'Сар бүр сунгах' },
+  { id:'trial', label:'7 хоног', days:7,   price:0,      display:'Үнэгүй',  desc:'Туршиж үзэх' },
+  { id:'month', label:'1 сар',   days:30,  price:25000,  display:'25,000₮', desc:'Сар бүр сунгая' },
   { id:'quarter',label:'3 сар',  days:90,  price:69900,  display:'69,900₮', desc:'23,300₮/сар — 7% хямдрал' },
   { id:'year',  label:'1 жил',   days:365, price:255000, display:'255,000₮',desc:'21,250₮/сар — 15% хямдрал' },
 ]
@@ -82,8 +82,8 @@ export default function PricingPage() {
               {PLANS.map(p=>(
                 <button key={p.id} onClick={()=>setSelected(p.id)}
                   className={`rounded-2xl border-2 p-4 text-center transition-all ${selected===p.id?'border-emerald-500 bg-emerald-50 shadow-sm':'border-gray-200 bg-white hover:border-emerald-300'}`}>
-                  {p.id==='quarter'&&<div className="text-xs font-semibold text-emerald-600 mb-1">Алдартай</div>}
-                  {p.id==='year'&&<div className="text-xs font-semibold text-amber-600 mb-1">Хэмнэлттэй</div>}
+                  {p.id==='quarter'&&<div className="text-xs font-semibold text-emerald-600 mb-1">Боломжийн шүү</div>}
+                  {p.id==='year'&&<div className="text-xs font-semibold text-amber-600 mb-1">Илүү тогтвортой</div>}
                   <div className="text-xs text-gray-500 mb-1">{p.label}</div>
                   <div className="text-base font-bold text-gray-800">{p.display}</div>
                   <div className="text-xs text-gray-400 mt-1">{p.desc}</div>
