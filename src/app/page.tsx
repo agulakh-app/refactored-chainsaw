@@ -98,6 +98,14 @@ export default function AuthPage() {
               </button>
               <h3 className="font-semibold text-gray-800 mt-3 mb-1">Нууц үг сэргээх</h3>
               <p className="text-xs text-gray-500">Бүртгэлийн имэйл хаягаа оруулна уу</p>
+              <p className="text-xs text-gray-400 mt-1">
+  Эсвэл{' '}
+  <a href="https://www.facebook.com/profile.php?id=61588363850286"
+    target="_blank" rel="noopener noreferrer"
+    className="text-blue-500 hover:underline">
+    Facebook-ээр админтай холбогдох →
+  </a>
+</p>
             </div>
           )}
 
