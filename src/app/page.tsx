@@ -1,5 +1,5 @@
 'use client'
-// src/app/page.tsx  ← ROOT хуудас (нэвтрэх)
+export const dynamic = 'force-dynamic'
 // ✅ export dynamic нь use client-тэй файлд ажиллахгүй тул ХАСАВ
 // Vercel-д dynamic rendering хэрэгтэй бол next.config.js-д тохируулна
 
