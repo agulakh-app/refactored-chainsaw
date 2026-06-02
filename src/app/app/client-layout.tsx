@@ -97,7 +97,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   )
 
   const isGuest = !!guestRole
-  const visibleTabs = isGuest ? TABS.filter(t => t.href !== '/app/settings') : TABS
+  const visibleTabs = isGuest 
+  ? TABS.filter(t => t.href !== '/app/settings' && t.href !== '/app/analytics') 
+  : TABS
 
   return (
     <div className="min-h-screen bg-gray-50">
