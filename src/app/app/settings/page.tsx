@@ -23,6 +23,7 @@ export default function SettingsPage() {
 
   const [viewers, setViewers] = useState<any[]>([])
   const [newEmail, setNewEmail] = useState('')
+  const [newRole, setNewRole] = useState('viewer')
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
