@@ -18,22 +18,46 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [subStatus, setSubStatus] = useState('trial')
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
+  const [guestRole, setGuestRole] = useState<string | null>(null)
+  const [ownerName, setOwnerName] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push('/'); return }
-      setReady(true)
-      supabase.from('profiles')
+
+      // Өөрийн profile шалгах
+      const { data: p } = await supabase.from('profiles')
         .select('business_name,subscription_status,trial_ends_at')
         .eq('id', data.user.id)
         .single()
-        .then(({ data: p }) => {
-          if (p) {
-            setBizName(p.business_name || '')
-            setSubStatus(p.subscription_status)
-            setTrialEndsAt(p.trial_ends_at || null)
-          }
-        })
+
+      if (p) {
+        setBizName(p.business_name || '')
+        setSubStatus(p.subscription_status)
+        setTrialEndsAt(p.trial_ends_at || null)
+        setReady(true)
+        return
+      }
+
+      // Profile байхгүй бол зочин эсэхийг шалгах
+      const { data: access } = await supabase.from('shared_access')
+        .select('role, owner_id')
+        .eq('viewer_email', data.user.email)
+        .single()
+
+      if (access) {
+        setGuestRole(access.role)
+        // Owner-ийн нэр авах
+        const { data: ownerProfile } = await supabase.from('profiles')
+          .select('business_name')
+          .eq('id', access.owner_id)
+          .single()
+        setOwnerName(ownerProfile?.business_name || 'OLULA')
+        setReady(true)
+        return
+      }
+
+      router.push('/')
     })
   }, [router])
 
@@ -55,6 +79,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   )
 
   const daysLeft = trialDaysLeft()
+  const isGuest = !!guestRole
+
+  // Зочинд харагдах tabуудыг шүүх
+  const visibleTabs = isGuest
+    ? TABS.filter(t => t.href !== '/app/settings')
+    : TABS
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -63,33 +93,35 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
             <div className="flex items-center gap-2">
               <span className="text-lg">📦</span>
-              <span className="font-semibold text-gray-800 text-sm">{bizName || 'OLULA'}</span>
-              {subStatus === 'trial' && (
+              <span className="font-semibold text-gray-800 text-sm">{isGuest ? ownerName : (bizName || 'OLULA')}</span>
+              {isGuest && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                  {guestRole === 'editor' ? '✏️ Засварлагч' : '👁 Харагч'}
+                </span>
+              )}
+              {!isGuest && subStatus === 'trial' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                   Туршилт {daysLeft !== null ? `· ${daysLeft} өдөр үлдсэн` : ''}
                 </span>
               )}
-              {subStatus === 'active' && (
+              {!isGuest && subStatus === 'active' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Идэвхтэй</span>
               )}
-              {subStatus === 'expired' && (
+              {!isGuest && subStatus === 'expired' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Дууссан</span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              {subStatus === 'expired' && (
+              {!isGuest && subStatus === 'expired' && (
                 <a href="/pricing" className="text-xs font-medium text-emerald-600 hover:underline">💳 Сунгах</a>
               )}
-              <button
-                onClick={logout}
-                className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-50"
-              >
+              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-50">
                 Гарах
               </button>
             </div>
           </div>
           <div className="flex overflow-x-auto">
-            {TABS.map(t => (
+            {visibleTabs.map(t => (
               <button
                 key={t.href}
                 onClick={() => router.push(t.href)}
@@ -106,13 +138,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      {subStatus === 'expired' && (
+      {!isGuest && subStatus === 'expired' && (
         <div className="bg-red-50 border-b border-red-100 px-4 py-2 text-center text-xs text-red-700">
           ⚠ Таны эрх дууссан. <a href="/pricing" className="underline font-medium">Сунгах →</a>
         </div>
       )}
 
-      <main className="max-w-5xl mx-auto px-4 py-5">{children}</main>
-    </div>
-  )
-}
+      {isGues
