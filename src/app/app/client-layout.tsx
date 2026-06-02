@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { createContext, useContext } from 'react'
 
-export const GuestContext = createContext<{ guestRole: string | null }>({ guestRole: null })
+export const GuestContext = createContext<{ guestRole: string | null, ownerId: string | null }>({ guestRole: null, ownerId: null })
 export function useGuestRole() { return useContext(GuestContext).guestRole }
+export function useOwnerId() { return useContext(GuestContext).ownerId }
 
 const TABS = [
   { href:'/app',            label:'Самбар',   icon:'📋' },
@@ -23,10 +24,30 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [guestRole, setGuestRole] = useState<string | null>(null)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
   const [ownerName, setOwnerName] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
+    async function init() {
+      // 1. Эхлээд cookie-д зочны мэдээлэл байгаа эсэх шалгах
+      const guestCookie = document.cookie.split(';').find(c => c.trim().startsWith('guest_access='))
+      if (guestCookie) {
+        try {
+          const access = JSON.parse(decodeURIComponent(guestCookie.split('=').slice(1).join('=')))
+          setGuestRole(access.role)
+          setOwnerId(access.owner_id)
+          const { data: ownerProfile } = await supabase.from('profiles')
+            .select('business_name')
+            .eq('id', access.owner_id)
+            .single()
+          setOwnerName(ownerProfile?.business_name || 'OLULA')
+          setReady(true)
+          return
+        } catch {}
+      }
+
+      // 2. Supabase auth шалгах
+      const { data } = await supabase.auth.getUser()
       if (!data.user) { router.push('/'); return }
 
       const { data: p } = await supabase.from('profiles')
@@ -46,28 +67,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         return
       }
 
-      // Profile байхгүй бол зочин эсэхийг шалгах
-      const { data: access } = await supabase.from('shared_access')
-        .select('role, owner_id')
-        .eq('viewer_email', data.user.email)
-        .single()
-
-      if (access) {
-        setGuestRole(access.role)
-        const { data: ownerProfile } = await supabase.from('profiles')
-          .select('business_name')
-          .eq('id', access.owner_id)
-          .single()
-        setOwnerName(ownerProfile?.business_name || 'OLULA')
-        setReady(true)
-        return
-      }
-
       router.push('/')
-    })
+    }
+    init()
   }, [router])
 
   async function logout() {
+    // Cookie устгах
+    document.cookie = 'guest_access=; path=/; max-age=0'
     await supabase.auth.signOut()
     router.push('/')
   }
@@ -141,7 +148,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-5">
-        <GuestContext.Provider value={{ guestRole }}>
+        <GuestContext.Provider value={{ guestRole, ownerId }}>
           {children}
         </GuestContext.Provider>
       </main>
