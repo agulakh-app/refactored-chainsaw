@@ -10,6 +10,13 @@ const ADMIN_PHONE_EMAIL = '88118270@agulakh.app'
 function fmt(n: number) { return n.toLocaleString() }
 function fmtD(d: string) { if(!d) return ''; return d.split('T')[0].replace(/-/g,'/') }
 
+const PLAN_OPTIONS = [
+  { label:'Туршилт +7 хоног', days:7,   status:'trial' },
+  { label:'1 сар',            days:30,  status:'active' },
+  { label:'3 сар',            days:90,  status:'active' },
+  { label:'1 жил',            days:365, status:'active' },
+]
+
 export default function AdminPage() {
   const router = useRouter()
   const [ready, setReady] = useState(false)
@@ -18,6 +25,8 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [tab, setTab] = useState<'users'|'payments'|'stats'>('users')
   const [flash, setFlash] = useState('')
+  const [extendUserId, setExtendUserId] = useState<string|null>(null)
+  const [extendPlan, setExtendPlan] = useState(0)
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),3000) }
 
@@ -47,16 +56,24 @@ export default function AdminPage() {
 
   async function confirmPayment(payId: string, userId: string, periodEnd: string) {
     await callAdmin('confirm_payment', payId, { user_id: userId, period_end: periodEnd })
-    const u = users.find(u=>u.id===userId)
-    if (u?.contact_email || u?.email) {
-      try {
-        await supabase.functions.invoke('send-notification', {
-          body: { type:'payment_confirmed', to: u.contact_email||u.email,
-            data: { plan:'1 сар', amount:'25,000₮', period_end: periodEnd } }
-        })
-      } catch(e) {}
-    }
-    showFlash('✓ Баталгаажлаа — имэйл илгээгдлээ')
+    showFlash('✓ Баталгаажлаа')
+  }
+
+  async function extendUser() {
+    if (!extendUserId) return
+    const plan = PLAN_OPTIONS[extendPlan]
+    const now = new Date()
+    const end = new Date(now.getTime() + plan.days * 86400000)
+    await supabase.from('profiles').update({
+      subscription_status: plan.status,
+      ...(plan.status === 'trial'
+        ? { trial_ends_at: end.toISOString() }
+        : { subscription_ends_at: end.toISOString() }
+      )
+    }).eq('id', extendUserId)
+    setExtendUserId(null)
+    showFlash('✓ Хугацаа тохируулагдлаа')
+    load()
   }
 
   const pendingPayments = payments.filter(p=>p.status==='pending')
@@ -73,6 +90,28 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {flash&&<div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
+
+      {/* Хугацаа тохируулах modal */}
+      {extendUserId && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold text-gray-800 mb-4">⏱ Хугацаа тохируулах</h3>
+            <div className="space-y-2 mb-5">
+              {PLAN_OPTIONS.map((p,i)=>(
+                <div key={i} onClick={()=>setExtendPlan(i)}
+                  className={`px-4 py-3 rounded-xl border-2 cursor-pointer text-sm transition-all ${extendPlan===i?'border-emerald-500 bg-emerald-50':'border-gray-200 hover:border-emerald-300'}`}>
+                  {p.label}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={()=>setExtendUserId(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm">Болих</button>
+              <button onClick={extendUser} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
@@ -115,33 +154,42 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50">
-                  {['Имэйл / Утас','Бизнес','Статус','Туршилт дуусах','Захиалга','Үйлдэл'].map(h=>(
+                  {['Имэйл / Утас','Хугацаа','Статус','Тохируулга'].map(h=>(
                     <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr></thead>
                 <tbody>
                   {users.map(u=>{
-                    const cnt=orders.filter(o=>o.user_id===u.id).length
-                    const badge=u.subscription_status==='active'
-                      ?<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Идэвхтэй</span>
-                      :u.subscription_status==='trial'
-                      ?<span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Туршилт</span>
-                      :<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">Дууссан</span>
+                    const endDate = u.subscription_status==='trial'
+                      ? u.trial_ends_at
+                      : u.subscription_ends_at
+                    const badge = u.subscription_status==='active'
+                      ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Идэвхтэй</span>
+                      : u.subscription_status==='trial'
+                      ? <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Туршилт</span>
+                      : <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">Дууссан</span>
                     return (
                       <tr key={u.id} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-3"><div className="text-xs font-medium">{u.email||'—'}</div></td>
-                        <td className="px-4 py-3 text-xs text-gray-600">{u.business_name||'—'}</td>
-                        <td className="px-4 py-3">{badge}</td>
-                        <td className="px-4 py-3 text-xs text-gray-500">{u.subscription_status==='trial'&&u.trial_ends_at?fmtD(u.trial_ends_at):u.subscription_ends_at?fmtD(u.subscription_ends_at):'—'}</td>
-                        <td className="px-4 py-3 text-center font-medium">{cnt}</td>
                         <td className="px-4 py-3">
-                          <div className="flex gap-1.5">
-                            <button onClick={()=>{ callAdmin('toggle_access',u.id,{new_status:u.subscription_status==='expired'?'active':'expired'}); showFlash(u.subscription_status==='expired'?'✓ Нээгдлээ':'Хаагдлаа') }}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-medium ${u.subscription_status==='expired'?'bg-emerald-50 text-emerald-600':'bg-red-50 text-red-500'}`}>
+                          <div className="text-xs font-medium text-gray-800">{u.contact_email || u.email || '—'}</div>
+                          {u.phone && <div className="text-xs text-gray-400">{u.phone}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {endDate ? fmtD(endDate) : '—'}
+                        </td>
+                        <td className="px-4 py-3">{badge}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button
+                              onClick={()=>{ setExtendUserId(u.id); setExtendPlan(1) }}
+                              className="px-2.5 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-600 font-medium hover:bg-emerald-100">
+                              Сунгах
+                            </button>
+                            <button
+                              onClick={()=>{ callAdmin('toggle_access',u.id,{new_status:u.subscription_status==='expired'?'active':'expired'}); showFlash(u.subscription_status==='expired'?'✓ Нээгдлээ':'Хаагдлаа') }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium ${u.subscription_status==='expired'?'bg-emerald-50 text-emerald-600 hover:bg-emerald-100':'bg-red-50 text-red-500 hover:bg-red-100'}`}>
                               {u.subscription_status==='expired'?'Нээх':'Хаах'}
                             </button>
-                            <button onClick={()=>{ callAdmin('extend_trial',u.id); showFlash('✓ +7 хоног') }}
-                              className="px-2.5 py-1 rounded-lg text-xs bg-amber-50 text-amber-600">+7 хоног</button>
                           </div>
                         </td>
                       </tr>
@@ -166,7 +214,7 @@ export default function AdminPage() {
                   return (
                     <div key={p.id} className="px-5 py-4 flex justify-between items-center flex-wrap gap-3 border-b border-gray-50 last:border-0">
                       <div>
-                        <div className="font-medium text-gray-800">{u?.email||p.user_id.slice(0,12)}</div>
+                        <div className="font-medium text-gray-800">{u?.contact_email||u?.email||p.user_id.slice(0,12)}</div>
                         <div className="text-xs text-gray-500 mt-0.5">Дүн: <b>{fmt(p.amount)}₮</b> · Гүйлгээ: <b>{p.reference_code}</b></div>
                         <div className="text-xs text-gray-400">{fmtD(p.created_at)}</div>
                       </div>
@@ -195,12 +243,14 @@ export default function AdminPage() {
                   <tbody>
                     {payments.map(p=>{
                       const u=users.find(u=>u.id===p.user_id)
-                      const badge=p.status==='confirmed'?<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Баталгаажсан</span>
-                        :p.status==='pending'?<span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Хүлээгдэж байна</span>
+                      const badge=p.status==='confirmed'
+                        ?<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Баталгаажсан</span>
+                        :p.status==='pending'
+                        ?<span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Хүлээгдэж байна</span>
                         :<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">Цуцлагдсан</span>
                       return (
                         <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
-                          <td className="px-4 py-3 text-xs">{u?.email||p.user_id.slice(0,12)}</td>
+                          <td className="px-4 py-3 text-xs">{u?.contact_email||u?.email||p.user_id.slice(0,12)}</td>
                           <td className="px-4 py-3 font-medium">{fmt(p.amount)}₮</td>
                           <td className="px-4 py-3 text-xs text-gray-500">{p.reference_code||'—'}</td>
                           <td className="px-4 py-3 text-xs text-gray-500">{p.period_start} → {p.period_end}</td>
