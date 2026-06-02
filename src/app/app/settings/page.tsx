@@ -21,6 +21,8 @@ export default function SettingsPage() {
   const [viewers, setViewers] = useState<any[]>([])
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState('viewer')
+  const [newUsername, setNewUsername] = useState('')
+  const [newPin, setNewPin] = useState('')
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
@@ -81,14 +83,26 @@ export default function SettingsPage() {
   }
 
   async function addViewer() {
-    if (!newEmail.trim()) return
+    if (!newEmail.trim()) { showFlash('Имэйл оруулна уу'); return }
+    if (!newUsername.trim()) { showFlash('Нэвтрэх нэр оруулна уу'); return }
+    if (!newPin.trim()) { showFlash('PIN код оруулна уу'); return }
+    if (newPin.length < 4) { showFlash('PIN хамгийн багадаа 4 оронтой байх ёстой'); return }
+
+    // Username давхцаж байгаа эсэх шалгах
+    const { data: existing } = await supabase.from('shared_access')
+      .select('id').eq('username', newUsername.trim()).single()
+    if (existing) { showFlash('Энэ нэвтрэх нэр аль хэдийн ашиглагдаж байна'); return }
+
     const { data:{ user } } = await supabase.auth.getUser()
     await supabase.from('shared_access').insert({
       owner_id:user!.id,
       viewer_email:newEmail.trim(),
-      role:newRole
+      role:newRole,
+      username:newUsername.trim(),
+      pin:newPin.trim()
     })
-    setNewEmail(''); showFlash('✓ Зочин нэмэгдлээ'); loadAll()
+    setNewEmail(''); setNewUsername(''); setNewPin('')
+    showFlash('✓ Зочин нэмэгдлээ'); loadAll()
   }
 
   return (
@@ -213,35 +227,62 @@ export default function SettingsPage() {
 
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">👁 Зочин хандалт</h2>
-        <p className="text-xs text-gray-500 mb-4">Зочин хэрэглэгч таны өгөгдлийг харах буюу засах боломжтой</p>
+        <p className="text-xs text-gray-500 mb-4">Зочин нэвтрэх нэр, PIN-ээр таны өгөгдлийг харна</p>
+
         <div className="space-y-3 mb-4">
-          <div className="flex gap-2">
-            <input type="email" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              placeholder="Зочины имэйл..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
-              onKeyDown={e=>e.key==='Enter'&&addViewer()} />
-            <select className="px-3 py-2.5 rounded-lg border border-gray-200 text-sm" value={newRole} onChange={e=>setNewRole(e.target.value)}>
-              <option value="viewer">👁 Харагч</option>
-              <option value="editor">✏️ Засварлагч</option>
-            </select>
-            <button onClick={addViewer} disabled={!newEmail.trim()}
-              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
-              + Урих
-            </button>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Имэйл хаяг</label>
+              <input type="email" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="zochin@gmail.com" value={newEmail} onChange={e=>setNewEmail(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Эрх</label>
+              <select className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" value={newRole} onChange={e=>setNewRole(e.target.value)}>
+                <option value="viewer">👁 Харагч</option>
+                <option value="editor">✏️ Засварлагч</option>
+              </select>
+            </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 space-y-1">
-            <div><span className="font-medium text-gray-700">👁 Харагч</span> — Бараа, захиалга, тайлан зөвхөн харах</div>
-            <div><span className="font-medium text-gray-700">✏️ Засварлагч</span> — Захиалга, бараа нэмэх, засах боломжтой</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Нэвтрэх нэр</label>
+              <input className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="username" value={newUsername} onChange={e=>setNewUsername(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">PIN код (4+ оронтой)</label>
+              <input type="password" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="••••" value={newPin} onChange={e=>setNewPin(e.target.value)} />
+            </div>
           </div>
+          <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-600 space-y-1">
+            <div><span className="font-medium">👁 Харагч</span> — Бараа, захиалга, тайлан зөвхөн харах</div>
+            <div><span className="font-medium">✏️ Засварлагч</span> — Захиалга, бараа нэмэх, засах боломжтой</div>
+          </div>
+          <button onClick={addViewer}
+            className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">
+            + Зочин нэмэх
+          </button>
         </div>
+
         {viewers.length>0?(
           <div className="space-y-2">
             {viewers.map(v=>(
               <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-700">{v.viewer_email}</div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${v.role==='editor'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}`}>
-                    {v.role==='editor'?'✏️ Засварлагч':'👁 Харагч'}
-                  </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-gray-700">{v.viewer_email}</div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${v.role==='editor'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}`}>
+                      {v.role==='editor'?'✏️ Засварлагч':'👁 Харагч'}
+                    </span>
+                  </div>
+                  {v.username && (
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      Нэвтрэх нэр: <span className="font-medium text-gray-600">{v.username}</span>
+                      {' · '}PIN: <span className="font-medium text-gray-600">{v.pin}</span>
+                    </div>
+                  )}
                 </div>
                 <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
                   className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Устгах</button>
