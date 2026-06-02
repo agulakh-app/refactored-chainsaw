@@ -1,14 +1,13 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 const BANK = { name:'Хаан банк', account:'5173027542', owner:'Алтаннар' }
 const FB_URL = 'https://www.facebook.com/profile.php?id=61588363850286'
 
-const PLANS = [
-  { id:'week',    label:'7 хоног', days:7,   price:0,      display:'Үнэгүй',    desc:'Туршаад үз!', badge:'Үнэгүй' },
+const PAID_PLANS = [
   { id:'month',   label:'1 сар',   days:30,  price:25000,  display:'25,000₮',   desc:'Хүндрэлгүй' },
   { id:'quarter', label:'3 сар',   days:90,  price:69900,  display:'69,900₮',   desc:'Боломжийн', badge:'Алдартай' },
   { id:'year',    label:'1 жил',   days:365, price:255000, display:'255,000₮',  desc:'Тогтвортой', badge:'Хэмнэлттэй' },
@@ -21,21 +20,41 @@ export default function PricingPage() {
   const [refCode, setRefCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState('')
-  const plan = PLANS.find(p=>p.id===selected)!
+  const [trialUsed, setTrialUsed] = useState(true) // default true — аюулгүй
+  const [checkingTrial, setCheckingTrial] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { setCheckingTrial(false); return }
+      const { data: p } = await supabase.from('profiles')
+        .select('trial_used')
+        .eq('id', data.user.id)
+        .single()
+      setTrialUsed(p?.trial_used === true)
+      setCheckingTrial(false)
+    })
+  }, [])
+
+  const PLANS = trialUsed
+    ? PAID_PLANS
+    : [{ id:'week', label:'7 хоног', days:7, price:0, display:'Үнэгүй', desc:'Туршаад үз!', badge:'Үнэгүй' }, ...PAID_PLANS]
+
+  const plan = PLANS.find(p=>p.id===selected) || PLANS[0]
 
   function copy(text: string, label: string) {
     navigator.clipboard.writeText(text).then(()=>{ setCopied(label); setTimeout(()=>setCopied(''),2000) })
   }
 
   async function choosePlan() {
-    if (selected==='week') {
+    if (plan.id === 'week') {
       const { data:{ user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const end = new Date(Date.now()+7*86400000)
       await supabase.from('profiles').update({
-        subscription_status:'trial',
-        trial_ends_at:end.toISOString(),
-      }).eq('id',user.id)
+        subscription_status: 'trial',
+        trial_ends_at: end.toISOString(),
+        trial_used: true,
+      }).eq('id', user.id)
       router.push('/app')
       return
     }
@@ -58,6 +77,12 @@ export default function PricingPage() {
     setLoading(false); setStep('done')
   }
 
+  if (checkingTrial) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-gray-400 text-sm">Ачааллаж байна...</div>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white px-4 py-10">
       <div className="max-w-3xl mx-auto">
@@ -68,11 +93,11 @@ export default function PricingPage() {
         </div>
 
         {step==='plans' && (<>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             {PLANS.map(p=>(
               <div key={p.id} onClick={()=>setSelected(p.id)}
                 className={"relative rounded-2xl border-2 p-4 cursor-pointer transition-all "+(selected===p.id?'border-emerald-500 bg-emerald-50 shadow-md':'border-gray-200 bg-white hover:border-emerald-300')}>
-                {p.badge&&<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">{p.badge}</div>}
+                {(p as any).badge&&<div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs font-semibold px-3 py-0.5 rounded-full whitespace-nowrap">{(p as any).badge}</div>}
                 <div className="text-xs font-semibold text-gray-500 mb-1 mt-1">{p.label}</div>
                 <div className="text-xl font-bold text-gray-800 mb-1">{p.display}</div>
                 <div className="text-xs text-gray-400 leading-relaxed">{p.desc}</div>
@@ -80,6 +105,7 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+
           <div className="bg-white rounded-2xl border border-gray-100 p-5 mb-8">
             <h3 className="font-semibold text-gray-700 mb-3 text-sm">Бүх тарифт орсон боломжууд:</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -88,11 +114,13 @@ export default function PricingPage() {
               ))}
             </div>
           </div>
+
           <div className="flex justify-center">
             <button onClick={choosePlan} className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-10 py-3.5 rounded-xl text-base transition-all shadow-sm">
-              {selected==='week'?'Үнэгүй туршиж үзэх →':plan.display+' — Үргэлжлүүлэх →'}
+              {plan.id==='week' ? 'Үнэгүй туршиж үзэх →' : plan.display+' — Үргэлжлүүлэх →'}
             </button>
           </div>
+
           <div className="text-center mt-6">
             <a href={FB_URL} target="_blank" rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline font-medium">
