@@ -143,3 +143,157 @@ export default function AdminPage() {
               <div className={`text-xl font-bold ${c}`}>{v}</div>
             </div>
           ))}
+        </div>
+
+        {tab==='users'&&(
+          <div className="bg-white rounded-2xl border border-gray-100">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h2 className="font-semibold text-gray-800">Бүх хэрэглэгчид ({users.length})</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="bg-gray-50">
+                  {['Имэйл','Утас','Хугацаа','Статус','Тохируулга'].map(h=>(
+                    <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {users.map(u=>{
+                    const endDate = u.subscription_status==='trial'
+                      ? u.trial_ends_at
+                      : u.subscription_ends_at
+                    const badge = u.subscription_status==='active'
+                      ? <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Идэвхтэй</span>
+                      : u.subscription_status==='trial'
+                      ? <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Туршилт</span>
+                      : <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">Дууссан</span>
+                    return (
+                      <tr key={u.id} className="border-t border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <div className="text-xs font-medium text-gray-800">{u.contact_email || u.email || '—'}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-xs text-gray-600">{u.phone || '—'}</div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-500">
+                          {endDate ? fmtD(endDate) : '—'}
+                        </td>
+                        <td className="px-4 py-3">{badge}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1.5 flex-wrap">
+                            <button onClick={()=>{ setExtendUserId(u.id); setExtendPlan(1) }}
+                              className="px-2.5 py-1 rounded-lg text-xs bg-emerald-50 text-emerald-600 font-medium hover:bg-emerald-100">
+                              Сунгах
+                            </button>
+                            <button onClick={()=>{ callAdmin('toggle_access',u.id,{new_status:u.subscription_status==='expired'?'active':'expired'}); showFlash(u.subscription_status==='expired'?'✓ Нээгдлээ':'Хаагдлаа') }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium ${u.subscription_status==='expired'?'bg-emerald-50 text-emerald-600 hover:bg-emerald-100':'bg-red-50 text-red-500 hover:bg-red-100'}`}>
+                              {u.subscription_status==='expired'?'Нээх':'Хаах'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              {users.length===0&&<p className="text-center text-gray-400 py-8">Хэрэглэгч алга</p>}
+            </div>
+          </div>
+        )}
+
+        {tab==='payments'&&(
+          <div className="space-y-4">
+            {pendingPayments.length>0&&(
+              <div className="bg-white rounded-2xl border border-amber-200">
+                <div className="px-5 py-4 border-b border-amber-100">
+                  <span className="font-semibold text-amber-600">⏳ Хүлээгдэж буй ({pendingPayments.length})</span>
+                </div>
+                {pendingPayments.map(p=>{
+                  const u=users.find(u=>u.id===p.user_id)
+                  return (
+                    <div key={p.id} className="px-5 py-4 flex justify-between items-center flex-wrap gap-3 border-b border-gray-50 last:border-0">
+                      <div>
+                        <div className="font-medium text-gray-800">{u?.contact_email||u?.email||p.user_id.slice(0,12)}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">Утас: <b>{u?.phone||'—'}</b> · Дүн: <b>{fmt(p.amount)}₮</b> · Гүйлгээ: <b>{p.reference_code}</b></div>
+                        <div className="text-xs text-gray-400">{fmtD(p.created_at)}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={()=>confirmPayment(p.id,p.user_id,p.period_end)}
+                          className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700">✓ Баталгаажуулах</button>
+                        <button onClick={()=>{ callAdmin('reject_payment',p.id); showFlash('Цуцлагдлаа') }}
+                          className="px-4 py-2 bg-red-50 text-red-500 rounded-xl text-sm">✕</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="bg-white rounded-2xl border border-gray-100">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h2 className="font-semibold text-gray-800">Бүх төлбөрүүд ({payments.length})</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-gray-50">
+                    {['Хэрэглэгч','Дүн','Гүйлгээний №','Хугацаа','Огноо','Статус'].map(h=>(
+                      <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {payments.map(p=>{
+                      const u=users.find(u=>u.id===p.user_id)
+                      const badge=p.status==='confirmed'
+                        ?<span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs">Баталгаажсан</span>
+                        :p.status==='pending'
+                        ?<span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">Хүлээгдэж байна</span>
+                        :<span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs">Цуцлагдсан</span>
+                      return (
+                        <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
+                          <td className="px-4 py-3 text-xs">{u?.contact_email||u?.email||p.user_id.slice(0,12)}</td>
+                          <td className="px-4 py-3 font-medium">{fmt(p.amount)}₮</td>
+                          <td className="px-4 py-3 text-xs text-gray-500">{p.reference_code||'—'}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500">{p.period_start} → {p.period_end}</td>
+                          <td className="px-4 py-3 text-xs text-gray-400">{fmtD(p.created_at)}</td>
+                          <td className="px-4 py-3">{badge}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+                {payments.length===0&&<p className="text-center text-gray-400 py-8">Төлбөр алга</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab==='stats'&&(
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-4">👥 Хэрэглэгчдийн статус</h3>
+              {[['Идэвхтэй',activeUsers,'#10B981'],['Туршилт',trialUsers,'#F59E0B'],['Дууссан',users.filter(u=>u.subscription_status==='expired').length,'#EF4444']].map(([l,v,c])=>(
+                <div key={String(l)} className="flex justify-between items-center mb-3">
+                  <span className="text-sm text-gray-600">{l}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 bg-gray-100 rounded-full h-2">
+                      <div className="h-2 rounded-full" style={{width:users.length?`${Math.round(Number(v)/users.length*100)}%`:'0%',background:String(c)}}/>
+                    </div>
+                    <span className="text-sm font-semibold w-6 text-right">{v}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-4">💰 Орлогын дүгнэлт</h3>
+              {[['Нийт баталгаажсан',fmt(totalRevenue)+'₮'],['Хүлээгдэж буй',fmt(payments.filter(p=>p.status==='pending').reduce((a,p)=>a+p.amount,0))+'₮'],['Нийт төлбөр',String(payments.length)],['Нийт захиалга',String(orders.length)]].map(([l,v])=>(
+                <div key={String(l)} className="flex justify-between py-1.5 border-b border-gray-50 last:border-0">
+                  <span className="text-sm text-gray-500">{l}</span>
+                  <span className="text-sm font-semibold">{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  )
+}
