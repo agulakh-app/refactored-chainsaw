@@ -1,7 +1,4 @@
 'use client'
-// src/app/app/client-layout.tsx
-// ✅ Client-side logic ЭНД байна - layout.tsx-ээс тусгаарласан
-
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
@@ -19,6 +16,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const path = usePathname()
   const [bizName, setBizName] = useState('')
   const [subStatus, setSubStatus] = useState('trial')
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -26,13 +24,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       if (!data.user) { router.push('/'); return }
       setReady(true)
       supabase.from('profiles')
-        .select('business_name,subscription_status')
+        .select('business_name,subscription_status,trial_ends_at')
         .eq('id', data.user.id)
         .single()
         .then(({ data: p }) => {
           if (p) {
             setBizName(p.business_name || '')
             setSubStatus(p.subscription_status)
+            setTrialEndsAt(p.trial_ends_at || null)
           }
         })
     })
@@ -43,11 +42,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     router.push('/')
   }
 
+  function trialDaysLeft() {
+    if (!trialEndsAt) return null
+    const diff = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000)
+    return diff > 0 ? diff : 0
+  }
+
   if (!ready) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-gray-400 text-sm">Ачааллаж байна...</div>
     </div>
   )
+
+  const daysLeft = trialDaysLeft()
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -58,7 +65,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <span className="text-lg">📦</span>
               <span className="font-semibold text-gray-800 text-sm">{bizName || 'OLULA'}</span>
               {subStatus === 'trial' && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">Туршилт</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                  Туршилт {daysLeft !== null ? `· ${daysLeft} өдөр үлдсэн` : ''}
+                </span>
               )}
               {subStatus === 'active' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Идэвхтэй</span>
@@ -79,7 +88,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               </button>
             </div>
           </div>
-          {/* Tabs */}
           <div className="flex overflow-x-auto">
             {TABS.map(t => (
               <button
