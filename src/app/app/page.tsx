@@ -217,9 +217,15 @@ export default function DashPage() {
               )}
             </div>
           )}
-          <label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
-          <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
-            {oItems.map((it,idx)=>(
+<label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
+<div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
+  <div className="grid grid-cols-[1fr_70px_100px_32px] gap-2 mb-1 px-1">
+    <div className="text-xs text-gray-400">Бараа</div>
+    <div className="text-xs text-gray-400 text-center">Тоо</div>
+    <div className="text-xs text-gray-400">Үнэ (₮)</div>
+    <div></div>
+  </div>
+  {oItems.map((it,idx)=>(
               <div key={idx} className="grid grid-cols-[1fr_70px_100px_32px] gap-2 items-center">
                 <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
