@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
+import { createContext, useContext } from 'react'
+
+export const GuestContext = createContext<{ guestRole: string | null }>({ guestRole: null })
+export function useGuestRole() { return useContext(GuestContext).guestRole }
 
 const TABS = [
   { href:'/app',            label:'Самбар',   icon:'📋' },
@@ -25,7 +29,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { router.push('/'); return }
 
-      // Өөрийн profile шалгах
       const { data: p } = await supabase.from('profiles')
         .select('business_name,subscription_status,trial_ends_at')
         .eq('id', data.user.id)
@@ -35,6 +38,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setBizName(p.business_name || '')
         setSubStatus(p.subscription_status)
         setTrialEndsAt(p.trial_ends_at || null)
+        if (p.subscription_status === 'expired') {
+          router.push('/pricing')
+          return
+        }
         setReady(true)
         return
       }
@@ -47,7 +54,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
       if (access) {
         setGuestRole(access.role)
-        // Owner-ийн нэр авах
         const { data: ownerProfile } = await supabase.from('profiles')
           .select('business_name')
           .eq('id', access.owner_id)
@@ -80,11 +86,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const daysLeft = trialDaysLeft()
   const isGuest = !!guestRole
-
-  // Зочинд харагдах tabуудыг шүүх
-  const visibleTabs = isGuest
-    ? TABS.filter(t => t.href !== '/app/settings')
-    : TABS
+  const visibleTabs = isGuest ? TABS.filter(t => t.href !== '/app/settings') : TABS
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,14 +109,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               {!isGuest && subStatus === 'active' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Идэвхтэй</span>
               )}
-              {!isGuest && subStatus === 'expired' && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Дууссан</span>
-              )}
             </div>
             <div className="flex items-center gap-3">
-              {!isGuest && subStatus === 'expired' && (
-                <a href="/pricing" className="text-xs font-medium text-emerald-600 hover:underline">💳 Сунгах</a>
-              )}
               <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-50">
                 Гарах
               </button>
@@ -138,12 +134,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       </header>
 
-      {!isGuest && subStatus === 'expired' && (
-        <div className="bg-red-50 border-b border-red-100 px-4 py-2 text-center text-xs text-red-700">
-          ⚠ Таны эрх дууссан. <a href="/pricing" className="underline font-medium">Сунгах →</a>
-        </div>
-      )}
-
       {isGuest && guestRole === 'viewer' && (
         <div className="bg-blue-50 border-b border-blue-100 px-4 py-2 text-center text-xs text-blue-700">
           👁 Та зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
@@ -151,7 +141,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-5">
-        {/* guestRole-г children рүү дамжуулах контекст */}
         <GuestContext.Provider value={{ guestRole }}>
           {children}
         </GuestContext.Provider>
@@ -159,7 +148,3 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     </div>
   )
 }
-
-import { createContext, useContext } from 'react'
-export const GuestContext = createContext<{ guestRole: string | null }>({ guestRole: null })
-export function useGuestRole() { return useContext(GuestContext).guestRole }
