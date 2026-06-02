@@ -233,6 +233,9 @@ export default function SettingsPage() {
             {viewers.map(v=>(
               <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
                 <div className="text-sm text-gray-700">{v.viewer_email}</div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${v.role==='editor'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}`}>
+  {v.role==='editor'?'✏️ Засварлагч':'👁 Харагч'}
+</span>
                 <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
                   className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Устгах</button>
               </div>
