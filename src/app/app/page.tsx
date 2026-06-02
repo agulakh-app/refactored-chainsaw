@@ -1,8 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
-import { useGuestRole, useOwnerId } from './client-layout'
+import { supabase } from '@/lib/supabase'
 import type { Product, Order } from '@/lib/types'
+import { useGuestRole, useOwnerId } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
@@ -19,6 +20,7 @@ function copyText(t:string,cb:()=>void){navigator.clipboard.writeText(t).then(cb
 
 export default function DashPage() {
   const guestRole = useGuestRole()
+  const ownerId = useOwnerId()
   const isViewer = guestRole === 'viewer'
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
@@ -47,17 +49,20 @@ export default function DashPage() {
 
   const load=useCallback(async()=>{
     const{data:{user}}=await supabase.auth.getUser()
-    if(!user) return
-    const{data:prof}=await supabase.from('profiles').select('default_delivery_fee').eq('id',user.id).single()
+    // Зочин бол owner_id, өөрөө бол user.id ашиглана
+    const targetId = ownerId || user?.id
+    if(!targetId) return
+
+    const{data:prof}=await supabase.from('profiles').select('default_delivery_fee').eq('id',targetId).single()
     if(prof?.default_delivery_fee){
       setDefaultDelivery(prof.default_delivery_fee)
       setODelv(v=>(!v||v==='0')?String(prof.default_delivery_fee):v)
     }
     const[{data:prods},{data:ords},{data:sts},{data:whs}]=await Promise.all([
-      supabase.from('products').select('*').eq('user_id',user.id).order('name'),
-      supabase.from('orders').select('*, order_items(*)').eq('user_id',user.id).order('date',{ascending:false}).order('day_seq',{ascending:false}),
-      supabase.from('stores').select('*').eq('user_id',user.id).order('created_at'),
-      supabase.from('warehouses').select('*').eq('user_id',user.id).order('created_at'),
+      supabase.from('products').select('*').eq('user_id',targetId).order('name'),
+      supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}),
+      supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
+      supabase.from('warehouses').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
     setOrders(ords||[])
@@ -66,7 +71,7 @@ export default function DashPage() {
     if(prods&&prods.length>0){
       setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
     }
-  },[])
+  },[ownerId])
 
   useEffect(()=>{load()},[load])
 
@@ -86,13 +91,15 @@ export default function DashPage() {
   async function submitOrder(){
     if(!oPhone||!oAddr){showFlash('Утас, хаяг оруулна уу');return}
     const{data:{user}}=await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if(!targetId) return
     for(const it of oItems){
       const p=products.find(x=>x.id===it.product_id)
       if(!p||p.stock<Number(it.qty)){showFlash((p?.name||'Бараа')+' хүрэлцэхгүй! '+(p?.stock||0));return}
     }
-    const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:user!.id,p_date:oDate||TODAY})
+    const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
-      user_id:user!.id,date:oDate||TODAY,day_seq:seqData||1,
+      user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
       phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
       store_id:oStore||null,warehouse_id:oWarehouse||null
     }).select().single()
@@ -101,7 +108,7 @@ export default function DashPage() {
       for(const it of oItems){
         const p=products.find(x=>x.id===it.product_id)!
         await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
-        await supabase.from('restock_log').insert({user_id:user!.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
+        await supabase.from('restock_log').insert({user_id:targetId,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
       }
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
@@ -176,7 +183,6 @@ export default function DashPage() {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[['Нийт үлдэгдэл',String(totalStock),'text-emerald-700'],['Хүлээгдэж байна',String(pending),'text-amber-600'],['Нийт захиалга',String(orders.length),'text-gray-700']].map(([l,v,c])=>(
           <div key={l} className="card text-center py-3">
@@ -186,7 +192,6 @@ export default function DashPage() {
         ))}
       </div>
 
-      {/* Order form — зөвхөн viewer биш үед */}
       {!isViewer && (
         <div className="card">
           <h2 className="font-semibold text-gray-800 mb-4 text-base">➕ Шинэ захиалга</h2>
@@ -216,15 +221,15 @@ export default function DashPage() {
               )}
             </div>
           )}
-<label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
-<div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
-  <div className="grid grid-cols-[1fr_70px_100px_32px] gap-2 mb-1 px-1">
-    <div className="text-xs text-gray-400">Бараа</div>
-    <div className="text-xs text-gray-400 text-center">Тоо</div>
-    <div className="text-xs text-gray-400">Үнэ (₮)</div>
-    <div></div>
-  </div>
-  {oItems.map((it,idx)=>(
+          <label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
+          <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
+            <div className="grid grid-cols-[1fr_70px_100px_32px] gap-2 mb-1 px-1">
+              <div className="text-xs text-gray-400">Бараа</div>
+              <div className="text-xs text-gray-400 text-center">Тоо</div>
+              <div className="text-xs text-gray-400">Үнэ (₮)</div>
+              <div></div>
+            </div>
+            {oItems.map((it,idx)=>(
               <div key={idx} className="grid grid-cols-[1fr_70px_100px_32px] gap-2 items-center">
                 <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
@@ -249,7 +254,6 @@ export default function DashPage() {
         </div>
       )}
 
-      {/* Orders */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-3 text-base">📋 Захиалгын бүртгэл</h2>
         <div className="flex gap-2 mb-4 flex-wrap">
