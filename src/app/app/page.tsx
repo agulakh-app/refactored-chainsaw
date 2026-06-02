@@ -1,9 +1,8 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { useGuestRole, useOwnerId } from './client-layout'
 import type { Product, Order } from '@/lib/types'
-import { useGuestRole } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
