@@ -276,4 +276,12 @@ export default function AuthPage() {
               🔑 Зочны эрхээр нэвтрэх →
             </button>
           )}
-          <a href="/pricing"
+          <a href="/pricing" className="block text-sm text-emerald-600 hover:underline font-medium">
+            💳 Үнийн мэдээлэл харах →
+          </a>
+          <p className="text-xs text-gray-400">Аюулгүй · HTTPS шифрлэлт · Өгөгдөл тусгаарлагдсан</p>
+        </div>
+      </div>
+    </div>
+  )
+}
