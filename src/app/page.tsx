@@ -79,14 +79,14 @@ export default function AuthPage() {
         setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return
       }
 
-      // Guest session localStorage-д хадгалах
-      localStorage.setItem('guest_access', JSON.stringify({
-        owner_id: access.owner_id,
-        role: access.role,
-        username: guestUsername.trim()
-      }))
-      router.push('/app/guest')
-      setLoading(false); return
+document.cookie = `guest_access=${encodeURIComponent(JSON.stringify({
+  owner_id: access.owner_id,
+  role: access.role,
+  username: guestUsername.trim()
+}))}; path=/; max-age=86400`
+
+router.push('/app')
+setLoading(false); return
     }
 
     setLoading(false)
