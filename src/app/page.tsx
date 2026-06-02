@@ -1,13 +1,12 @@
 'use client'
 export const dynamic = 'force-dynamic'
-
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login')
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'guest'>('login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -17,6 +16,8 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
+  const [guestUsername, setGuestUsername] = useState('')
+  const [guestPin, setGuestPin] = useState('')
 
   function phoneToEmail(p: string) {
     return p.replace(/\D/g, '') + '@agulakh.app'
@@ -62,7 +63,32 @@ export default function AuthPage() {
       })
       if (error) setError(error.message)
       else setSuccess('✓ Нууц үг сэргээх холбоос таны имэйлд илгээгдлээ')
+
+    } else if (mode === 'guest') {
+      if (!guestUsername.trim() || !guestPin.trim()) {
+        setError('Нэвтрэх нэр болон PIN оруулна уу'); setLoading(false); return
+      }
+      // shared_access хүснэгтээс шалгах
+      const { data: access } = await supabase.from('shared_access')
+        .select('id, owner_id, role')
+        .eq('username', guestUsername.trim())
+        .eq('pin', guestPin.trim())
+        .single()
+
+      if (!access) {
+        setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return
+      }
+
+      // Guest session localStorage-д хадгалах
+      localStorage.setItem('guest_access', JSON.stringify({
+        owner_id: access.owner_id,
+        role: access.role,
+        username: guestUsername.trim()
+      }))
+      router.push('/app/guest')
+      setLoading(false); return
     }
+
     setLoading(false)
   }
 
@@ -77,7 +103,7 @@ export default function AuthPage() {
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
 
-          {mode !== 'forgot' && (
+          {mode !== 'forgot' && mode !== 'guest' && (
             <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-5">
               {(['login', 'register'] as const).map(m => (
                 <button key={m} onClick={() => { setMode(m); setError(''); setSuccess('') }}
@@ -90,6 +116,17 @@ export default function AuthPage() {
             </div>
           )}
 
+          {mode === 'guest' && (
+            <div className="mb-4">
+              <button onClick={() => { setMode('login'); setError(''); setSuccess('') }}
+                className="text-sm text-gray-400 hover:text-gray-600 flex items-center gap-1">
+                ← Буцах
+              </button>
+              <h3 className="font-semibold text-gray-800 mt-3 mb-1">🔑 Зочны нэвтрэлт</h3>
+              <p className="text-xs text-gray-500">Урисан хүний өгсөн нэвтрэх нэр, PIN кодоо оруулна уу</p>
+            </div>
+          )}
+
           {mode === 'forgot' && (
             <div className="mb-4">
               <button onClick={() => { setMode('login'); setError(''); setSuccess('') }}
@@ -99,17 +136,38 @@ export default function AuthPage() {
               <h3 className="font-semibold text-gray-800 mt-3 mb-1">Нууц үг сэргээх</h3>
               <p className="text-xs text-gray-500">Бүртгэлийн имэйл хаягаа оруулна уу</p>
               <p className="text-xs text-gray-400 mt-1">
-  Эсвэл{' '}
-  <a href="https://www.facebook.com/profile.php?id=61588363850286"
-    target="_blank" rel="noopener noreferrer"
-    className="text-blue-500 hover:underline">
-    Facebook-ээр админтай холбогдох →
-  </a>
-</p>
+                Эсвэл{' '}
+                <a href="https://www.facebook.com/profile.php?id=61588363850286"
+                  target="_blank" rel="noopener noreferrer"
+                  className="text-blue-500 hover:underline">
+                  Facebook-ээр админтай холбогдох →
+                </a>
+              </p>
             </div>
           )}
 
-          {mode !== 'forgot' && (
+          {mode === 'guest' && (
+            <>
+              <label className="block text-xs text-gray-500 mb-1">Нэвтрэх нэр</label>
+              <input
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="username"
+                value={guestUsername}
+                onChange={e => setGuestUsername(e.target.value)}
+              />
+              <label className="block text-xs text-gray-500 mb-1">PIN код</label>
+              <input
+                type="password"
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                placeholder="••••"
+                value={guestPin}
+                onChange={e => setGuestPin(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+              />
+            </>
+          )}
+
+          {mode !== 'forgot' && mode !== 'guest' && (
             <>
               <label className="block text-xs text-gray-500 mb-1">
                 Утасны дугаар
@@ -141,7 +199,7 @@ export default function AuthPage() {
             </>
           )}
 
-          {mode !== 'forgot' && (
+          {mode !== 'forgot' && mode !== 'guest' && (
             <>
               <label className="block text-xs text-gray-500 mb-1">Нууц үг</label>
               <div className="relative mb-3">
@@ -206,17 +264,16 @@ export default function AuthPage() {
             {loading ? 'Уншиж байна...'
               : mode === 'login' ? 'Нэвтрэх →'
               : mode === 'register' ? 'Бүртгүүлэх →'
+              : mode === 'guest' ? 'Зочноор нэвтрэх →'
               : 'Сэргээх холбоос илгээх →'}
           </button>
         </div>
 
         <div className="text-center mt-5 space-y-2">
-          <a href="/pricing" className="block text-sm text-emerald-600 hover:underline font-medium">
-            💳 Үнийн мэдээлэл харах →
-          </a>
-          <p className="text-xs text-gray-400">Аюулгүй · HTTPS шифрлэлт · Өгөгдөл тусгаарлагдсан</p>
-        </div>
-      </div>
-    </div>
-  )
-}
+          {mode !== 'guest' && (
+            <button onClick={() => { setMode('guest'); setError(''); setSuccess('') }}
+              className="block w-full text-sm text-blue-600 hover:underline font-medium">
+              🔑 Зочны эрхээр нэвтрэх →
+            </button>
+          )}
+          <a href="/pricing"
