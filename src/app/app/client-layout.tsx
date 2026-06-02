@@ -144,4 +144,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       )}
 
-      {isGues
+      {isGuest && guestRole === 'viewer' && (
+        <div className="bg-blue-50 border-b border-blue-100 px-4 py-2 text-center text-xs text-blue-700">
+          👁 Та зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
+        </div>
+      )}
+
+      <main className="max-w-5xl mx-auto px-4 py-5">
+        {/* guestRole-г children рүү дамжуулах контекст */}
+        <GuestContext.Provider value={{ guestRole }}>
+          {children}
+        </GuestContext.Provider>
+      </main>
+    </div>
+  )
+}
+
+import { createContext, useContext } from 'react'
+export const GuestContext = createContext<{ guestRole: string | null }>({ guestRole: null })
+export function useGuestRole() { return useContext(GuestContext).guestRole }
