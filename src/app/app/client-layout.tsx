@@ -16,6 +16,18 @@ const TABS = [
   { href:'/app/settings',   label:'Тохиргоо', icon:'⚙️' },
 ]
 
+function timeLeft(d: string | null) {
+  if (!d) return ''
+  const ms = new Date(d).getTime() - Date.now()
+  if (ms <= 0) return '0 минут үлдсэн'
+  const mins = Math.floor(ms / 60000)
+  const hours = Math.floor(ms / 3600000)
+  const days = Math.floor(ms / 86400000)
+  if (days >= 2) return `${days} өдөр үлдсэн`
+  if (hours >= 1) return `${hours} цаг үлдсэн`
+  return `${mins} минут үлдсэн`
+}
+
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const path = usePathname()
@@ -78,25 +90,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     router.push('/')
   }
 
-  function fmtDate(d: string | null) {
-    if (!d) return ''
-    const dt = new Date(d)
-    return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
-  }
-
-  function trialDaysLeft() {
-    if (!trialEndsAt) return null
-    const diff = Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000)
-    return diff > 0 ? diff : 0
-  }
-
   if (!ready) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-gray-400 text-sm">Ачааллаж байна...</div>
     </div>
   )
 
-  const daysLeft = trialDaysLeft()
   const isGuest = !!guestRole
   const visibleTabs = isGuest ? TABS.filter(t => t.href !== '/app/settings') : TABS
 
@@ -117,12 +116,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               )}
               {!isGuest && subStatus === 'trial' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                  Туршилт {daysLeft !== null ? `· ${daysLeft} өдөр` : ''}{trialEndsAt ? ` · ${fmtDate(trialEndsAt)}` : ''}
+                  Туршилт · {timeLeft(trialEndsAt)}
                 </span>
               )}
               {!isGuest && subStatus === 'active' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                  Идэвхтэй{subEndsAt ? ` · ${fmtDate(subEndsAt)}` : ''}
+                  Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
             </div>
