@@ -1,6 +1,6 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
-export const supabase = createBrowserClient(
+export const supabase = createClient(
   'https://bvniuzekffxhzqgvvwea.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2bml1emVrZmZ4aHpxZ3Z2d2VhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5NTAyMjMsImV4cCI6MjA5NTUyNjIyM30.Q06MYQsP_w8L-zReeHMPQAtd4rAM_QNUHNUtKzR2IRU'
+  'sb_publishable_xxLk57fl4GNtUQqp9uZA5w_LTaEOhu_'
 )
