@@ -13,14 +13,11 @@ export default function SettingsPage() {
   const [flash, setFlash] = useState('')
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [subStatus, setSubStatus] = useState('')
-
   const [stores, setStores] = useState<any[]>([])
   const [newStoreName, setNewStoreName] = useState('')
-
   const [warehouses, setWarehouses] = useState<any[]>([])
   const [newWhName, setNewWhName] = useState('')
   const [newWhAddr, setNewWhAddr] = useState('')
-
   const [viewers, setViewers] = useState<any[]>([])
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState('viewer')
@@ -86,7 +83,11 @@ export default function SettingsPage() {
   async function addViewer() {
     if (!newEmail.trim()) return
     const { data:{ user } } = await supabase.auth.getUser()
-    await supabase.from('shared_access').insert({ owner_id:user!.id, viewer_email:newEmail.trim(), role:'viewer' })
+    await supabase.from('shared_access').insert({
+      owner_id:user!.id,
+      viewer_email:newEmail.trim(),
+      role:newRole
+    })
     setNewEmail(''); showFlash('✓ Зочин нэмэгдлээ'); loadAll()
   }
 
@@ -94,7 +95,6 @@ export default function SettingsPage() {
     <div className="space-y-5">
       {flash&&<div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
 
-      {/* Туршилтын мэдээлэл */}
       {subStatus === 'trial' && trialEndsAt && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
           <div className="flex items-center justify-between">
@@ -131,7 +131,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Admin link */}
       {isAdmin&&(
         <a href="/admin" className="flex items-center justify-between bg-gray-900 text-white rounded-2xl px-5 py-4 hover:bg-gray-800 transition-all">
           <div className="flex items-center gap-3">
@@ -145,7 +144,6 @@ export default function SettingsPage() {
         </a>
       )}
 
-      {/* 1. Дэлгүүрүүд */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">🏪 Дэлгүүрүүд</h2>
         <p className="text-xs text-gray-500 mb-4">Захиалга шивэхэд аль дэлгүүрээс ирсэнийг тэмдэглэнэ</p>
@@ -170,7 +168,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 2. Агуулахууд */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">🏭 Агуулахууд</h2>
         <p className="text-xs text-gray-500 mb-4">Бараа хаана хадгалагдаж, хаанаас хүргэгдэхийг тэмдэглэнэ</p>
@@ -201,7 +198,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 3. Хүргэлтийн үнэ */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-4 text-base">🚚 Өгөгдмөл хүргэлтийн үнэ (₮)</h2>
         <p className="text-xs text-gray-500 mb-3">Захиалга шивэхэд автоматаар орно</p>
@@ -215,27 +211,38 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 4. Зочин */}
       <div className="card">
         <h2 className="font-semibold text-gray-800 mb-2 text-base">👁 Зочин хандалт</h2>
-        <p className="text-xs text-gray-500 mb-4">Зочин хэрэглэгч зөвхөн харах боломжтой</p>
-        <div className="flex gap-2 mb-4">
-          <input type="email" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            placeholder="Зочины имэйл..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
-            onKeyDown={e=>e.key==='Enter'&&addViewer()} />
-          <button onClick={addViewer} disabled={!newEmail.trim()}
-            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
-            + Урих
-          </button>
+        <p className="text-xs text-gray-500 mb-4">Зочин хэрэглэгч таны өгөгдлийг харах буюу засах боломжтой</p>
+        <div className="space-y-3 mb-4">
+          <div className="flex gap-2">
+            <input type="email" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              placeholder="Зочины имэйл..." value={newEmail} onChange={e=>setNewEmail(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&addViewer()} />
+            <select className="px-3 py-2.5 rounded-lg border border-gray-200 text-sm" value={newRole} onChange={e=>setNewRole(e.target.value)}>
+              <option value="viewer">👁 Харагч</option>
+              <option value="editor">✏️ Засварлагч</option>
+            </select>
+            <button onClick={addViewer} disabled={!newEmail.trim()}
+              className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50">
+              + Урих
+            </button>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 space-y-1">
+            <div><span className="font-medium text-gray-700">👁 Харагч</span> — Бараа, захиалга, тайлан зөвхөн харах</div>
+            <div><span className="font-medium text-gray-700">✏️ Засварлагч</span> — Захиалга, бараа нэмэх, засах боломжтой</div>
+          </div>
         </div>
         {viewers.length>0?(
           <div className="space-y-2">
             {viewers.map(v=>(
               <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                <div className="text-sm text-gray-700">{v.viewer_email}</div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${v.role==='editor'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}`}>
-  {v.role==='editor'?'✏️ Засварлагч':'👁 Харагч'}
-</span>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-gray-700">{v.viewer_email}</div>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${v.role==='editor'?'bg-blue-100 text-blue-600':'bg-gray-100 text-gray-500'}`}>
+                    {v.role==='editor'?'✏️ Засварлагч':'👁 Харагч'}
+                  </span>
+                </div>
                 <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
                   className="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded hover:bg-red-50">Устгах</button>
               </div>
