@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Product, Order } from '@/lib/types'
+import { useGuestRole } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
@@ -18,6 +19,8 @@ function fmtD(d: string) {
 function copyText(t:string,cb:()=>void){navigator.clipboard.writeText(t).then(cb).catch(()=>{})}
 
 export default function DashPage() {
+  const guestRole = useGuestRole()
+  const isViewer = guestRole === 'viewer'
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
   const [stores,setStores]=useState<any[]>([])
@@ -86,13 +89,13 @@ export default function DashPage() {
     const{data:{user}}=await supabase.auth.getUser()
     for(const it of oItems){
       const p=products.find(x=>x.id===it.product_id)
-      if(!p||p.stock<Number(it.qty)){showFlash((p?.name||'Бараа')+' хүрэлцэхгүй! '+( p?.stock||0));return}
+      if(!p||p.stock<Number(it.qty)){showFlash((p?.name||'Бараа')+' хүрэлцэхгүй! '+(p?.stock||0));return}
     }
     const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:user!.id,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
       user_id:user!.id,date:oDate||TODAY,day_seq:seqData||1,
       phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
-      store_id:oStore||null, warehouse_id:oWarehouse||null
+      store_id:oStore||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
       await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price)})))
@@ -146,7 +149,7 @@ export default function DashPage() {
     <div className="space-y-5">
       {flash&&<div className="fixed top-4 right-4 bg-emerald-700 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50">{flash}</div>}
 
-      {editOrder&&(
+      {!isViewer && editOrder&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
             <h3 className="font-semibold text-gray-800 mb-4">Захиалга засварлах</h3>
@@ -184,63 +187,62 @@ export default function DashPage() {
         ))}
       </div>
 
-      {/* Order form */}
-      <div className="card">
-        <h2 className="font-semibold text-gray-800 mb-4 text-base">➕ Шинэ захиалга</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-            <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
-            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)} /></div>
-        </div>
-        <label className="block text-xs text-gray-500 mb-1 mt-3">Хаяг</label>
-        <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)} />
-
-        {/* Store & Warehouse selectors — зөвхөн байгаа үед */}
-        {(stores.length>0||warehouses.length>0)&&(
-          <div className="grid grid-cols-2 gap-3 mt-3">
-            {stores.length>0&&(
-              <div><label className="block text-xs text-gray-500 mb-1">Дэлгүүр</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oStore} onChange={e=>setOStore(e.target.value)}>
-                  <option value="">— Сонгох —</option>
-                  {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                </select></div>
-            )}
-            {warehouses.length>0&&(
-              <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                  <option value="">— Сонгох —</option>
-                  {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                </select></div>
-            )}
+      {/* Order form — зөвхөн viewer биш үед */}
+      {!isViewer && (
+        <div className="card">
+          <h2 className="font-semibold text-gray-800 mb-4 text-base">➕ Шинэ захиалга</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)} /></div>
           </div>
-        )}
-
-        <label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
-        <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
-          {oItems.map((it,idx)=>(
-            <div key={idx} className="grid grid-cols-[1fr_70px_100px_32px] gap-2 items-center">
-              <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-              </select>
-              <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} />
-              <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ" />
-              {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+          <label className="block text-xs text-gray-500 mb-1 mt-3">Хаяг</label>
+          <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)} />
+          {(stores.length>0||warehouses.length>0)&&(
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              {stores.length>0&&(
+                <div><label className="block text-xs text-gray-500 mb-1">Дэлгүүр</label>
+                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oStore} onChange={e=>setOStore(e.target.value)}>
+                    <option value="">— Сонгох —</option>
+                    {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select></div>
+              )}
+              {warehouses.length>0&&(
+                <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
+                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
+                    <option value="">— Сонгох —</option>
+                    {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select></div>
+              )}
             </div>
-          ))}
+          )}
+          <label className="block text-xs text-gray-500 mb-1 mt-3">Захиалсан бараанууд</label>
+          <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2">
+            {oItems.map((it,idx)=>(
+              <div key={idx} className="grid grid-cols-[1fr_70px_100px_32px] gap-2 items-center">
+                <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                  {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
+                </select>
+                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} />
+                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ" />
+                {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+              </div>
+            ))}
+          </div>
+          <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-3">＋ Бараа нэмэх</button>
+          <div className="max-w-xs">
+            <label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
+            <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)} />
+          </div>
+          {gross>0&&<div className="mt-2 text-sm font-medium text-emerald-700">
+            Нийт: {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = ${fmt(net)}₮ цэвэр`:''}
+          </div>}
+          <div className="flex justify-end mt-4">
+            <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700">✓ Захиалга бүртгэх</button>
+          </div>
         </div>
-        <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-3">＋ Бараа нэмэх</button>
-        <div className="max-w-xs">
-          <label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
-          <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)} />
-        </div>
-        {gross>0&&<div className="mt-2 text-sm font-medium text-emerald-700">
-          Нийт: {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = ${fmt(net)}₮ цэвэр`:''}
-        </div>}
-        <div className="flex justify-end mt-4">
-          <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700">✓ Захиалга бүртгэх</button>
-        </div>
-      </div>
+      )}
 
       {/* Orders */}
       <div className="card">
@@ -293,9 +295,13 @@ export default function DashPage() {
                           {fmt(gross)}₮{o.delivery_fee>0&&<span className="text-gray-400"> −{fmt(o.delivery_fee)}₮</span>}
                           {' = '}<span className="font-semibold text-emerald-700">{fmt(net)}₮</span>
                         </span>
-                        <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
-                          className="text-xs text-blue-400 hover:text-blue-600 px-1.5 py-0.5 rounded hover:bg-blue-50">Засах</button>
-                        <button onClick={()=>deleteOrder(o)} className="text-xs text-red-300 hover:text-red-500 px-1 py-0.5 rounded hover:bg-red-50">🗑</button>
+                        {!isViewer && (
+                          <>
+                            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
+                              className="text-xs text-blue-400 hover:text-blue-600 px-1.5 py-0.5 rounded hover:bg-blue-50">Засах</button>
+                            <button onClick={()=>deleteOrder(o)} className="text-xs text-red-300 hover:text-red-500 px-1 py-0.5 rounded hover:bg-red-50">🗑</button>
+                          </>
+                        )}
                         <button onClick={()=>toggleStatus(o.id,o.status)}
                           className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-all whitespace-nowrap ${o.status==='delivered'?'bg-emerald-100 text-emerald-700 border-emerald-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>
                           {o.status==='delivered'?'✓ Хүргэгдсэн':'○ Хүлээгдэж байна'}
