@@ -22,6 +22,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [bizName, setBizName] = useState('')
   const [subStatus, setSubStatus] = useState('trial')
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
+  const [subEndsAt, setSubEndsAt] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [guestRole, setGuestRole] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
@@ -29,7 +30,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     async function init() {
-      // 1. Эхлээд cookie-д зочны мэдээлэл байгаа эсэх шалгах
       const guestCookie = document.cookie.split(';').find(c => c.trim().startsWith('guest_access='))
       if (guestCookie) {
         try {
@@ -46,12 +46,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         } catch {}
       }
 
-      // 2. Supabase auth шалгах
       const { data } = await supabase.auth.getUser()
       if (!data.user) { router.push('/'); return }
 
       const { data: p } = await supabase.from('profiles')
-        .select('business_name,subscription_status,trial_ends_at')
+        .select('business_name,subscription_status,trial_ends_at,subscription_ends_at')
         .eq('id', data.user.id)
         .single()
 
@@ -59,6 +58,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setBizName(p.business_name || '')
         setSubStatus(p.subscription_status)
         setTrialEndsAt(p.trial_ends_at || null)
+        setSubEndsAt(p.subscription_ends_at || null)
         if (p.subscription_status === 'expired') {
           router.push('/pricing')
           return
@@ -73,10 +73,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, [router])
 
   async function logout() {
-    // Cookie устгах
     document.cookie = 'guest_access=; path=/; max-age=0'
     await supabase.auth.signOut()
     router.push('/')
+  }
+
+  function fmtDate(d: string | null) {
+    if (!d) return ''
+    const dt = new Date(d)
+    return `${dt.getFullYear()}/${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`
   }
 
   function trialDaysLeft() {
@@ -102,7 +107,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
             <div className="flex items-center gap-2">
               <span className="text-lg">📦</span>
-              <span className="font-semibold text-gray-800 text-sm">{isGuest ? ownerName : (bizName || 'OLULA')}</span>
+              <span className="font-semibold text-gray-800 text-sm">
+                {isGuest ? ownerName : (bizName || 'OLULA')}
+              </span>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                   {guestRole === 'editor' ? '✏️ Засварлагч' : '👁 Харагч'}
@@ -110,11 +117,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               )}
               {!isGuest && subStatus === 'trial' && (
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                  Туршилт {daysLeft !== null ? `· ${daysLeft} өдөр үлдсэн` : ''}
+                  Туршилт {daysLeft !== null ? `· ${daysLeft} өдөр` : ''}{trialEndsAt ? ` · ${fmtDate(trialEndsAt)}` : ''}
                 </span>
               )}
               {!isGuest && subStatus === 'active' && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Идэвхтэй</span>
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                  Идэвхтэй{subEndsAt ? ` · ${fmtDate(subEndsAt)}` : ''}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
