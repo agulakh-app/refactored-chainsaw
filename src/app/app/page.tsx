@@ -87,7 +87,7 @@ export default function DashPage() {
       const{data:storeData}=await supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
       setVariantEnabled(storeData?.variant_enabled||false)
     } else { setVariantEnabled(false) }
-  },[ownerId, activeStoreId, products.length])
+  },[ownerId, activeStoreId])
 
   useEffect(()=>{load()},[load])
 
@@ -262,7 +262,7 @@ export default function DashPage() {
                 </div>
                 {oItems.map((it,idx)=>{
                   const selProd=products.find(p=>p.id===it.product_id)
-                  const variants:any[]=(selProd as any)?.variants||[]
+                  const variants:any[]=selProd?.variants||[]
                   return(
                   <div key={idx} className="space-y-1.5">
                     <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 items-center">
@@ -275,11 +275,16 @@ export default function DashPage() {
                     </div>
                     {variantEnabled&&variants.length>0&&(
                       <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
-                        value={it.variant_label} onChange={e=>setItem(idx,'variant_label',e.target.value)}>
-                        <option value="">— Өнгө / Хэмжээ сонгох —</option>
+                        value={it.variant_label}
+                        onChange={e=>{
+                          const v=variants.find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===e.target.value)
+                          setItem(idx,'variant_label',e.target.value)
+                          if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
+                        }}>
+                        <option value="">— Хэмжээ / Өнгө сонгох —</option>
                         {variants.map((v:any,vi:number)=>(
-                          <option key={vi} value={[v.color,v.size].filter(Boolean).join(' / ')}>
-                            {[v.color,v.size].filter(Boolean).join(' / ')}
+                          <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
+                            {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
                           </option>
                         ))}
                       </select>
