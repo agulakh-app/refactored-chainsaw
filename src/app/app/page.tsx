@@ -295,7 +295,7 @@ export default function DashPage() {
                           setItem(idx,'variant_label',e.target.value)
                           if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
                         }}>
-                        <option value="">— Хэмжээ / Өнгө сонгох —</option>
+                        <option value="">— Хэмжээ /      Өнгө сонгох —</option>
                         {variants.map((v:any,vi:number)=>(
                           <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
                             {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
