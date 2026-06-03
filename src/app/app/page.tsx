@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Product, Order } from '@/lib/types'
-import { useGuestRole, useOwnerId, useActiveStore } from './client-layout'
+import { useGuestRole, useOwnerId, useActiveStore, useSetActiveStore } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
@@ -112,7 +112,7 @@ export default function DashPage() {
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
       phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
-      store_id:oStore||activeStoreId||null,warehouse_id:oWarehouse||null
+      store_id:activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
       await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price)})))
@@ -220,20 +220,22 @@ export default function DashPage() {
       {/* Order form */}
       {!isViewer&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ захиалга</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-medium text-gray-800 text-sm">Шинэ захиалга</h2>
+            {activeStoreId&&stores.length>0&&(
+              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+                {stores.find(s=>s.id===activeStoreId)?.name}
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-3">
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
                 <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
-              {stores.length>0&&(
-                <div><label className="block text-xs text-gray-500 mb-1">Дэлгүүр</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oStore} onChange={e=>setOStore(e.target.value)}>
-                    <option value="">— Сонгох —</option>
-                    {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select></div>
-              )}
+              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
               {warehouses.length>0&&(
                 <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
@@ -241,12 +243,10 @@ export default function DashPage() {
                     {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
                   </select></div>
               )}
-              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
             <div className="flex flex-col">
-              <div className="mb-3"><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
+              <div className="mb-3"><label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
               <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
               <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2 flex-1">
                 <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 mb-1 px-1">
@@ -330,7 +330,7 @@ export default function DashPage() {
                           <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600">
                             {o.phone}
                           </button>
-                          {showStore&&(
+                          {!activeStoreId&&storeName&&(
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">{storeName}</span>
                           )}
                           <span className="text-xs text-gray-400">{o.address}</span>
