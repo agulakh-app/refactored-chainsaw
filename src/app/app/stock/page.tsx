@@ -34,20 +34,27 @@ export default function StockPage() {
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
+  const [variantEnabled, setVariantEnabled] = useState(false)
+  const [nVariants, setNVariants] = useState<{color:string,size:string}[]>([])
+
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const [{ data: prods },{ data: ls }] = await Promise.all([
+    const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
       (activeStoreId
         ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
         : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
       (activeStoreId
         ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
-        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}))
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})),
+      activeStoreId
+        ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
+        : Promise.resolve({ data: null })
     ])
     setProducts(prods||[])
     setLogs(ls||[])
+    setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
   },[rProd, ownerId, activeStoreId])
 
@@ -82,15 +89,17 @@ export default function StockPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
+    const validVariants = nVariants.filter(v=>v.color.trim()||v.size.trim())
     const { data: prod } = await supabase.from('products').insert({
       user_id:targetId, name:nName.trim(), unit_price:Number(nPrice)||0,
-      stock:Number(nQty)||0, added_date:nDate, store_id:activeStoreId||null
+      stock:Number(nQty)||0, added_date:nDate, store_id:activeStoreId||null,
+      variants: validVariants.length>0 ? validVariants : null
     }).select().single()
     if (prod&&Number(nQty)>0) await supabase.from('restock_log').insert({
       user_id:targetId, product_id:prod.id, product_name:nName.trim(),
       quantity:Number(nQty), type:'in', note:'Шинэ бараа', date:nDate, store_id:activeStoreId||null
     })
-    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY)
+    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([])
     showFlash(nName+' нэмэгдлээ ✓'); load()
   }
 
@@ -207,6 +216,32 @@ export default function StockPage() {
               <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={nDate} onChange={e=>setNDate(e.target.value)} /></div>
           </div>
+          {variantEnabled && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs text-gray-500">Variant (өнгө / хэмжээ)</label>
+                <button onClick={()=>setNVariants(v=>[...v,{color:'',size:''}])}
+                  className="text-xs text-emerald-600 hover:underline">＋ Variant нэмэх</button>
+              </div>
+              {nVariants.length===0 && (
+                <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
+              )}
+              <div className="space-y-2">
+                {nVariants.map((v,i)=>(
+                  <div key={i} className="grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Өнгө (Улаан, Хар...)" value={v.color}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
+                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Хэмжээ (S, M, L...)" value={v.size}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
+                    <button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
+                      className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex justify-end mt-3">
             <button onClick={addNewProduct} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Нэмэх</button>
           </div>
