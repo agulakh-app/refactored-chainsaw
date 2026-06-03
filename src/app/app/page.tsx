@@ -44,7 +44,8 @@ export default function DashPage() {
   const [oDelv,setODelv]=useState('')
   const [oStore,setOStore]=useState('')
   const [oWarehouse,setOWarehouse]=useState('')
-  const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:''}])
+  const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
+  const [variantEnabled,setVariantEnabled]=useState(false)
   const [openDropdown,setOpenDropdown]=useState<string|null>(null)
   const dropdownRef=useRef<HTMLDivElement>(null)
 
@@ -82,16 +83,20 @@ export default function DashPage() {
     if(prods&&prods.length>0){
       setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
     }
-  },[ownerId, activeStoreId])
+    if(activeStoreId){
+      const{data:storeData}=await supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
+      setVariantEnabled(storeData?.variant_enabled||false)
+    } else { setVariantEnabled(false) }
+  },[ownerId, activeStoreId, products.length])
 
   useEffect(()=>{load()},[load])
 
-  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||'')}])}
+  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])}
   function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx))}
   function setItem(idx:number,key:string,val:string){
     setOItems(items=>items.map((it,i)=>{
       if(i!==idx) return it
-      if(key==='product_id'){const p=products.find(x=>x.id===val);return{...it,product_id:val,product_name:p?.name||'',price:String(p?.unit_price||'')}}
+      if(key==='product_id'){const p=products.find(x=>x.id===val);return{...it,product_id:val,product_name:p?.name||'',price:String(p?.unit_price||''),variant_label:''}}
       return{...it,[key]:val}
     }))
   }
@@ -115,7 +120,7 @@ export default function DashPage() {
       store_id:activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
-      await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price)})))
+      await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price),variant_label:it.variant_label||null})))
       for(const it of oItems){
         const p=products.find(x=>x.id===it.product_id)!
         await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
@@ -123,7 +128,7 @@ export default function DashPage() {
       }
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
-    setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||'')}])
+    setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
     showFlash('Захиалга бүртгэгдлээ ✓');load()
   }
 
@@ -255,16 +260,32 @@ export default function DashPage() {
                   <div className="text-xs text-gray-400">Үнэ (₮)</div>
                   <div></div>
                 </div>
-                {oItems.map((it,idx)=>(
-                  <div key={idx} className="grid grid-cols-[1fr_60px_90px_28px] gap-2 items-center">
-                    <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                      {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                    </select>
-                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
-                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ"/>
-                    {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+                {oItems.map((it,idx)=>{
+                  const selProd=products.find(p=>p.id===it.product_id)
+                  const variants:any[]=selProd?.variants||[]
+                  return(
+                  <div key={idx} className="space-y-1.5">
+                    <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 items-center">
+                      <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
+                      </select>
+                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
+                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ"/>
+                      {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+                    </div>
+                    {variantEnabled&&variants.length>0&&(
+                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+                        value={it.variant_label} onChange={e=>setItem(idx,'variant_label',e.target.value)}>
+                        <option value="">— Өнгө / Хэмжээ сонгох —</option>
+                        {variants.map((v:any,vi:number)=>(
+                          <option key={vi} value={[v.color,v.size].filter(Boolean).join(' / ')}>
+                            {[v.color,v.size].filter(Boolean).join(' / ')}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                ))}
+                )})}
               </div>
               <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-2 text-left">＋ Бараа нэмэх</button>
               {gross>0&&<div className="text-sm font-medium text-emerald-700 mb-3">
@@ -372,7 +393,7 @@ export default function DashPage() {
                       <div className="space-y-1 mb-2">
                         {(o.order_items||[]).map((item:any,idx:number)=>(
                           <div key={idx} className="flex justify-between items-baseline">
-                            <span className="text-xs text-gray-500">{item.product_name}</span>
+                            <span className="text-xs text-gray-500">{item.product_name}{item.variant_label&&<span className="text-gray-400 ml-1">· {item.variant_label}</span>}</span>
                             <div className="flex items-baseline gap-4">
                               <span className="text-xs text-gray-400">{item.quantity} ш</span>
                               <span className="text-xs text-gray-500 w-20 text-right">{fmt(item.quantity*item.unit_price)}₮</span>
