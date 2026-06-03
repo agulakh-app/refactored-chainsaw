@@ -238,14 +238,14 @@ export default function AuthPage() {
 
         <div className="text-center mt-5 space-y-2">
           {mode !== 'guest' && (
-            <button onClick={() => { setMode('guest'); setError('') }}
-              className="block w-full text-sm text-gray-500 hover:text-gray-700">
-              Зочны эрхээр нэвтрэх →
-            </button>
-          )}
-          <a href="/pricing" className="block text-sm text-emerald-600 hover:underline">
-            Үнийн мэдээлэл →
-          </a>
+  <button onClick={() => { setMode('guest'); setError('') }}
+    className="block w-full text-sm text-gray-500 hover:text-gray-600 py-2.5 px-4 rounded-xl border border-gray-200 hover:bg-gray-50">
+    Зочны эрхээр нэвтрэх
+  </button>
+)}
+<a href="/pricing" className="block text-sm text-center text-white bg-emerald-600 hover:bg-emerald-700 py-2.5 px-4 rounded-xl font-medium">
+  Үнийн мэдээлэл
+</a>
           <p className="text-xs text-gray-300">Аюулгүй · HTTPS · Өгөгдөл тусгаарлагдсан</p>
         </div>
       </div>
