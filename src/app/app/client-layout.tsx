@@ -163,6 +163,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
             {!isGuest && stores.length > 1 && (
               <div className="flex gap-1 pb-1">
+                <button
+                  onClick={() => setActiveStoreId(null)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap ${
+                    activeStoreId === null
+                      ? 'bg-gray-800 text-white'
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                  }`}
+                >
+                  Бүгд
+                </button>
                 {stores.map(s => (
                   <button
                     key={s.id}
