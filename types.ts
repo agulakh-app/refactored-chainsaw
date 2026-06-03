@@ -6,6 +6,8 @@ export interface Product {
   stock: number
   added_date: string
   created_at: string
+  store_id?: string | null
+  variants?: {color: string, size: string}[] | null
 }
 
 export interface Order {
@@ -28,6 +30,7 @@ export interface OrderItem {
   product_name: string
   quantity: number
   unit_price: number
+  variant_label?: string | null
 }
 
 export interface RestockLog {
