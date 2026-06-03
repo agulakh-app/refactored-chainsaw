@@ -42,9 +42,10 @@ export default function AnalyticsPage() {
   const productMap: Record<string,{qty:number,revenue:number}> = {}
   filtered.forEach(o=>{
     (o.order_items||[]).forEach((i:any)=>{
-      if (!productMap[i.product_name]) productMap[i.product_name]={qty:0,revenue:0}
-      productMap[i.product_name].qty+=i.quantity
-      productMap[i.product_name].revenue+=i.quantity*i.unit_price
+      const key = i.product_name + (i.variant_label ? ' · '+i.variant_label : '')
+      if (!productMap[key]) productMap[key]={qty:0,revenue:0}
+      productMap[key].qty+=i.quantity
+      productMap[key].revenue+=i.quantity*i.unit_price
     })
   })
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
