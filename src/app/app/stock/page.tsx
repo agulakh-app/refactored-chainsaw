@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Product, RestockLog } from '@/lib/types'
-import { useGuestRole, useOwnerId } from '../client-layout'
+import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
@@ -11,6 +11,7 @@ function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); retur
 export default function StockPage() {
   const guestRole = useGuestRole()
   const ownerId = useOwnerId()
+  const activeStoreId = useActiveStore()
   const isViewer = guestRole === 'viewer'
 
   const [products, setProducts] = useState<Product[]>([])
@@ -38,15 +39,17 @@ export default function StockPage() {
     const targetId = ownerId || user?.id
     if (!targetId) return
     const [{ data: prods },{ data: ls }] = await Promise.all([
-      supabase.from('products').select('*').eq('user_id',targetId).order('name'),
-      supabase.from('restock_log').select('*').eq('user_id',targetId)
-        .neq('note','Захиалга')
-        .order('date',{ascending:false}).order('created_at',{ascending:false})
+      (activeStoreId
+        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
+        : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
+      (activeStoreId
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}))
     ])
     setProducts(prods||[])
     setLogs(ls||[])
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
-  },[rProd, ownerId])
+  },[rProd, ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
@@ -66,7 +69,7 @@ export default function StockPage() {
       supabase.from('restock_log').insert({
         user_id:targetId, product_id:rProd, product_name:p.name,
         quantity:absQty, type:isNeg?'out':'in',
-        note:rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date:rDate
+        note:rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date:rDate, store_id:activeStoreId||null
       })
     ])
     setRQty('1'); setRNote(''); setRDate(TODAY)
@@ -81,11 +84,11 @@ export default function StockPage() {
     if (!targetId) return
     const { data: prod } = await supabase.from('products').insert({
       user_id:targetId, name:nName.trim(), unit_price:Number(nPrice)||0,
-      stock:Number(nQty)||0, added_date:nDate
+      stock:Number(nQty)||0, added_date:nDate, store_id:activeStoreId||null
     }).select().single()
     if (prod&&Number(nQty)>0) await supabase.from('restock_log').insert({
       user_id:targetId, product_id:prod.id, product_name:nName.trim(),
-      quantity:Number(nQty), type:'in', note:'Шинэ бараа', date:nDate
+      quantity:Number(nQty), type:'in', note:'Шинэ бараа', date:nDate, store_id:activeStoreId||null
     })
     setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY)
     showFlash(nName+' нэмэгдлээ ✓'); load()
