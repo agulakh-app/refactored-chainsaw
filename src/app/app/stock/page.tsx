@@ -36,6 +36,7 @@ export default function StockPage() {
 
   const [variantEnabled, setVariantEnabled] = useState(false)
   const [nVariants, setNVariants] = useState<{color:string,size:string}[]>([])
+  const [rVariant, setRVariant] = useState('')
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
@@ -79,7 +80,7 @@ export default function StockPage() {
         note:rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date:rDate, store_id:activeStoreId||null
       })
     ])
-    setRQty('1'); setRNote(''); setRDate(TODAY)
+    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariant('')
     showFlash(p.name+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
@@ -170,10 +171,27 @@ export default function StockPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Цэнэглэлт бүртгэх</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div><label className="block text-xs text-gray-500 mb-1">Бараа</label>
-              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={rProd} onChange={e=>setRProd(e.target.value)}>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Бараа</label>
+              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={rProd} onChange={e=>{setRProd(e.target.value);setRVariant('')}}>
                 {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-              </select></div>
+              </select>
+              {(()=>{
+                const rProdData=products.find(p=>p.id===rProd)
+                const rVariants:any[]=rProdData?.variants||[]
+                return variantEnabled&&rVariants.length>0?(
+                  <select className="w-full mt-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+                    value={rVariant} onChange={e=>setRVariant(e.target.value)}>
+                    <option value="">— Өнгө / Хэмжээ сонгох —</option>
+                    {rVariants.map((v:any,i:number)=>(
+                      <option key={i} value={[v.color,v.size].filter(Boolean).join(' / ')}>
+                        {[v.color,v.size].filter(Boolean).join(' / ')}
+                      </option>
+                    ))}
+                  </select>
+                ):null
+              })()}
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Тоо <span className="text-gray-400">(− бичвэл хасна)</span></label>
               <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
