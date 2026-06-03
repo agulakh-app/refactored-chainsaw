@@ -262,7 +262,7 @@ export default function DashPage() {
                 </div>
                 {oItems.map((it,idx)=>{
                   const selProd=products.find(p=>p.id===it.product_id)
-                  const variants:any[]=selProd?.variants||[]
+                  const variants:any[]=(selProd as any)?.variants||[]
                   return(
                   <div key={idx} className="space-y-1.5">
                     <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 items-center">
