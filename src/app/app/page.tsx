@@ -313,6 +313,25 @@ export default function DashPage() {
           return (
             <div key={date}>
               {/* Day header */}
+              <div className="px-4 py-2.5 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">{grp.length} захиалга</span>
+                  <span className="text-xs font-medium text-emerald-700">{fmt(dayNet)}₮</span>
+                </div>
+              </div>
+
+              {/* Order cards */}
+              <div>
+                {grp.map((o,idx)=>{
+        {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+          const grp=groups[date]
+          const dayGross=grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
+          const dayDelv=grp.reduce((a,o)=>a+(o.delivery_fee||0),0)
+          const dayNet=dayGross-dayDelv
+          return (
+            <div key={date}>
+              {/* Day header */}
               <div className="px-4 py-2.5 bg-gray-50 border-y border-gray-200 flex justify-between items-center">
   <span className="text-xs font-medium text-gray-500">{fmtD(date)}</span>
                 <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
