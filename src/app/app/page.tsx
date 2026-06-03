@@ -311,10 +311,16 @@ export default function DashPage() {
                             <button onClick={()=>deleteOrder(o)} className="text-xs text-red-300 hover:text-red-500 px-1 py-0.5 rounded hover:bg-red-50">🗑</button>
                           </>
                         )}
-                        <button onClick={()=>toggleStatus(o.id,o.status)}
-                          className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-all whitespace-nowrap ${o.status==='delivered'?'bg-emerald-100 text-emerald-700 border-emerald-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                          {o.status==='delivered'?'✓ Хүргэгдсэн':'○ Хүлээгдэж байна'}
-                        </button>
+{isViewer ? (
+  <span className={`text-xs px-2.5 py-1 rounded-full font-medium border whitespace-nowrap ${o.status==='delivered'?'bg-emerald-100 text-emerald-700 border-emerald-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>
+    {o.status==='delivered'?'✓ Хүргэгдсэн':'○ Хүлээгдэж байна'}
+  </span>
+) : (
+  <button onClick={()=>toggleStatus(o.id,o.status)}
+    className={`text-xs px-2.5 py-1 rounded-full font-medium border transition-all whitespace-nowrap ${o.status==='delivered'?'bg-emerald-100 text-emerald-700 border-emerald-200':'bg-gray-100 text-gray-500 border-gray-200'}`}>
+    {o.status==='delivered'?'✓ Хүргэгдсэн':'○ Хүлээгдэж байна'}
+  </button>
+)}
                       </div>
                     </div>
                   )
