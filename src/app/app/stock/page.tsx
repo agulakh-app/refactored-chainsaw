@@ -153,18 +153,6 @@ export default function StockPage() {
         </div>
       )}
 
-      
-          {warns.length>0&&(
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Дусах дөхсөн</p>
-              <div className="flex flex-wrap gap-1.5">
-                {warns.map(p=><span key={p.id} className="px-2.5 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-xs">{p.name} — {p.stock}ш</span>)}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Цэнэглэлт бүртгэх */}
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -236,14 +224,13 @@ export default function StockPage() {
             value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
         </div>
-
         {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp = logGroups[date]
           const totalIn = grp.filter(r=>r.type==='in').reduce((a,r)=>a+r.quantity,0)
           const totalOut = grp.filter(r=>r.type==='out').reduce((a,r)=>a+r.quantity,0)
           return (
             <div key={date}>
-              <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 flex justify-between items-center">
+              <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
                 <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
                 <div className="flex gap-2">
                   {totalIn>0&&<span className="text-xs text-emerald-600">+{totalIn}ш</span>}
@@ -278,10 +265,8 @@ export default function StockPage() {
         })}
         {filteredLogs.length===0&&<p className="text-center text-gray-400 text-sm py-8">Бүртгэл алга</p>}
       </div>
-    </div>
-  )
-}
-{/* Анхааруулга */}
+
+      {/* Анхааруулга — доод талд */}
       {(zeros.length>0||warns.length>0)&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Цэнэглэх шаардлагатай</h2>
@@ -293,3 +278,16 @@ export default function StockPage() {
               </div>
             </div>
           )}
+          {warns.length>0&&(
+            <div>
+              <p className="text-xs text-gray-400 mb-2">Дусах дөхсөн</p>
+              <div className="flex flex-wrap gap-1.5">
+                {warns.map(p=><span key={p.id} className="px-2.5 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-xs">{p.name} — {p.stock}ш</span>)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
