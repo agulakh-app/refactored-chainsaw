@@ -4,9 +4,16 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { createContext, useContext } from 'react'
 
-export const GuestContext = createContext<{ guestRole: string | null, ownerId: string | null }>({ guestRole: null, ownerId: null })
+export const GuestContext = createContext<{
+  guestRole: string | null
+  ownerId: string | null
+  activeStoreId: string | null
+  setActiveStoreId: (id: string | null) => void
+}>({ guestRole: null, ownerId: null, activeStoreId: null, setActiveStoreId: () => {} })
 export function useGuestRole() { return useContext(GuestContext).guestRole }
 export function useOwnerId() { return useContext(GuestContext).ownerId }
+export function useActiveStore() { return useContext(GuestContext).activeStoreId }
+export function useSetActiveStore() { return useContext(GuestContext).setActiveStoreId }
 
 const TABS = [
   { href:'/app',           label:'Самбар'   },
@@ -39,6 +46,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [guestRole, setGuestRole] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [ownerName, setOwnerName] = useState('')
+  const [stores, setStores] = useState<any[]>([])
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
 
   useEffect(() => {
     async function init() {
@@ -61,10 +70,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       const { data } = await supabase.auth.getUser()
       if (!data.user) { router.push('/'); return }
 
-      const { data: p } = await supabase.from('profiles')
-        .select('business_name,subscription_status,trial_ends_at,subscription_ends_at')
-        .eq('id', data.user.id)
-        .single()
+      const [{ data: p }, { data: sts }] = await Promise.all([
+        supabase.from('profiles')
+          .select('business_name,subscription_status,trial_ends_at,subscription_ends_at')
+          .eq('id', data.user.id)
+          .single(),
+        supabase.from('stores').select('*').eq('user_id', data.user.id).order('created_at')
+      ])
 
       if (p) {
         setBizName(p.business_name || '')
@@ -75,6 +87,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           router.push('/pricing')
           return
         }
+        const storeList = sts || []
+        setStores(storeList)
+        if (storeList.length > 0) setActiveStoreId(storeList[0].id)
         setReady(true)
         return
       }
@@ -130,20 +145,39 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               Гарах
             </button>
           </div>
-          <div className="flex overflow-x-auto">
-            {visibleTabs.map(t => (
-              <button
-                key={t.href}
-                onClick={() => router.push(t.href)}
-                className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
-                  path === t.href
-                    ? 'border-emerald-600 text-emerald-700 font-medium'
-                    : 'border-transparent text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="flex items-center justify-between">
+            <div className="flex overflow-x-auto">
+              {visibleTabs.map(t => (
+                <button
+                  key={t.href}
+                  onClick={() => router.push(t.href)}
+                  className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
+                    path === t.href
+                      ? 'border-emerald-600 text-emerald-700 font-medium'
+                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {!isGuest && stores.length > 1 && (
+              <div className="flex gap-1 pb-1">
+                {stores.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setActiveStoreId(s.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                      activeStoreId === s.id
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -155,7 +189,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-5">
-        <GuestContext.Provider value={{ guestRole, ownerId }}>
+        <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId }}>
           {children}
         </GuestContext.Provider>
       </main>
