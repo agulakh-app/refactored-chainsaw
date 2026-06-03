@@ -178,7 +178,7 @@ export default function StockPage() {
               </select>
               {(()=>{
                 const rProdData=products.find(p=>p.id===rProd)
-                const rVariants:any[]=rProdData?.variants||[]
+                const rVariants:any[]=(rProdData as any)?.variants||[]
                 return variantEnabled&&rVariants.length>0?(
                   <select className="w-full mt-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
                     value={rVariant} onChange={e=>setRVariant(e.target.value)}>
