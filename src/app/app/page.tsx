@@ -332,7 +332,7 @@ export default function DashPage() {
                             {o.phone}
                           </button>
                           {showStore&&(
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 border border-blue-100">{storeName}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-White-50 text-white-500 border border-blue-100">{storeName}</span>
                           )}
                           <span className="text-xs text-gray-400">{o.address}</span>
                         </div>
