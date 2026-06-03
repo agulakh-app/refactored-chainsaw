@@ -64,8 +64,14 @@ export default function SettingsPage() {
 
   async function deleteStore(id: string) {
     if (!confirm('Дэлгүүр устгах уу?')) return
-    await supabase.from('stores').delete().eq('id',id)
+    const { error } = await supabase.from('stores').delete().eq('id',id)
+    if (error) { showFlash('Алдаа: ' + error.message); return }
     showFlash('Устгагдлаа'); loadAll()
+  }
+
+  async function toggleStoreVariant(id: string, current: boolean) {
+    await supabase.from('stores').update({ variant_enabled: !current }).eq('id', id)
+    loadAll()
   }
 
   async function addWarehouse() {
@@ -78,7 +84,8 @@ export default function SettingsPage() {
 
   async function deleteWarehouse(id: string) {
     if (!confirm('Агуулах устгах уу?')) return
-    await supabase.from('warehouses').delete().eq('id',id)
+    const { error } = await supabase.from('warehouses').delete().eq('id',id)
+    if (error) { showFlash('Алдаа: ' + error.message); return }
     showFlash('Устгагдлаа'); loadAll()
   }
 
@@ -146,7 +153,16 @@ export default function SettingsPage() {
             {stores.map(s=>(
               <div key={s.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
                 <span className="text-sm text-gray-700">{s.name}</span>
-                <button onClick={()=>deleteStore(s.id)} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                <div className="flex items-center gap-3">
+                  <button onClick={()=>toggleStoreVariant(s.id, s.variant_enabled)}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700">
+                    <div className={`w-8 h-4 rounded-full relative transition-colors ${s.variant_enabled?'bg-emerald-500':'bg-gray-200'}`}>
+                      <div className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-all ${s.variant_enabled?'right-0.5':'left-0.5'}`}/>
+                    </div>
+                    <span className={s.variant_enabled?'text-emerald-600':'text-gray-400'}>Variant</span>
+                  </button>
+                  <button onClick={()=>deleteStore(s.id)} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                </div>
               </div>
             ))}
           </div>
