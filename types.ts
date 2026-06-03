@@ -30,7 +30,6 @@ export interface OrderItem {
   product_name: string
   quantity: number
   unit_price: number
-  variant_label?: string | null
 }
 
 export interface RestockLog {
