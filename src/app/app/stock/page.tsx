@@ -35,7 +35,7 @@ export default function StockPage() {
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
   const [variantEnabled, setVariantEnabled] = useState(false)
-  const [nVariants, setNVariants] = useState<{color:string,size:string}[]>([])
+  const [nVariants, setNVariants] = useState<{color:string,size:string,price:string}[]>([])
   const [rVariant, setRVariant] = useState('')
 
   const load = useCallback(async () => {
@@ -90,7 +90,7 @@ export default function StockPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const validVariants = nVariants.filter(v=>v.color.trim()||v.size.trim())
+    const validVariants = nVariants.filter(v=>v.color.trim()||v.size.trim()||v.price.trim())
     const { data: prod } = await supabase.from('products').insert({
       user_id:targetId, name:nName.trim(), unit_price:Number(nPrice)||0,
       stock:Number(nQty)||0, added_date:nDate, store_id:activeStoreId||null,
@@ -102,6 +102,12 @@ export default function StockPage() {
     })
     setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([])
     showFlash(nName+' нэмэгдлээ ✓'); load()
+  }
+
+  async function deleteProduct(id: string, name: string) {
+    if (!confirm(name+' устгах уу? Холбоотой бүртгэл хэвээр үлдэнэ.')) return
+    await supabase.from('products').delete().eq('id', id)
+    showFlash(name+' устгагдлаа'); load()
   }
 
   async function deleteLog(log: RestockLog) {
@@ -237,8 +243,13 @@ export default function StockPage() {
           {variantEnabled && (
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-gray-500">Variant (өнгө / хэмжээ)</label>
-                <button onClick={()=>setNVariants(v=>[...v,{color:'',size:''}])}
+                <div className="grid grid-cols-[1fr_1fr_90px_28px] gap-2 pr-0">
+                  <span className="text-xs text-gray-400">Хэмжээ</span>
+                  <span className="text-xs text-gray-400">Өнгө</span>
+                  <span className="text-xs text-gray-400">Үнэ (₮)</span>
+                  <span></span>
+                </div>
+                <button onClick={()=>setNVariants(v=>[...v,{color:'',size:'',price:''}])}
                   className="text-xs text-emerald-600 hover:underline">＋ Variant нэмэх</button>
               </div>
               {nVariants.length===0 && (
@@ -246,13 +257,16 @@ export default function StockPage() {
               )}
               <div className="space-y-2">
                 {nVariants.map((v,i)=>(
-                  <div key={i} className="grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                  <div key={i} className="grid grid-cols-[1fr_1fr_90px_28px] gap-2 items-center">
                     <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="Өнгө (Улаан, Хар...)" value={v.color}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
-                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="Хэмжээ (S, M, L...)" value={v.size}
+                      placeholder="Хэмжээ (150x200...)" value={v.size}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
+                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Өнгө (Цагаан...)" value={v.color}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
+                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Үнэ (₮)" value={v.price}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value}:x))}/>
                     <button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
                       className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button>
                   </div>
@@ -322,26 +336,46 @@ export default function StockPage() {
         {filteredLogs.length===0&&<p className="text-center text-gray-400 text-sm py-8">Бүртгэл алга</p>}
       </div>
 
-      {/* Анхааруулга — доод талд */}
-      {(zeros.length>0||warns.length>0)&&(
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-3 text-sm">Цэнэглэх шаардлагатай</h2>
-          {zeros.length>0&&(
-            <div className="mb-2">
-              <p className="text-xs text-gray-400 mb-2">Дууссан</p>
-              <div className="flex flex-wrap gap-1.5">
-                {zeros.map(p=><span key={p.id} className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-100 rounded-lg text-xs">{p.name}</span>)}
-              </div>
-            </div>
-          )}
-          {warns.length>0&&(
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Дусах дөхсөн</p>
-              <div className="flex flex-wrap gap-1.5">
-                {warns.map(p=><span key={p.id} className="px-2.5 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-xs">{p.name} — {p.stock}ш</span>)}
-              </div>
-            </div>
-          )}
+      {/* Бараа жагсаалт + устгах */}
+      {products.length>0&&(
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {products.map(p=>{
+              const pvs:any[]=(p as any).variants||[]
+              return(
+                <div key={p.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-700">{p.name}</span>
+                      {p.stock===0&&<span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded">Дууссан</span>}
+                      {p.stock>0&&p.stock<=10&&<span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded">{p.stock}ш</span>}
+                    </div>
+                    {pvs.length>0&&(
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {pvs.map((v:any,i:number)=>(
+                          <span key={i} className="text-xs text-gray-400">
+                            {[v.size,v.color].filter(Boolean).join('/')}
+                            {v.price?<span className="text-emerald-600 ml-1">{Number(v.price).toLocaleString()}₮</span>:null}
+                            {i<pvs.length-1?<span className="mx-1">·</span>:null}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-500">{p.stock}ш</span>
+                    {!isViewer&&(
+                      <button onClick={()=>deleteProduct(p.id,p.name)}
+                        className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
     </div>
