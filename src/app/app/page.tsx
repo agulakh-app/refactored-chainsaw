@@ -313,7 +313,8 @@ export default function DashPage() {
           return (
             <div key={date}>
               {/* Day header */}
-              <div className="px-4 py-2 bg-gray-50 border-y border-gray-100 flex justify-between items-center">
+              <div className="px-4 py-2.5 bg-gray-50 border-y border-gray-200 flex justify-between items-center">
+  <span className="text-xs font-medium text-gray-500">{fmtD(date)}</span>
                 <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-400">{grp.length} захиалга</span>
@@ -332,7 +333,7 @@ export default function DashPage() {
                   const isCancelled=o.status==='cancelled'
 
                   return (
-                    <div key={o.id} className={`px-4 py-3 ${isDelivered?'bg-emerald-50/40':isCancelled?'bg-gray-50/60':'bg-white'}`}>
+<div key={o.id} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${isDelivered?'bg-emerald-50/30':isCancelled?'bg-gray-50':'bg-white'}`}>
                       {/* Top row: phone + store + addr + actions */}
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
