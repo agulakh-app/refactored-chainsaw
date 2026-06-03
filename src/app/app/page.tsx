@@ -111,7 +111,14 @@ export default function DashPage() {
     if(!targetId) return
     for(const it of oItems){
       const p=products.find(x=>x.id===it.product_id)
-      if(!p||p.stock<Number(it.qty)){showFlash((p?.name||'Бараа')+' хүрэлцэхгүй! '+(p?.stock||0));return}
+      if(!p){showFlash('Бараа олдсонгүй');return}
+      const pvs:any[]=(p as any).variants||[]
+      if(variantEnabled&&pvs.length>0&&it.variant_label){
+        const v=pvs.find((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label)
+        if(!v||v.stock<Number(it.qty)){showFlash((p.name+' · '+it.variant_label)+' хүрэлцэхгүй! '+(v?.stock||0)+'ш');return}
+      } else {
+        if(p.stock<Number(it.qty)){showFlash(p.name+' хүрэлцэхгүй! '+p.stock+'ш');return}
+      }
     }
     const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
@@ -123,8 +130,15 @@ export default function DashPage() {
       await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price),variant_label:it.variant_label||null})))
       for(const it of oItems){
         const p=products.find(x=>x.id===it.product_id)!
-        await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
-        await supabase.from('restock_log').insert({user_id:targetId,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
+        const pvs:any[]=(p as any).variants||[]
+        if(variantEnabled&&pvs.length>0&&it.variant_label){
+          const newVariants=pvs.map((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label?{...vv,stock:Math.max(0,vv.stock-Number(it.qty))}:vv)
+          const newTotal=newVariants.reduce((a:number,vv:any)=>a+vv.stock,0)
+          await supabase.from('products').update({variants:newVariants,stock:newTotal}).eq('id',it.product_id)
+        } else {
+          await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
+        }
+        await supabase.from('restock_log').insert({user_id:targetId,product_id:it.product_id,product_name:it.product_name+(it.variant_label?' · '+it.variant_label:''),quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
       }
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
