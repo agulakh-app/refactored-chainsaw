@@ -153,18 +153,7 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Анхааруулга */}
-      {(zeros.length>0||warns.length>0)&&(
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-3 text-sm">Цэнэглэх шаардлагатай</h2>
-          {zeros.length>0&&(
-            <div className="mb-2">
-              <p className="text-xs text-gray-400 mb-2">Дууссан</p>
-              <div className="flex flex-wrap gap-1.5">
-                {zeros.map(p=><span key={p.id} className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-100 rounded-lg text-xs">{p.name}</span>)}
-              </div>
-            </div>
-          )}
+      
           {warns.length>0&&(
             <div>
               <p className="text-xs text-gray-400 mb-2">Дусах дөхсөн</p>
@@ -292,3 +281,15 @@ export default function StockPage() {
     </div>
   )
 }
+{/* Анхааруулга */}
+      {(zeros.length>0||warns.length>0)&&(
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <h2 className="font-medium text-gray-800 mb-3 text-sm">Цэнэглэх шаардлагатай</h2>
+          {zeros.length>0&&(
+            <div className="mb-2">
+              <p className="text-xs text-gray-400 mb-2">Дууссан</p>
+              <div className="flex flex-wrap gap-1.5">
+                {zeros.map(p=><span key={p.id} className="px-2.5 py-1 bg-red-50 text-red-600 border border-red-100 rounded-lg text-xs">{p.name}</span>)}
+              </div>
+            </div>
+          )}
