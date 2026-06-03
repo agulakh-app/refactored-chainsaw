@@ -9,11 +9,11 @@ export function useGuestRole() { return useContext(GuestContext).guestRole }
 export function useOwnerId() { return useContext(GuestContext).ownerId }
 
 const TABS = [
-  { href:'/app',            label:'Самбар',   icon:'📋' },
-  { href:'/app/stock',      label:'Агуулах',  icon:'📦' },
-  { href:'/app/history',    label:'Түүх',     icon:'📜' },
-  { href:'/app/analytics',  label:'Тайлан',   icon:'📊' },
-  { href:'/app/settings',   label:'Тохиргоо', icon:'⚙️' },
+  { href:'/app',           label:'Самбар'   },
+  { href:'/app/stock',     label:'Агуулах'  },
+  { href:'/app/history',   label:'Түүх'     },
+  { href:'/app/analytics', label:'Тайлан'   },
+  { href:'/app/settings',  label:'Тохиргоо' },
 ]
 
 function timeLeft(d: string | null) {
@@ -97,54 +97,51 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   )
 
   const isGuest = !!guestRole
-  const visibleTabs = isGuest 
-  ? TABS.filter(t => t.href !== '/app/settings' && t.href !== '/app/analytics') 
-  : TABS
+  const visibleTabs = isGuest
+    ? TABS.filter(t => t.href !== '/app/settings' && t.href !== '/app/analytics')
+    : TABS
 
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">📦</span>
-              <span className="font-semibold text-gray-800 text-sm">
+          <div className="flex items-center justify-between py-3 border-b border-gray-50">
+            <div className="flex items-center gap-2.5">
+              <span className="font-medium text-gray-900 text-sm tracking-tight">
                 {isGuest ? ownerName : (bizName || 'OLULA')}
               </span>
               {isGuest && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                  {guestRole === 'editor' ? '✏️ Засварлагч' : '👁 Харагч'}
+                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
+                  {guestRole === 'editor' ? 'Засварлагч' : 'Харагч'}
                 </span>
               )}
               {!isGuest && subStatus === 'trial' && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-600 border border-amber-100">
                   Туршилт · {timeLeft(trialEndsAt)}
                 </span>
               )}
               {!isGuest && subStatus === 'active' && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-600 border border-emerald-100">
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3">
-              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-50">
-                Гарах
-              </button>
-            </div>
+            <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
+              Гарах
+            </button>
           </div>
           <div className="flex overflow-x-auto">
             {visibleTabs.map(t => (
               <button
                 key={t.href}
                 onClick={() => router.push(t.href)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-all whitespace-nowrap ${
+                className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
                   path === t.href
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
+                    ? 'border-emerald-600 text-emerald-700 font-medium'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
                 }`}
               >
-                <span>{t.icon}</span>{t.label}
+                {t.label}
               </button>
             ))}
           </div>
@@ -152,8 +149,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </header>
 
       {isGuest && guestRole === 'viewer' && (
-        <div className="bg-blue-50 border-b border-blue-100 px-4 py-2 text-center text-xs text-blue-700">
-          👁 Та зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
+        <div className="border-b border-gray-100 px-4 py-2 text-center text-xs text-gray-400">
+          Зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
         </div>
       )}
 
