@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Product, Order } from '@/lib/types'
-import { useGuestRole, useOwnerId } from './client-layout'
+import { useGuestRole, useOwnerId, useActiveStore } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
@@ -20,6 +20,7 @@ function fmtD(d: string) {
 export default function DashPage() {
   const guestRole = useGuestRole()
   const ownerId = useOwnerId()
+  const activeStoreId = useActiveStore()
   const isViewer = guestRole === 'viewer'
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
@@ -69,8 +70,8 @@ export default function DashPage() {
       setODelv(v=>(!v||v==='0')?String(prof.default_delivery_fee):v)
     }
     const[{data:prods},{data:ords},{data:sts},{data:whs}]=await Promise.all([
-      supabase.from('products').select('*').eq('user_id',targetId).order('name'),
-      supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}),
+      (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
+      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
       supabase.from('warehouses').select('*').eq('user_id',targetId).order('created_at'),
     ])
@@ -81,7 +82,7 @@ export default function DashPage() {
     if(prods&&prods.length>0){
       setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
     }
-  },[ownerId])
+  },[ownerId, activeStoreId])
 
   useEffect(()=>{load()},[load])
 
@@ -111,7 +112,7 @@ export default function DashPage() {
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
       phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
-      store_id:oStore||null,warehouse_id:oWarehouse||null
+      store_id:oStore||activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
       await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price)})))
