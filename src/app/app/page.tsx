@@ -178,21 +178,21 @@ export default function DashPage() {
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
       {/* Edit modal */}
-      {!isViewer && editOrder&&(
+      {!isViewer&&editOrder&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-medium text-gray-800 mb-4">Захиалга засварлах</h3>
             <div className="space-y-3">
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDate} onChange={e=>setEditDate(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)} /></div>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)} /></div>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)} /></div>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
+                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
                   <option value="pending">Хүлээгдэж байна</option>
                   <option value="delivered">Хүргэгдсэн</option>
                   <option value="cancelled">Цуцлагдсан</option>
@@ -217,29 +217,29 @@ export default function DashPage() {
       </div>
 
       {/* Order form */}
-      {!isViewer && (
+      {!isViewer&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ захиалга</h2>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)} /></div>
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
             <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
-              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)} /></div>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
           </div>
           <label className="block text-xs text-gray-500 mb-1 mt-3">Хаяг</label>
-          <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)} />
+          <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/>
           {(stores.length>0||warehouses.length>0)&&(
             <div className="grid grid-cols-2 gap-3 mt-3">
               {stores.length>0&&(
                 <div><label className="block text-xs text-gray-500 mb-1">Дэлгүүр</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oStore} onChange={e=>setOStore(e.target.value)}>
+                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oStore} onChange={e=>setOStore(e.target.value)}>
                     <option value="">— Сонгох —</option>
                     {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
                   </select></div>
               )}
               {warehouses.length>0&&(
                 <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
+                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
                     <option value="">— Сонгох —</option>
                     {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
                   </select></div>
@@ -256,11 +256,11 @@ export default function DashPage() {
             </div>
             {oItems.map((it,idx)=>(
               <div key={idx} className="grid grid-cols-[1fr_70px_100px_32px] gap-2 items-center">
-                <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                 </select>
-                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} />
-                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ" />
+                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
+                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ"/>
                 {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-8 h-8 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
               </div>
             ))}
@@ -268,7 +268,7 @@ export default function DashPage() {
           <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-3">＋ Бараа нэмэх</button>
           <div className="max-w-xs">
             <label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
-            <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)} />
+            <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
           </div>
           {gross>0&&<div className="mt-2 text-sm font-medium text-emerald-700">
             Нийт: {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = ${fmt(net)}₮ цэвэр`:''}
@@ -284,11 +284,9 @@ export default function DashPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
         </div>
-
-        {/* Filters */}
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)} />
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
           {stores.length>0&&(
             <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
@@ -304,7 +302,6 @@ export default function DashPage() {
           </select>
         </div>
 
-        {/* Grouped orders */}
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp=groups[date]
           const dayGross=grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
@@ -312,7 +309,6 @@ export default function DashPage() {
           const dayNet=dayGross-dayDelv
           return (
             <div key={date}>
-              {/* Day header */}
               <div className="px-4 py-2.5 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
                 <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
                 <div className="flex items-center gap-3">
@@ -320,29 +316,7 @@ export default function DashPage() {
                   <span className="text-xs font-medium text-emerald-700">{fmt(dayNet)}₮</span>
                 </div>
               </div>
-
-              {/* Order cards */}
-              <div>
-                {grp.map((o,idx)=>{
-        {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
-          const grp=groups[date]
-          const dayGross=grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
-          const dayDelv=grp.reduce((a,o)=>a+(o.delivery_fee||0),0)
-          const dayNet=dayGross-dayDelv
-          return (
-            <div key={date}>
-              {/* Day header */}
-              <div className="px-4 py-2.5 bg-gray-50 border-y border-gray-200 flex justify-between items-center">
-  <span className="text-xs font-medium text-gray-500">{fmtD(date)}</span>
-                <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400">{grp.length} захиалга</span>
-                  <span className="text-xs font-medium text-emerald-700">{fmt(dayNet)}₮</span>
-                </div>
-              </div>
-
-              {/* Order cards */}
-              <div className="divide-y divide-gray-50">
+              <div className="divide-y divide-gray-100">
                 {grp.map(o=>{
                   const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
                   const net=gross-(o.delivery_fee||0)
@@ -350,73 +324,52 @@ export default function DashPage() {
                   const showStore=storeFilter==='all'&&!!storeName
                   const isDelivered=o.status==='delivered'
                   const isCancelled=o.status==='cancelled'
-
                   return (
-<div key={o.id} className={`px-4 py-3 border-b border-gray-50 last:border-0 ${isDelivered?'bg-emerald-50/30':isCancelled?'bg-gray-50':'bg-white'}`}>
-                      {/* Top row: phone + store + addr + actions */}
+                    <div key={o.id} className={`px-4 py-3 ${isDelivered?'bg-emerald-50/30':isCancelled?'bg-gray-50/80':'bg-white'}`}>
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={()=>copyOrderInfo(o)}
-                            className="text-sm font-medium text-gray-800 hover:text-emerald-600"
-                          >
+                          <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600">
                             {o.phone}
                           </button>
                           {showStore&&(
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">{storeName}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 border border-blue-100">{storeName}</span>
                           )}
                           <span className="text-xs text-gray-400">{o.address}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          {/* Status badge */}
                           <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                            isDelivered?'bg-emerald-100 text-emerald-700 border-emerald-200':
+                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
                             isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                            'bg-amber-50 text-amber-600 border-amber-200'
+                            'bg-amber-50 text-amber-600 border-amber-100'
                           }`}>
                             {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
                           </span>
-                          {/* Dropdown */}
                           {!isViewer&&(
                             <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
-                              <button
-                                onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center gap-1"
-                              >
+                              <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
+                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center gap-1">
                                 Үйлдэл ▾
                               </button>
                               {openDropdown===o.id&&(
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 min-w-[140px] overflow-hidden">
+                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[140px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
                                   {o.status!=='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">
-                                      ✓ Хүргэгдсэн
-                                    </button>
+                                    <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>
                                   )}
                                   {o.status==='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">
-                                      ↩ Хүлээгдэж байна
-                                    </button>
+                                    <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Хүлээгдэж байна</button>
                                   )}
                                   <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-blue-600 hover:bg-blue-50">
-                                    Засах
-                                  </button>
+                                    className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
                                   {o.status!=='cancelled'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">
-                                      Цуцлах
-                                    </button>
+                                    <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
                                   )}
-                                  <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">
-                                    Устгах
-                                  </button>
+                                  <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
                                 </div>
                               )}
                             </div>
                           )}
                         </div>
                       </div>
-
-                      {/* Items */}
                       <div className="space-y-1 mb-2">
                         {(o.order_items||[]).map((item:any,idx:number)=>(
                           <div key={idx} className="flex justify-between items-baseline">
@@ -428,8 +381,6 @@ export default function DashPage() {
                           </div>
                         ))}
                       </div>
-
-                      {/* Totals */}
                       <div className="flex flex-col items-end gap-0.5 border-t border-gray-100 pt-2">
                         {o.delivery_fee>0&&(
                           <>
