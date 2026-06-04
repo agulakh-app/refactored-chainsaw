@@ -70,7 +70,7 @@ export default function StockPage() {
 
   useEffect(()=>{ load() },[load])
 
-  // Цэнэглэлт бүртгэх — variant stock шинэчлэх
+  // Агуулахад бараа нэмэх — variant stock шинэчлэх
   async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
@@ -165,8 +165,36 @@ export default function StockPage() {
 
   async function saveEditLog() {
     if (!editLog) return
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if (!targetId) return
+    const oldQty = editLog.quantity
+    const newQty = Number(editQty)
+    const diff = newQty - oldQty
+
+    // product stock-ийг засах
+    if (diff !== 0) {
+      const prod = products.find(p => p.name === editLog.product_name.split(' · ')[0])
+      if (prod) {
+        const variantLabel = editLog.product_name.includes(' · ') ? editLog.product_name.split(' · ')[1] : null
+        const pvs: Variant[] = prod.variants || []
+        if (variantLabel && pvs.length > 0) {
+          const newVariants = pvs.map(v => [v.size, v.color].filter(Boolean).join(' / ') === variantLabel
+            ? { ...v, stock: Math.max(0, v.stock + (editLog.type === 'in' ? diff : -diff)) }
+            : v
+          )
+          const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
+          await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', prod.id)
+        } else {
+          await supabase.from('products').update({
+            stock: Math.max(0, prod.stock + (editLog.type === 'in' ? diff : -diff))
+          }).eq('id', prod.id)
+        }
+      }
+    }
+
     await supabase.from('restock_log').update({
-      quantity: Number(editQty), date: editDate, note: editNote
+      quantity: newQty, date: editDate, note: editNote
     }).eq('id', editLog.id)
     setEditLog(null); showFlash('Засварлагдлаа ✓'); load()
   }
@@ -211,10 +239,10 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Цэнэглэлт бүртгэх */}
+      {/* Агуулахад бараа нэмэх */}
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-4 text-sm">Цэнэглэлт бүртгэх</h2>
+          <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Бараа</label>
@@ -248,13 +276,13 @@ export default function StockPage() {
           <div className="mt-3">
             <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
             <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Нийлүүлэгч, тэмдэглэл..." value={rNote} onChange={e=>setRNote(e.target.value)} />
+              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
           </div>
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
           <div className="flex justify-end mt-3">
             <button onClick={addRestock}
               className={`px-5 py-2 rounded-lg text-sm font-medium text-white ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
-              {Number(rQty)<0?'Хасах':'Цэнэглэлт бүртгэх'}
+              {Number(rQty)<0?'Хасах':'Агуулахад бараа нэмэх'}
             </button>
           </div>
         </div>
