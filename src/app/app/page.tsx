@@ -366,7 +366,7 @@ export default function DashPage() {
                             }`}>
                               {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
                             </span>
-                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(orderNet)}₮</span>
+                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(gross-(o.delivery_fee||0))}₮</span>
                           </div>
                           {!isViewer&&(
                             <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
