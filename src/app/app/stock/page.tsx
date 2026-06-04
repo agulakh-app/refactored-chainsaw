@@ -1,423 +1,458 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Product, Order } from '@/lib/types'
-import { useGuestRole, useOwnerId, useActiveStore, useSetActiveStore } from './client-layout'
+import type { RestockLog } from '@/lib/types'
+import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
+function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
 function fmt(n: number) { return n.toLocaleString() }
-function fmtD(d: string) {
-  const [y,m,day]=d.split('-')
-  return `${y}/${m}/${day}`
-}
 
-export default function DashPage() {
+type Variant = { size: string; color: string; price: number; stock: number }
+type Product = { id: string; name: string; stock: number; unit_price: number; store_id?: string|null; variants?: Variant[]|null }
+
+export default function StockPage() {
   const guestRole = useGuestRole()
   const ownerId = useOwnerId()
   const activeStoreId = useActiveStore()
   const isViewer = guestRole === 'viewer'
-  const [products,setProducts]=useState<Product[]>([])
-  const [orders,setOrders]=useState<Order[]>([])
-  const [stores,setStores]=useState<any[]>([])
-  const [warehouses,setWarehouses]=useState<any[]>([])
-  const [flash,setFlash]=useState('')
-  const [phoneFilter,setPhoneFilter]=useState('')
-  const [storeFilter,setStoreFilter]=useState('all')
-  const [statusFilter,setStatusFilter]=useState('all')
-  const [dateFilter,setDateFilter]=useState('')
-  const [defaultDelivery,setDefaultDelivery]=useState(0)
-  const [editOrder,setEditOrder]=useState<Order|null>(null)
-  const [editPhone,setEditPhone]=useState('')
-  const [editAddr,setEditAddr]=useState('')
-  const [editDate,setEditDate]=useState('')
-  const [editStatus,setEditStatus]=useState('')
-  const [editDelv,setEditDelv]=useState('')
-  const [oDate,setODate]=useState(TODAY)
-  const [oPhone,setOPhone]=useState('')
-  const [oAddr,setOAddr]=useState('')
-  const [oDelv,setODelv]=useState('')
-  const [oStore,setOStore]=useState('')
-  const [oWarehouse,setOWarehouse]=useState('')
-  const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
-  const [variantEnabled,setVariantEnabled]=useState(false)
-  const [openDropdown,setOpenDropdown]=useState<string|null>(null)
-  const dropdownRef=useRef<HTMLDivElement>(null)
 
-  const showFlash=(m:string)=>{setFlash(m);setTimeout(()=>setFlash(''),2500)}
+  const [products, setProducts] = useState<Product[]>([])
+  const [logs, setLogs] = useState<RestockLog[]>([])
+  const [flash, setFlash] = useState('')
+  const [logFilter, setLogFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('')
+  const [variantEnabled, setVariantEnabled] = useState(false)
 
-  useEffect(()=>{
-    function handleClick(e:MouseEvent){
-      if(dropdownRef.current&&!dropdownRef.current.contains(e.target as Node)){
-        setOpenDropdown(null)
-      }
-    }
-    document.addEventListener('mousedown',handleClick)
-    return()=>document.removeEventListener('mousedown',handleClick)
-  },[])
+  // Цэнэглэлт
+  const [rProd, setRProd] = useState('')
+  const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
+  const [rQty, setRQty] = useState('1')
+  const [rDate, setRDate] = useState(TODAY)
+  const [rNote, setRNote] = useState('')
 
-  const load=useCallback(async()=>{
-    const{data:{user}}=await supabase.auth.getUser()
-    const targetId=ownerId||user?.id
-    if(!targetId) return
-    const{data:prof}=await supabase.from('profiles').select('default_delivery_fee').eq('id',targetId).single()
-    if(prof?.default_delivery_fee){
-      setDefaultDelivery(prof.default_delivery_fee)
-      setODelv(v=>(!v||v==='0')?String(prof.default_delivery_fee):v)
-    }
-    const[{data:prods},{data:ords},{data:sts},{data:whs}]=await Promise.all([
-      (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
-      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
-      supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
-      supabase.from('warehouses').select('*').eq('user_id',targetId).order('created_at'),
+  // Шинэ бараа
+  const [nName, setNName] = useState('')
+  const [nPrice, setNPrice] = useState('')
+  const [nQty, setNQty] = useState('0')
+  const [nDate, setNDate] = useState(TODAY)
+  const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string}[]>([])
+
+  // Edit log
+  const [editLog, setEditLog] = useState<RestockLog|null>(null)
+  const [editQty, setEditQty] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editNote, setEditNote] = useState('')
+
+  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
+
+  const load = useCallback(async () => {
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if (!targetId) return
+    const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
+      activeStoreId
+        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
+        : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
+      activeStoreId
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
+      activeStoreId
+        ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
+        : Promise.resolve({ data: null })
     ])
     setProducts(prods||[])
-    setOrders(ords||[])
-    setStores(sts||[])
-    setWarehouses(whs||[])
-    if(prods&&prods.length>0){
-      setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
+    setLogs(ls||[])
+    setVariantEnabled(storeData?.variant_enabled || false)
+    if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
+  },[rProd, ownerId, activeStoreId])
+
+  useEffect(()=>{ load() },[load])
+
+  // Агуулахад бараа нэмэх — variant stock шинэчлэх
+  async function addRestock() {
+    const qty = Number(rQty)
+    if (qty===0) { showFlash('Тоо оруулна уу'); return }
+    const p = products.find(x=>x.id===rProd)
+    if (!p) return
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if (!targetId) return
+    const isNeg = qty < 0
+    const absQty = Math.abs(qty)
+
+    const pvs: Variant[] = p.variants || []
+    let variantLabel = ''
+
+    if (variantEnabled && pvs.length > 0) {
+      if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
+      const v = pvs[rVariantIdx]
+      if (!v) return
+      variantLabel = [v.size, v.color].filter(Boolean).join(' / ')
+      const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
+      const newVariants = pvs.map((vv, i) => i === rVariantIdx ? {...vv, stock: newVStock} : vv)
+      const newTotalStock = newVariants.reduce((a, vv) => a + vv.stock, 0)
+      await supabase.from('products').update({ variants: newVariants, stock: newTotalStock }).eq('id', rProd)
+    } else {
+      const newStock = isNeg ? Math.max(0, p.stock - absQty) : p.stock + absQty
+      await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
     }
-    if(activeStoreId){
-      const{data:storeData}=await supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
-      setVariantEnabled(storeData?.variant_enabled||false)
-    } else { setVariantEnabled(false) }
-  },[ownerId, activeStoreId])
 
-  useEffect(()=>{load()},[load])
+    await supabase.from('restock_log').insert({
+      user_id: targetId, product_id: rProd,
+      product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
+      quantity: absQty, type: isNeg ? 'out' : 'in',
+      note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null
+    })
 
-  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])}
-  function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx))}
-  function setItem(idx:number,key:string,val:string){
-    setOItems(items=>items.map((it,i)=>{
-      if(i!==idx) return it
-      if(key==='product_id'){const p=products.find(x=>x.id===val);return{...it,product_id:val,product_name:p?.name||'',price:String(p?.unit_price||''),variant_label:''}}
-      return{...it,[key]:val}
-    }))
-  }
-
-  const gross=oItems.reduce((a,i)=>a+(Number(i.qty)||0)*(Number(i.price)||0),0)
-  const net=gross-(Number(oDelv)||0)
-
-  async function submitOrder(){
-    if(!oPhone||!oAddr){showFlash('Утас, хаяг оруулна уу');return}
-    const{data:{user}}=await supabase.auth.getUser()
-    const targetId=ownerId||user?.id
-    if(!targetId) return
-    for(const it of oItems){
-      const p=products.find(x=>x.id===it.product_id)
-      if(!p){showFlash('Бараа олдсонгүй');return}
-      const pvs:any[]=(p as any).variants||[]
-      if(variantEnabled&&pvs.length>0&&it.variant_label){
-        const v=pvs.find((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label)
-        if(!v||v.stock<Number(it.qty)){showFlash((p.name+' · '+it.variant_label)+' хүрэлцэхгүй! '+(v?.stock||0)+'ш');return}
-      } else {
-        if(p.stock<Number(it.qty)){showFlash(p.name+' хүрэлцэхгүй! '+p.stock+'ш');return}
-      }
-    }
-    const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
-    const{data:order}=await supabase.from('orders').insert({
-      user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
-      phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
-      store_id:activeStoreId||null,warehouse_id:oWarehouse||null
-    }).select().single()
-    if(order){
-      await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price),variant_label:it.variant_label||null})))
-      for(const it of oItems){
-        const p=products.find(x=>x.id===it.product_id)!
-        const pvs:any[]=(p as any).variants||[]
-        if(variantEnabled&&pvs.length>0&&it.variant_label){
-          const newVariants=pvs.map((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label?{...vv,stock:Math.max(0,vv.stock-Number(it.qty))}:vv)
-          const newTotal=newVariants.reduce((a:number,vv:any)=>a+vv.stock,0)
-          await supabase.from('products').update({variants:newVariants,stock:newTotal}).eq('id',it.product_id)
-        } else {
-          await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
-        }
-        await supabase.from('restock_log').insert({user_id:targetId,product_id:it.product_id,product_name:it.product_name+(it.variant_label?' · '+it.variant_label:''),quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
-      }
-    }
-    setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
-    setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
-    showFlash('Захиалга бүртгэгдлээ ✓');load()
-  }
-
-  async function setOrderStatus(id:string,status:string){
-    await supabase.from('orders').update({status}).eq('id',id)
-    setOpenDropdown(null)
-    showFlash(status==='delivered'?'Хүргэгдсэн ✓':status==='cancelled'?'Цуцлагдлаа':'Хүлээгдэж байна болгов')
+    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1)
+    showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
 
-  async function saveEditOrder(){
-    if(!editOrder) return
-    await supabase.from('orders').update({phone:editPhone,address:editAddr,status:editStatus,delivery_fee:Number(editDelv)||0,date:editDate}).eq('id',editOrder.id)
-    setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
+  // Шинэ бараа нэмэх
+  async function addNewProduct() {
+    if (!nName.trim()) { showFlash('Нэр оруулна уу'); return }
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if (!targetId) return
+
+    const validVariants: Variant[] = nVariants
+      .filter(v => v.size.trim() || v.color.trim())
+      .map(v => ({
+        size: v.size.trim(),
+        color: v.color.trim(),
+        price: Number(v.price) || 0,
+        stock: Number(v.stock) || 0
+      }))
+
+    const totalStock = validVariants.length > 0
+      ? validVariants.reduce((a, v) => a + v.stock, 0)
+      : Number(nQty) || 0
+
+    const { data: prod } = await supabase.from('products').insert({
+      user_id: targetId, name: nName.trim(),
+      unit_price: Number(nPrice) || 0,
+      stock: totalStock, added_date: nDate,
+      store_id: activeStoreId || null,
+      variants: validVariants.length > 0 ? validVariants : null
+    }).select().single()
+
+    if (prod && totalStock > 0) {
+      await supabase.from('restock_log').insert({
+        user_id: targetId, product_id: prod.id,
+        product_name: nName.trim(), quantity: totalStock,
+        type: 'in', note: 'Шинэ бараа', date: nDate, store_id: activeStoreId||null
+      })
+    }
+
+    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([])
+    showFlash(nName + ' нэмэгдлээ ✓'); load()
   }
 
-  async function deleteOrder(o:Order){
-    if(!confirm('Захиалга устгах уу?')) return
-    setOpenDropdown(null)
-    if(o.status==='pending'){
-      for(const it of(o.order_items||[])){
-        const p=products.find(x=>x.id===(it as any).product_id)
-        if(p) await supabase.from('products').update({stock:p.stock+(it as any).quantity}).eq('id',p.id)
+  async function deleteProduct(id: string, name: string) {
+    if (!confirm(name + ' устгах уу?')) return
+    await supabase.from('products').delete().eq('id', id)
+    showFlash(name + ' устгагдлаа'); load()
+  }
+
+  async function deleteLog(log: RestockLog) {
+    if (!confirm('Энэ бүртгэлийг устгах уу?')) return
+    await supabase.from('restock_log').delete().eq('id', log.id)
+    showFlash('Устгагдлаа'); load()
+  }
+
+  async function saveEditLog() {
+    if (!editLog) return
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if (!targetId) return
+    const oldQty = editLog.quantity
+    const newQty = Number(editQty)
+    const diff = newQty - oldQty
+
+    // product stock-ийг засах
+    if (diff !== 0) {
+      const prod = products.find(p => p.name === editLog.product_name.split(' · ')[0])
+      if (prod) {
+        const variantLabel = editLog.product_name.includes(' · ') ? editLog.product_name.split(' · ')[1] : null
+        const pvs: Variant[] = prod.variants || []
+        if (variantLabel && pvs.length > 0) {
+          const newVariants = pvs.map(v => [v.size, v.color].filter(Boolean).join(' / ') === variantLabel
+            ? { ...v, stock: Math.max(0, v.stock + (editLog.type === 'in' ? diff : -diff)) }
+            : v
+          )
+          const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
+          await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', prod.id)
+        } else {
+          await supabase.from('products').update({
+            stock: Math.max(0, prod.stock + (editLog.type === 'in' ? diff : -diff))
+          }).eq('id', prod.id)
+        }
       }
     }
-    await supabase.from('order_items').delete().eq('order_id',o.id)
-    await supabase.from('orders').delete().eq('id',o.id)
-    showFlash('Устгагдлаа');load()
+
+    await supabase.from('restock_log').update({
+      quantity: newQty, date: editDate, note: editNote
+    }).eq('id', editLog.id)
+    setEditLog(null); showFlash('Засварлагдлаа ✓'); load()
   }
 
-  function copyOrderInfo(o:Order){
-    const text=`${o.phone} ${o.address}`
-    navigator.clipboard.writeText(text).then(()=>showFlash('Хуулагдлаа ✓')).catch(()=>{})
-  }
+  let filteredLogs = logs
+  if (logFilter !== 'all') filteredLogs = filteredLogs.filter(l => l.product_name.startsWith(logFilter))
+  if (dateFilter) filteredLogs = filteredLogs.filter(l => l.date === dateFilter)
 
-  const filtered=orders.filter(o=>{
-    if(phoneFilter&&!o.phone.includes(phoneFilter)) return false
-    if(statusFilter!=='all'&&o.status!==statusFilter) return false
-    if(dateFilter&&o.date!==dateFilter) return false
-    if(storeFilter!=='all'){
-      const store=stores.find(s=>s.id===(o as any).store_id)
-      if(!store||store.name!==storeFilter) return false
-    }
-    return true
-  })
-  const groups:Record<string,Order[]>={}
-  filtered.forEach(o=>{if(!groups[o.date])groups[o.date]=[];groups[o.date].push(o)})
-  const totalStock=products.reduce((a,p)=>a+p.stock,0)
-  const pending=orders.filter(o=>o.status==='pending').length
+  const logGroups: Record<string, RestockLog[]> = {}
+  filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
+
+  const rProdData = products.find(p => p.id === rProd)
+  const rVariants: Variant[] = rProdData?.variants || []
 
   return (
     <div className="space-y-4">
-      {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
       {/* Edit modal */}
-      {!isViewer&&editOrder&&(
+      {!isViewer && editLog && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-medium text-gray-800 mb-4">Захиалга засварлах</h3>
+            <h3 className="font-medium text-gray-800 mb-4">Цэнэглэлт засварлах</h3>
             <div className="space-y-3">
+              <div><label className="block text-xs text-gray-500 mb-1">Бараа</label>
+                <div className="text-sm bg-gray-50 px-3 py-2 rounded-lg text-gray-700">{editLog.product_name}</div></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Тоо ширхэг</label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  value={editQty} onChange={e=>setEditQty(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDate} onChange={e=>setEditDate(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
-                  <option value="pending">Хүлээгдэж байна</option>
-                  <option value="delivered">Хүргэгдсэн</option>
-                  <option value="cancelled">Цуцлагдсан</option>
-                </select></div>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
             </div>
             <div className="flex gap-2 mt-5">
-              <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
-              <button onClick={saveEditOrder} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+              <button onClick={()=>setEditLog(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
+              <button onClick={saveEditLog} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
             </div>
           </div>
         </div>
       )}
 
-
-
-      {/* Order form */}
-      {!isViewer&&(
+      {/* Агуулахад бараа нэмэх */}
+      {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-800 text-sm">Шинэ захиалга</h2>
-            {activeStoreId&&stores.length>0&&(
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                {stores.find(s=>s.id===activeStoreId)?.name}
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
-              {warehouses.length>0&&(
-                <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                    <option value="">— Сонгох —</option>
-                    {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select></div>
+          <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Бараа</label>
+              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
+                {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
+              </select>
+              {variantEnabled && rVariants.length > 0 && (
+                <select className="w-full mt-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+                  value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
+                  <option value={-1}>— Хэмжээ / Өнгө сонгох —</option>
+                  {rVariants.map((v, i) => (
+                    <option key={i} value={i}>
+                      {[v.size, v.color].filter(Boolean).join(' / ')} — {fmt(v.price)}₮ ({v.stock}ш үлдсэн)
+                    </option>
+                  ))}
+                </select>
               )}
             </div>
-            <div className="flex flex-col">
-              <div className="mb-3"><label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
-              <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
-              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2 flex-1">
-                <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 mb-1 px-1">
-                  <div className="text-xs text-gray-400">Бараа</div>
-                  <div className="text-xs text-gray-400 text-center">Тоо</div>
-                  <div className="text-xs text-gray-400">Үнэ (₮)</div>
-                  <div></div>
-                </div>
-                {oItems.map((it,idx)=>{
-                  const selProd=products.find(p=>p.id===it.product_id)
-                  const variants:any[]=(selProd as any)?.variants||[]
-                  return(
-                  <div key={idx} className="space-y-1.5">
-                    <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 items-center">
-                      <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                        {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                      </select>
-                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
-                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ"/>
-                      {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
-                    </div>
-                    {variantEnabled&&variants.length>0&&(
-                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
-                        value={it.variant_label}
-                        onChange={e=>{
-                          const v=variants.find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===e.target.value)
-                          setItem(idx,'variant_label',e.target.value)
-                          if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
-                        }}>
-                        <option value="">— Хэмжээ / Өнгө сонгох —</option>
-                        {variants.map((v:any,vi:number)=>(
-                          <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
-                            {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )})}
-              </div>
-              <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-2 text-left">＋ Бараа нэмэх</button>
-
-              <div className="flex justify-end">
-                <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
-              </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Тоо <span className="text-gray-400">(− бичвэл хасна)</span></label>
+              <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
+                className={`w-full px-3 py-2 rounded-lg border text-sm ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
             </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                value={rDate} onChange={e=>setRDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="mt-3">
+            <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
+          </div>
+          {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
+          <div className="flex justify-end mt-3">
+            <button onClick={addRestock}
+              className={`px-5 py-2 rounded-lg text-sm font-medium text-white ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
+              {Number(rQty)<0?'Хасах':'Агуулахад бараа нэмэх'}
+            </button>
           </div>
         </div>
       )}
 
-      {/* Orders list */}
+      {/* Шинэ бараа */}
+      {!isViewer && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div><label className="block text-xs text-gray-500 mb-1">Нэр</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} /></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Нэгж үнэ (₮)</label>
+              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="0" value={nPrice} onChange={e=>setNPrice(e.target.value)} /></div>
+            {!variantEnabled && (
+              <div><label className="block text-xs text-gray-500 mb-1">Анхны тоо</label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  min="0" value={nQty} onChange={e=>setNQty(e.target.value)} /></div>
+            )}
+            <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                value={nDate} onChange={e=>setNDate(e.target.value)} /></div>
+          </div>
+          {variantEnabled && (
+            <div className="mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 flex-1 mr-4">
+                  <span className="text-xs text-gray-400">Хэмжээ</span>
+                  <span className="text-xs text-gray-400">Өнгө</span>
+                  <span className="text-xs text-gray-400">Үнэ (₮)</span>
+                  <span className="text-xs text-gray-400">Тоо</span>
+                  <span></span>
+                </div>
+                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0'}])}
+                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
+              </div>
+              {nVariants.length===0 && (
+                <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
+              )}
+              <div className="space-y-2">
+                {nVariants.map((v,i)=>(
+                  <div key={i} className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 items-center">
+                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="150x200..." value={v.size}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
+                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Цагаан..." value={v.color}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
+                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="83000" value={v.price}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value}:x))}/>
+                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                      placeholder="0" min="0" value={v.stock}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/>
+                    <button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
+                      className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end mt-3">
+            <button onClick={addNewProduct} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Нэмэх</button>
+          </div>
+        </div>
+      )}
+
+      {/* Бараа жагсаалт */}
+      {products.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {products.map(p => {
+              const pvs: Variant[] = p.variants || []
+              return (
+                <div key={p.id} className="px-4 py-3 hover:bg-gray-50">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">{p.name}</span>
+                      {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded">Дууссан</span>}
+                      {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded">Цөөн</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-gray-500">Нийт: {p.stock}ш</span>
+                      {!isViewer && (
+                        <button onClick={()=>deleteProduct(p.id, p.name)}
+                          className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                      )}
+                    </div>
+                  </div>
+                  {pvs.length > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      {pvs.map((v, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
+                          <div className="flex items-center gap-4">
+                            <span className="text-emerald-600">{fmt(v.price)}₮</span>
+                            <span className={`font-medium ${v.stock === 0 ? 'text-red-500' : v.stock <= 5 ? 'text-amber-500' : 'text-gray-600'}`}>
+                              {v.stock}ш
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Цэнэглэлтийн бүртгэл */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
+          <h2 className="font-medium text-gray-800 text-sm">Цэнэглэлтийн бүртгэл</h2>
         </div>
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
-          {stores.length>0&&(
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
-              <option value="all">Бүх дэлгүүр</option>
-              {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
-          )}
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-            <option value="all">Бүх статус</option>
-            <option value="pending">Хүлээгдэж байна</option>
-            <option value="delivered">Хүргэгдсэн</option>
-            <option value="cancelled">Цуцлагдсан</option>
+          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
+            <option value="all">Бүх бараа</option>
+            {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
+          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+            value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
         </div>
-
-        {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
-          const grp=groups[date]
-          const dayGross=grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
-          const dayDelv=grp.reduce((a,o)=>a+(o.delivery_fee||0),0)
-          const dayNet=dayGross-dayDelv
+        {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+          const grp = logGroups[date]
+          const totalIn = grp.filter(r=>r.type==='in').reduce((a,r)=>a+r.quantity,0)
+          const totalOut = grp.filter(r=>r.type==='out').reduce((a,r)=>a+r.quantity,0)
           return (
             <div key={date}>
               <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
-                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="font-semibold text-emerald-700">{fmt(dayNet)}₮</span></span>
+                <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
+                <div className="flex gap-2">
+                  {totalIn>0&&<span className="text-xs text-emerald-600">+{totalIn}ш</span>}
+                  {totalOut>0&&<span className="text-xs text-red-500">−{totalOut}ш</span>}
+                </div>
               </div>
-              <div className="divide-y divide-gray-100">
-                {grp.map(o=>{
-                  const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
-                  const net=gross-(o.delivery_fee||0)
-                  const storeName=stores.find(s=>s.id===(o as any).store_id)?.name
-                  const showStore=storeFilter==='all'&&!!storeName
-                  const isDelivered=o.status==='delivered'
-                  const isCancelled=o.status==='cancelled'
-                  return (
-                    <div key={o.id} className="px-4 py-3 bg-white">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600">
-                            {o.phone}
-                          </button>
-                          {!activeStoreId&&storeName&&(
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">{storeName}</span>
-                          )}
-                          <span className="text-xs text-gray-400">{o.address}</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex flex-col items-end gap-0.5">
-                            <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                              isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                              isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                              'bg-amber-50 text-amber-600 border-amber-100'
-                            }`}>
-                              {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                            </span>
-                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(orderNet)}₮</span>
-                          </div>
-                          {!isViewer&&(
-                            <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
-                              <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center gap-1">
-                                Үйлдэл ▾
-                              </button>
-                              {openDropdown===o.id&&(
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[140px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                  {o.status!=='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>
-                                  )}
-                                  {o.status==='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Хүлээгдэж байна</button>
-                                  )}
-                                  <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                  {o.status!=='cancelled'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
-                                  )}
-                                  <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-1 mb-2">
-                        {(o.order_items||[]).map((item:any,idx:number)=>(
-                          <div key={idx} className="flex justify-between items-baseline">
-                            <span className="text-xs text-gray-500">{item.product_name}{item.variant_label&&<span className="text-gray-400 ml-1">· {item.variant_label}</span>}</span>
-                            <div className="flex items-baseline gap-4">
-                              <span className="text-xs text-gray-400">{item.quantity} ш</span>
-                              <span className="text-xs text-gray-500 w-20 text-right">{fmt(item.quantity*item.unit_price)}₮</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {o.delivery_fee>0&&(
-                        <div className="flex items-baseline gap-2 border-t border-gray-100 pt-1.5 justify-end">
-                          <span className="text-xs text-gray-300 tabular-nums">{fmt(gross)}₮ − {fmt(o.delivery_fee)}₮</span>
+              <div className="divide-y divide-gray-50">
+                {grp.map(r=>(
+                  <div key={r.id} className="flex justify-between items-center py-2.5 px-4 hover:bg-gray-50 group">
+                    <div>
+                      <div className="text-sm text-gray-700">{r.product_name}</div>
+                      {r.note&&<div className="text-xs text-gray-400 mt-0.5">{r.note}</div>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${r.type==='in'?'text-emerald-600':'text-red-500'}`}>
+                        {r.type==='in'?'+':'-'}{r.quantity}ш
+                      </span>
+                      {!isViewer && (
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'')}}
+                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50">засах</button>
+                          <button onClick={()=>deleteLog(r)}
+                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-red-500 hover:bg-red-50">устгах</button>
                         </div>
                       )}
                     </div>
-                  )
-                })}
+                  </div>
+                ))}
               </div>
             </div>
           )
         })}
-        {filtered.length===0&&<p className="text-center text-gray-400 text-sm py-10">Захиалга олдсонгүй</p>}
+        {filteredLogs.length===0&&<p className="text-center text-gray-400 text-sm py-8">Бүртгэл алга</p>}
       </div>
     </div>
   )
