@@ -9,12 +9,7 @@ const TODAY = new Date().toISOString().slice(0,10)
 function fmt(n: number) { return n.toLocaleString() }
 function fmtD(d: string) {
   const [y,m,day]=d.split('-')
-  const today=new Date().toISOString().slice(0,10)
-  const yest=new Date(Date.now()-86400000).toISOString().slice(0,10)
-  const label=`${y}/${m}/${day}`
-  if(d===today) return `Өнөөдөр — ${label}`
-  if(d===yest) return `Өчигдөр — ${label}`
-  return label
+  return `${y}/${m}/${day}`
 }
 
 export default function DashPage() {
@@ -226,15 +221,7 @@ export default function DashPage() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        {[['Нийт үлдэгдэл',String(totalStock),'text-emerald-700'],['Хүлээгдэж байна',String(pending),'text-amber-600'],['Нийт захиалга',String(orders.length),'text-gray-700']].map(([l,v,c])=>(
-          <div key={l} className="bg-white rounded-xl border border-gray-100 text-center py-3 px-2">
-            <div className="text-xs text-gray-400 mb-1">{l}</div>
-            <div className={`text-2xl font-medium ${c}`}>{v}</div>
-          </div>
-        ))}
-      </div>
+
 
       {/* Order form */}
       {!isViewer&&(
@@ -295,7 +282,7 @@ export default function DashPage() {
                           setItem(idx,'variant_label',e.target.value)
                           if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
                         }}>
-                        <option value="">— Хэмжээ /      Өнгө сонгох —</option>
+                        <option value="">— Хэмжээ / Өнгө сонгох —</option>
                         {variants.map((v:any,vi:number)=>(
                           <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
                             {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
@@ -307,9 +294,7 @@ export default function DashPage() {
                 )})}
               </div>
               <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-2 text-left">＋ Бараа нэмэх</button>
-              {gross>0&&<div className="text-sm font-medium text-emerald-700 mb-3">
-                Нийт: {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = ${fmt(net)}₮ цэвэр`:''}
-              </div>}
+
               <div className="flex justify-end">
                 <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
               </div>
@@ -348,12 +333,9 @@ export default function DashPage() {
           const dayNet=dayGross-dayDelv
           return (
             <div key={date}>
-              <div className="px-4 py-2.5 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400">{grp.length} захиалга</span>
-                  <span className="text-xs font-medium text-emerald-700">{fmt(dayNet)}₮</span>
-                </div>
+              <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
+                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="font-semibold text-emerald-700">{fmt(dayNet)}₮</span></span>
               </div>
               <div className="divide-y divide-gray-100">
                 {grp.map(o=>{
@@ -376,13 +358,16 @@ export default function DashPage() {
                           <span className="text-xs text-gray-400">{o.address}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                            isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                            'bg-amber-50 text-amber-600 border-amber-100'
-                          }`}>
-                            {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                          </span>
+                          <div className="flex flex-col items-end gap-0.5">
+                            <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                              isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                              isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                              'bg-amber-50 text-amber-600 border-amber-100'
+                            }`}>
+                              {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                            </span>
+                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(orderNet)}₮</span>
+                          </div>
                           {!isViewer&&(
                             <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
                               <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
@@ -420,24 +405,11 @@ export default function DashPage() {
                           </div>
                         ))}
                       </div>
-                      <div className="flex flex-col items-end gap-0.5 border-t border-gray-100 pt-2">
-                        {o.delivery_fee>0&&(
-                          <>
-                            <div className="flex gap-8 items-baseline">
-                              <span className="text-xs text-gray-400">Барааны дүн</span>
-                              <span className="text-xs text-gray-400 w-20 text-right">{fmt(gross)}₮</span>
-                            </div>
-                            <div className="flex gap-8 items-baseline">
-                              <span className="text-xs text-gray-400">Хүргэлт</span>
-                              <span className="text-xs text-gray-400 w-20 text-right">−{fmt(o.delivery_fee)}₮</span>
-                            </div>
-                          </>
-                        )}
-                        <div className="flex gap-8 items-baseline">
-                          <span className="text-xs text-gray-500">Нийт</span>
-                          <span className="text-sm font-medium text-emerald-700 w-20 text-right">{fmt(net)}₮</span>
+                      {o.delivery_fee>0&&(
+                        <div className="flex items-baseline gap-2 border-t border-gray-100 pt-1.5 justify-end">
+                          <span className="text-xs text-gray-300 tabular-nums">{fmt(gross)}₮ − {fmt(o.delivery_fee)}₮</span>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )
                 })}
