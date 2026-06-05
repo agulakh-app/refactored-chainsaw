@@ -289,17 +289,17 @@ export default function StockPage() {
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="grid grid-cols-[1fr_1fr_80px_130px] gap-2 mb-2">
-            <div>
+          <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex-1 min-w-[140px]">
               <label className="block text-xs text-gray-500 mb-1">Бараа</label>
               <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                 value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
                 {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
-              {variantEnabled && rVariants.length > 0 ? (
+            {variantEnabled && rVariants.length > 0 && (
+              <div className="flex-1 min-w-[140px]">
+                <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                   value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                   <option value={-1}>— Сонгох —</option>
@@ -309,16 +309,14 @@ export default function StockPage() {
                     </option>
                   ))}
                 </select>
-              ) : (
-                <div className="px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
-              )}
-            </div>
-            <div>
+              </div>
+            )}
+            <div className="w-20">
               <label className="block text-xs text-gray-500 mb-1">Тоо</label>
               <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
                 className={`w-full px-3 py-2 rounded-lg border text-sm ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
             </div>
-            <div>
+            <div className="w-36">
               <label className="block text-xs text-gray-500 mb-1">Огноо</label>
               <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={rDate} onChange={e=>setRDate(e.target.value)} />
