@@ -271,7 +271,7 @@ export default function DashPage() {
                         {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                       </select>
                       <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
-                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="Үнэ"/>
+                      <div className="px-2 py-2 rounded-lg border border-gray-100 text-sm text-gray-500 bg-gray-50">{it.price?Number(it.price).toLocaleString()+'₮':'—'}</div>
                       {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
                     </div>
                     {variantEnabled&&variants.length>0&&(
@@ -366,7 +366,7 @@ export default function DashPage() {
                             }`}>
                               {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
                             </span>
-                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(gross-(o.delivery_fee||0))}₮</span>
+                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(orderNet)}₮</span>
                           </div>
                           {!isViewer&&(
                             <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
