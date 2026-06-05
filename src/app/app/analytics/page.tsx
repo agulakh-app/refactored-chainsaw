@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useOwnerId } from '../client-layout'
+import { useOwnerId, useActiveStore } from '../client-layout'
 
 function fmt(n: number) { return n.toLocaleString() }
 
@@ -10,6 +10,7 @@ const PERIODS = [['week','7 хоног'],['month','Энэ сар'],['quarter','3
 
 export default function AnalyticsPage() {
   const ownerId = useOwnerId()
+  const activeStoreId = useActiveStore()
   const [orders, setOrders] = useState<any[]>([])
   const [period, setPeriod] = useState('month')
 
@@ -17,10 +18,11 @@ export default function AnalyticsPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const { data } = await supabase.from('orders').select('*, order_items(*)')
+    const q = supabase.from('orders').select('*, order_items(*)')
       .eq('user_id', targetId).order('date',{ascending:false})
+    const { data } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
     setOrders(data||[])
-  },[ownerId])
+  },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
