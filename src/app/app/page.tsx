@@ -299,9 +299,12 @@ export default function DashPage() {
                 )})}
               </div>
               <button onClick={addItem} className="text-xs text-emerald-600 hover:underline mb-2 text-left">＋ Бараа нэмэх</button>
-
+              {gross>0&&<div className="text-sm font-medium text-emerald-700 mb-3">
+                Нийт: {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = ${fmt(net)}₮ цэвэр`:''}
+              </div>}
               <div className="flex justify-end">
                 <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
+              </div>
               </div>
             </div>
           </div>
