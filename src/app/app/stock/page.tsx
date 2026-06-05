@@ -45,6 +45,10 @@ export default function StockPage() {
   const [editDate, setEditDate] = useState('')
   const [editNote, setEditNote] = useState('')
 
+  // Edit product variants stock
+  const [editProd, setEditProd] = useState<Product|null>(null)
+  const [editVariantStocks, setEditVariantStocks] = useState<number[]>([])
+
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
   const load = useCallback(async () => {
@@ -157,6 +161,17 @@ export default function StockPage() {
     showFlash(name + ' устгагдлаа'); load()
   }
 
+  async function saveEditVariants() {
+    if (!editProd) return
+    const pvs: Variant[] = editProd.variants || []
+    const newVariants = pvs.map((v, i) => ({ ...v, stock: editVariantStocks[i] ?? v.stock }))
+    const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
+    await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
+    setEditProd(null)
+    showFlash(editProd.name + ' stock шинэчлэгдлээ ✓')
+    load()
+  }
+
   async function deleteLog(log: RestockLog) {
     if (!confirm('Энэ бүртгэлийг устгах уу?')) return
     await supabase.from('restock_log').delete().eq('id', log.id)
@@ -213,6 +228,37 @@ export default function StockPage() {
     <div className="space-y-4">
       {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
+      {/* Edit variants stock modal */}
+      {!isViewer && editProd && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
+            <h3 className="font-medium text-gray-800 mb-1">{editProd.name}</h3>
+            <p className="text-xs text-gray-400 mb-4">Variant бүрийн үлдэгдэл тоог засна</p>
+            <div className="space-y-2 mb-5">
+              {(editProd.variants||[]).map((v, i) => (
+                <div key={i} className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-600 flex-1">{[v.size,v.color].filter(Boolean).join(' / ')}</span>
+                  <span className="text-xs text-emerald-600">{fmt(v.price)}₮</span>
+                  <input type="number" min="0"
+                    className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                    value={editVariantStocks[i] ?? v.stock}
+                    onChange={e=>{
+                      const arr = [...editVariantStocks]
+                      arr[i] = Number(e.target.value)
+                      setEditVariantStocks(arr)
+                    }} />
+                  <span className="text-xs text-gray-400">ш</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={()=>setEditProd(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
+              <button onClick={saveEditVariants} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit modal */}
       {!isViewer && editLog && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -243,27 +289,32 @@ export default function StockPage() {
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-[1fr_1fr_80px_130px] gap-2 mb-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Бараа</label>
               <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                 value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
                 {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
               </select>
-              {variantEnabled && rVariants.length > 0 && (
-                <select className="w-full mt-1.5 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
+              {variantEnabled && rVariants.length > 0 ? (
+                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                   value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
-                  <option value={-1}>— Хэмжээ / Өнгө сонгох —</option>
+                  <option value={-1}>— Сонгох —</option>
                   {rVariants.map((v, i) => (
                     <option key={i} value={i}>
-                      {[v.size, v.color].filter(Boolean).join(' / ')} — {fmt(v.price)}₮ ({v.stock}ш үлдсэн)
+                      {[v.size, v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
                     </option>
                   ))}
                 </select>
+              ) : (
+                <div className="px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
               )}
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Тоо <span className="text-gray-400">(− бичвэл хасна)</span></label>
+              <label className="block text-xs text-gray-500 mb-1">Тоо</label>
               <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
                 className={`w-full px-3 py-2 rounded-lg border text-sm ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
             </div>
@@ -273,7 +324,7 @@ export default function StockPage() {
                 value={rDate} onChange={e=>setRDate(e.target.value)} />
             </div>
           </div>
-          <div className="mt-3">
+          <div>
             <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
             <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
               placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
@@ -310,17 +361,20 @@ export default function StockPage() {
           </div>
           {variantEnabled && (
             <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 flex-1 mr-4">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-400">Variant жагсаалт</span>
+                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0'}])}
+                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
+              </div>
+              {nVariants.length>0&&(
+                <div className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 mb-1 px-1">
                   <span className="text-xs text-gray-400">Хэмжээ</span>
                   <span className="text-xs text-gray-400">Өнгө</span>
                   <span className="text-xs text-gray-400">Үнэ (₮)</span>
                   <span className="text-xs text-gray-400">Тоо</span>
                   <span></span>
                 </div>
-                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0'}])}
-                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
-              </div>
+              )}
               {nVariants.length===0 && (
                 <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
               )}
@@ -372,8 +426,14 @@ export default function StockPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-gray-500">Нийт: {p.stock}ш</span>
                       {!isViewer && (
-                        <button onClick={()=>deleteProduct(p.id, p.name)}
-                          className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                        <div className="flex items-center gap-1">
+                          {pvs.length > 0 && (
+                            <button onClick={()=>{setEditProd(p);setEditVariantStocks(pvs.map(v=>v.stock))}}
+                              className="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">засах</button>
+                          )}
+                          <button onClick={()=>deleteProduct(p.id, p.name)}
+                            className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -402,7 +462,7 @@ export default function StockPage() {
       {/* Цэнэглэлтийн бүртгэл */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-medium text-gray-800 text-sm">Цэнэглэлтийн бүртгэл</h2>
+          <h2 className="font-medium text-gray-800 text-sm">Агуулах дахь бараа</h2>
         </div>
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
           <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
