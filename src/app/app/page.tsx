@@ -234,25 +234,30 @@ export default function DashPage() {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+          <div className="space-y-3">
+            {/* Мөр 1: Утас | Огноо | Хүргэлт */}
+            <div className="grid grid-cols-3 gap-3">
               <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
-              {warehouses.length>0&&(
-                <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                    <option value="">— Сонгох —</option>
-                    {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select></div>
-              )}
-            </div>
-            <div className="flex flex-col">
-              <div className="mb-3"><label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">— өгөгдмөл: {fmt(defaultDelivery)}₮</span>}</label>
+              <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлтийн үнэ (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
+            </div>
+            {/* Мөр 2: Хаяг | Бараа */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-3">
+                <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
+                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
+                {warehouses.length>0&&(
+                  <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
+                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
+                      <option value="">— Сонгох —</option>
+                      {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select></div>
+                )}
+              </div>
+              <div className="flex flex-col">
               <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
               <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 mb-2 flex-1">
                 <div className="grid grid-cols-[1fr_60px_90px_28px] gap-2 mb-1 px-1">
@@ -358,16 +363,13 @@ export default function DashPage() {
                           <span className="text-xs text-gray-400">{o.address}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex flex-col items-end gap-0.5">
-                            <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                          <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
                               isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
                               isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
                               'bg-amber-50 text-amber-600 border-amber-100'
                             }`}>
                               {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
                             </span>
-                            <span className="text-xs font-semibold text-emerald-700 tabular-nums">{fmt(orderNet)}₮</span>
-                          </div>
                           {!isViewer&&(
                             <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
                               <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
@@ -406,8 +408,8 @@ export default function DashPage() {
                         ))}
                       </div>
                       {o.delivery_fee>0&&(
-                        <div className="flex items-baseline gap-2 border-t border-gray-100 pt-1.5 justify-end">
-                          <span className="text-xs text-gray-300 tabular-nums">{fmt(gross)}₮ − {fmt(o.delivery_fee)}₮</span>
+                        <div className="flex justify-end border-t border-gray-50 pt-1.5">
+                          <span className="text-xs text-gray-300 tabular-nums">{fmt(gross)}₮ − {fmt(o.delivery_fee)}₮ = {fmt(net)}₮</span>
                         </div>
                       )}
                     </div>
