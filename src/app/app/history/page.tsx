@@ -1,170 +1,284 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useOwnerId } from '../client-layout'
+import type { Order } from '@/lib/types'
+import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
 function fmt(n: number) { return n.toLocaleString() }
+function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
+function dayLabel(d: string) {
+  const today = new Date().toISOString().slice(0,10)
+  const yest = new Date(Date.now()-86400000).toISOString().slice(0,10)
+  const label = fmtD(d)
+  if (d===today) return `Өнөөдөр  ${label}`
+  if (d===yest) return `Өчигдөр  ${label}`
+  return label
+}
 
-const PERIODS = [['week','7 хоног'],['month','Энэ сар'],['quarter','3 сар'],['all','Бүгд']] as const
+const StatusBadge = ({ s }: { s: string }) => {
+  if (s === 'delivered') return <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-xs whitespace-nowrap">Хүргэгдсэн</span>
+  if (s === 'cancelled') return <span className="px-2 py-0.5 bg-gray-100 text-gray-400 border border-gray-200 rounded-full text-xs whitespace-nowrap">Цуцлагдсан</span>
+  return <span className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100 rounded-full text-xs whitespace-nowrap">Хүлээгдэж байна</span>
+}
 
-export default function AnalyticsPage() {
+export default function HistoryPage() {
+  const guestRole = useGuestRole()
   const ownerId = useOwnerId()
-  const [orders, setOrders] = useState<any[]>([])
-  const [period, setPeriod] = useState('month')
+  const activeStoreId = useActiveStore()
+  const isViewer = guestRole === 'viewer'
+
+  const [orders, setOrders] = useState<Order[]>([])
+  const [phone, setPhone] = useState('')
+  const [status, setStatus] = useState('all')
+  const [dateFilter, setDateFilter] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importMsg, setImportMsg] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const { data } = await supabase.from('orders').select('*, order_items(*)')
-      .eq('user_id', targetId).order('date',{ascending:false})
+    const q = supabase.from('orders').select('*, order_items(*)')
+      .eq('user_id', targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})
+    const { data } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
     setOrders(data||[])
-  },[ownerId])
+  },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
-  const now = new Date()
+  async function setOrderStatus(id: string, s: string) {
+    await supabase.from('orders').update({status:s}).eq('id',id)
+    load()
+  }
+
+  async function handleExcelImport(file: File) {
+    setImporting(true)
+    setImportMsg('Файл уншиж байна...')
+    const { data:{ user } } = await supabase.auth.getUser()
+    if (!user) { setImporting(false); return }
+
+    const loadXLSX = (): Promise<any> => new Promise(resolve => {
+      if ((window as any).XLSX) { resolve((window as any).XLSX); return }
+      const s = document.createElement('script')
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      s.onload = () => resolve((window as any).XLSX)
+      document.head.appendChild(s)
+    })
+
+    try {
+      const buf = await file.arrayBuffer()
+      const XLSX = await loadXLSX()
+      const wb = XLSX.read(new Uint8Array(buf), {type:'array', cellDates:true, raw:false})
+
+      const iSheet = wb.Sheets['Агуулах'] || wb.Sheets[wb.SheetNames[1]] || wb.Sheets[wb.SheetNames[0]]
+      const invRows: any[] = iSheet ? XLSX.utils.sheet_to_json(iSheet,{defval:''}) : []
+      let importedProds = 0
+      for (const r of invRows) {
+        const keys = Object.keys(r)
+        const name = (r['Барааны нэр']||r[keys[0]]||'').toString().trim()
+        const qty = parseInt(String(r['Тоо ширхэг (үлдэгдэл)']||r['Тоо ширхэг']||r[keys[1]]||'0').replace(/[^\d]/g,''))||0
+        const price = parseInt(String(r['Нэгж үнэ (₮)']||r[keys[2]]||'0').replace(/[^\d]/g,''))||0
+        if (!name||name.length>60) continue
+        const { data: ex } = await supabase.from('products').select('id').eq('user_id',user.id).eq('name',name).maybeSingle()
+        if (ex) await supabase.from('products').update({stock:qty,unit_price:price}).eq('id',ex.id)
+        else await supabase.from('products').insert({user_id:user.id,name,stock:qty,unit_price:price})
+        importedProds++
+      }
+
+      const oSheet = wb.Sheets['Захиалга'] || wb.Sheets[wb.SheetNames[0]]
+      const rows: any[] = oSheet ? XLSX.utils.sheet_to_json(oSheet,{defval:'',raw:false}) : []
+
+      const grouped: Record<string,any> = {}
+      for (const r of rows) {
+        const date = (r['Огноо\n(YYYY-MM-DD)']||r['Огноо']||r['Date']||r['date']||r[Object.keys(r)[0]]||'').toString().replace(/\./g,'-').trim().slice(0,10)
+        const seq = String(r['Захиалгын\nДугаар']||r['Захиалгын Дугаар']||r['Дугаар']||r['№']||'1').replace(/[^\d]/g,'')||'1'
+        const ph = (r['Утасны\nДугаар']||r['Утасны Дугаар']||r['Утас']||r['Phone number']||r['phone']||'').toString().trim()
+        const addr = (r['Хаяг']||r['Address']||r['address']||'').toString().trim()
+        const prod = (r['Барааны нэр']||r['order']||r['Бараа']||'').toString().trim()
+        const qty = parseInt(String(r['Тоо ширхэг']||r['Qty']||r['qty']||'1').replace(/[^\d]/g,''))||1
+        const price = parseInt(String(r['Нэгж үнэ (₮)']||r['order price']||r['Үнэ']||'0').replace(/[^\d,₮\s]/g,'').replace(/[,\s₮]/g,''))||0
+        const delv = parseInt(String(r['Хүргэлтийн үнэ (₮)\n(нэг удаа)']||r['Delivery price']||r['Хүргэлт']||r['delivery']||'0').replace(/[^\d]/g,''))||0
+        const rawSt = (r['Хүргэлтийн\nСтатус']||r['Статус']||r['status']||'').toString()
+        const st = rawSt.includes('Хүргэгдсэн')||rawSt.toLowerCase().includes('delivered')?'delivered':'pending'
+        if (!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
+        if (!ph||!prod) continue
+        const key = `${date}__${seq}__${ph}`
+        if (!grouped[key]) grouped[key]={date,seq:parseInt(seq)||1,phone:ph,addr,items:[],delv,status:st}
+        grouped[key].items.push({product_name:prod,quantity:qty,unit_price:price})
+        if (addr) grouped[key].addr=addr
+        if (delv) grouped[key].delv=delv
+      }
+
+      let importedOrders=0
+      for (const g of Object.values(grouped)) {
+        const { data: ord } = await supabase.from('orders').insert({
+          user_id:user.id, date:g.date, day_seq:g.seq,
+          phone:g.phone, address:g.addr||'-', delivery_fee:g.delv, status:g.status
+        }).select().single()
+        if (ord&&g.items.length>0) {
+          await supabase.from('order_items').insert(g.items.map((it:any)=>({order_id:ord.id,...it})))
+        }
+        importedOrders++
+      }
+
+      setImportMsg(`${importedOrders} захиалга, ${importedProds} бараа оруулагдлаа`)
+      load()
+    } catch(err:any) {
+      setImportMsg('Алдаа: '+err.message)
+    }
+    setImporting(false)
+  }
+
+  function exportCSV() {
+    const rows=[['Огноо','Утас','Хаяг','Бараа','Барааны дүн','Хүргэлт','Цэвэр','Статус']]
+    filtered.forEach(o=>{
+      const g=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
+      rows.push([o.date,o.phone,o.address,(o.order_items||[]).map((i:any)=>i.product_name+'×'+i.quantity).join(';'),String(g),String(o.delivery_fee),String(g-o.delivery_fee),o.status])
+    })
+    const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n')
+    const a=document.createElement('a')
+    a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}))
+    a.download='orders.csv'; a.click()
+  }
+
   const filtered = orders.filter(o=>{
-    const d = new Date(o.date)
-    if (period==='week') return (now.getTime()-d.getTime())<7*86400000
-    if (period==='month') return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear()
-    if (period==='quarter') return (now.getTime()-d.getTime())<90*86400000
+    if(phone&&!o.phone.includes(phone)) return false
+    if(status!=='all'&&o.status!==status) return false
+    if(dateFilter&&o.date!==dateFilter) return false
     return true
   })
 
-  const totalGross = filtered.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
-  const totalDelv = filtered.reduce((a,o)=>a+(o.delivery_fee||0),0)
-  const totalNet = totalGross-totalDelv
-  const delivered = filtered.filter(o=>o.status==='delivered').length
-  const pending = filtered.filter(o=>o.status==='pending').length
-
-  const productMap: Record<string,{qty:number,revenue:number}> = {}
-  filtered.forEach(o=>{
-    (o.order_items||[]).forEach((i:any)=>{
-      if (!productMap[i.product_name]) productMap[i.product_name]={qty:0,revenue:0}
-      productMap[i.product_name].qty+=i.quantity
-      productMap[i.product_name].revenue+=i.quantity*i.unit_price
-    })
-  })
-  const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
-  const maxQty = ranking[0]?.[1]?.qty||1
-
-  const dailyMap: Record<string,number> = {}
-  filtered.forEach(o=>{
-    const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
-    dailyMap[o.date]=(dailyMap[o.date]||0)+gross-(o.delivery_fee||0)
-  })
-  const dailyDays = Object.keys(dailyMap).sort().slice(-14)
-  const maxDay = Math.max(...Object.values(dailyMap),1)
+  const groups: Record<string,Order[]> = {}
+  filtered.forEach(o=>{ if(!groups[o.date])groups[o.date]=[]; groups[o.date].push(o) })
 
   return (
     <div className="space-y-4">
 
-      {/* Period tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
-        {PERIODS.map(([v,l])=>(
-          <button key={v} onClick={()=>setPeriod(v)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all ${period===v?'bg-white text-gray-800 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {([
-          ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
-          ['Нийт захиалга', String(filtered.length), 'text-gray-800'],
-          ['Хүргэгдсэн', String(delivered), 'text-gray-800'],
-          ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
-        ] as const).map(([l,v,c])=>(
-          <div key={l} className="bg-white rounded-xl border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 mb-1">{l}</div>
-            <div className={`text-xl font-medium ${c}`}>{v}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Daily revenue bar chart */}
-      {dailyDays.length > 0 && (
+      {/* Excel import — viewer-д харагдахгүй */}
+      {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 text-sm mb-4">Өдрийн цэвэр орлого</h2>
-          <div className="flex items-end gap-1.5 h-28">
-            {dailyDays.map(d=>{
-              const val = dailyMap[d]||0
-              const h = Math.max(4, Math.round((val/maxDay)*100))
-              const [,m,day] = d.split('-')
-              return (
-                <div key={d} className="flex-1 flex flex-col items-center gap-1 group">
-                  <div className="text-xs text-gray-300 font-medium group-hover:text-gray-500 transition-colors">
-                    {val>=1000 ? Math.round(val/1000)+'к' : ''}
-                  </div>
-                  <div className="w-full bg-emerald-500 rounded-t hover:bg-emerald-600 transition-all cursor-default relative"
-                    style={{height:`${h}%`}}>
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all z-10 pointer-events-none">
-                      {fmt(val)}₮
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-300">{parseInt(m)}/{parseInt(day)}</div>
-                </div>
-              )
-            })}
+          <h2 className="font-medium text-gray-800 text-sm mb-1">Хуучин бүртгэл оруулах</h2>
+          <p className="text-xs text-gray-400 mb-3">
+            Excel файлаас захиалга болон барааны бүртгэлийг импортлоно. Огноо <span className="font-medium text-gray-500">YYYY-MM-DD</span> форматтай байх шаардлагатай.
+          </p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <input type="file" accept=".xlsx,.xls" ref={fileRef} className="hidden"
+              onChange={e=>{ if(e.target.files?.[0]){ handleExcelImport(e.target.files[0]); e.target.value='' } }} />
+            <button onClick={()=>fileRef.current?.click()} disabled={importing}
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-700 disabled:opacity-50 transition-all">
+              {importing ? 'Оруулж байна...' : 'Excel файл сонгох'}
+            </button>
+            {importMsg && (
+              <span className={`text-xs font-medium ${importMsg.startsWith('Алдаа') ? 'text-red-500' : 'text-emerald-600'}`}>
+                {importMsg}
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {/* Product ranking */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <h2 className="font-medium text-gray-800 text-sm mb-4">Барааны борлуулалт</h2>
-        {ranking.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm py-6">Мэдээлэл алга</p>
-        ) : (
-          <div className="space-y-3">
-            {ranking.map(([name,{qty,revenue}],idx)=>(
-              <div key={name} className="flex items-center gap-3">
-                <div className="text-xs text-gray-300 w-4 text-right">{idx+1}</div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-baseline mb-1.5">
-                    <span className="text-sm text-gray-700">{name}</span>
-                    <div className="flex items-baseline gap-4">
-                      <span className="text-xs text-gray-400">{qty} ш</span>
-                      <span className="text-xs font-medium text-emerald-600">{fmt(revenue)}₮</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-1.5">
-                    <div className="bg-emerald-500 h-1.5 rounded-full transition-all"
-                      style={{width:`${Math.round((qty/maxQty)*100)}%`}} />
-                  </div>
+      {/* Orders list */}
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+          <h2 className="font-medium text-gray-800 text-sm">Захиалгын түүх</h2>
+          <button onClick={exportCSV}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50 transition-all">
+            CSV татах
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
+          <input
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white"
+            style={{minWidth:120,maxWidth:160}}
+            placeholder="Утасны дугаар..."
+            value={phone} onChange={e=>setPhone(e.target.value)}
+          />
+          <input type="date"
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+            value={dateFilter} onChange={e=>setDateFilter(e.target.value)}
+          />
+          {dateFilter && (
+            <button onClick={()=>setDateFilter('')}
+              className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-400 bg-white hover:bg-gray-50">✕</button>
+          )}
+          <select
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+            value={status} onChange={e=>setStatus(e.target.value)}>
+            <option value="all">Бүх статус</option>
+            <option value="pending">Хүлээгдэж байна</option>
+            <option value="delivered">Хүргэгдсэн</option>
+            <option value="cancelled">Цуцлагдсан</option>
+          </select>
+        </div>
+
+        {/* Grouped orders */}
+        {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+          const grp = groups[date]
+          const tot = grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
+          const totNet = tot - grp.reduce((a,o)=>a+(o.delivery_fee||0),0)
+          return (
+            <div key={date}>
+              <div className="px-4 py-2.5 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
+                <span className="text-xs font-medium text-gray-600">{dayLabel(date)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">{grp.length} захиалга</span>
+                  <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Summary table */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-medium text-gray-800 text-sm">Орлогын дүгнэлт</h2>
-        </div>
-        <div>
-          {[
-            ['Нийт борлуулалт', fmt(totalGross)+'₮'],
-            ['Хүргэлтийн зардал', fmt(totalDelv)+'₮'],
-            ['Цэвэр орлого', fmt(totalNet)+'₮'],
-            ['Захиалга тоо', String(filtered.length)],
-            ['Дундаж захиалга', filtered.length ? fmt(Math.round(totalNet/filtered.length))+'₮' : '—'],
-            ['Хүргэлтийн хувь', totalGross ? Math.round((totalDelv/totalGross)*100)+'%' : '—'],
-          ].map(([k,v],i)=>(
-            <div key={k} className={`flex justify-between px-4 py-2.5 ${i>0?'border-t border-gray-100':''}`}>
-              <span className="text-sm text-gray-500">{k}</span>
-              <span className={`text-sm font-medium ${k==='Цэвэр орлого'?'text-emerald-700':'text-gray-800'}`}>{v}</span>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr>
+                      {['Утас','Хаяг','Бараа','Барааны дүн','Хүргэлт','Цэвэр','Статус',''].map(h=>(
+                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap border-b border-gray-100">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grp.map(o=>{
+                      const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
+                      const net=gross-(o.delivery_fee||0)
+                      return (
+                        <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="px-3 py-2.5 font-medium text-gray-800 whitespace-nowrap">{o.phone}</td>
+                          <td className="px-3 py-2.5 text-gray-400 text-xs max-w-[110px] truncate">{o.address}</td>
+                          <td className="px-3 py-2.5 text-xs text-gray-500">{(o.order_items||[]).map((i:any)=>`${i.product_name}×${i.quantity}`).join(', ')}</td>
+                          <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmt(gross)}₮</td>
+                          <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</td>
+                          <td className="px-3 py-2.5 font-medium text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
+                          <td className="px-3 py-2.5"><StatusBadge s={o.status} /></td>
+                          <td className="px-3 py-2.5">
+                            {!isViewer && (
+                              <div className="flex gap-1">
+                                {o.status!=='cancelled'&&(
+                                  <button
+                                    onClick={()=>setOrderStatus(o.id,o.status==='delivered'?'pending':'delivered')}
+                                    className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${o.status==='delivered'?'bg-amber-50 text-amber-600 hover:bg-amber-100':'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'}`}>
+                                    {o.status==='delivered'?'↩':'✓'}
+                                  </button>
+                                )}
+                                {o.status==='pending'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'cancelled')}
+                                    className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all">✕</button>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          ))}
-        </div>
+          )
+        })}
+        {filtered.length===0&&<p className="text-center text-gray-400 text-sm py-10">Захиалга олдсонгүй</p>}
       </div>
-
     </div>
   )
 }
