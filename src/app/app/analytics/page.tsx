@@ -37,6 +37,8 @@ export default function AnalyticsPage() {
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
+  const [products, setProducts] = useState<any[]>([])
+
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
@@ -49,8 +51,12 @@ export default function AnalyticsPage() {
       .eq('user_id', targetId).order('date',{ascending:false})
     const { data: exps } = activeStoreId ? await eq.eq('store_id', activeStoreId) : await eq
 
+    const pq = supabase.from('products').select('*').eq('user_id', targetId)
+    const { data: prods } = activeStoreId ? await pq.eq('store_id', activeStoreId) : await pq
+
     setOrders(ords||[])
     setExpenses(exps||[])
+    setProducts(prods||[])
   },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
@@ -95,7 +101,8 @@ export default function AnalyticsPage() {
   const totalDelv = filtered.reduce((a,o)=>a+(o.delivery_fee||0),0)
   const totalNet = totalGross - totalDelv
   const totalExpenses = filteredExp.reduce((a,e)=>a+Number(e.amount),0)
-  const totalProfit = totalNet - totalExpenses
+  const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
+  const totalProfit = totalNet - totalExpenses - totalCOGS
   const delivered = filtered.filter(o=>o.status==='delivered').length
   const pending = filtered.filter(o=>o.status==='pending').length
 
@@ -103,13 +110,28 @@ export default function AnalyticsPage() {
   const expByCat: Record<string,number> = {}
   filteredExp.forEach(e=>{ expByCat[e.category]=(expByCat[e.category]||0)+Number(e.amount) })
 
-  const productMap: Record<string,{qty:number,revenue:number}> = {}
+  // Бараа бүрийн өртөг тооцоолох
+  const getCost = (productName: string, variantLabel: string|null) => {
+    for (const p of products) {
+      if (p.name !== productName) continue
+      const pvs: any[] = p.variants || []
+      if (pvs.length > 0 && variantLabel) {
+        const v = pvs.find((vv: any) => [vv.size, vv.color].filter(Boolean).join(' / ') === variantLabel)
+        if (v?.cost) return Number(v.cost)
+      }
+      return 0
+    }
+    return 0
+  }
+
+  const productMap: Record<string,{qty:number,revenue:number,cost:number}> = {}
   filtered.forEach(o=>{
     (o.order_items||[]).forEach((i:any)=>{
       const key = i.product_name + (i.variant_label ? ' · '+i.variant_label : '')
-      if (!productMap[key]) productMap[key]={qty:0,revenue:0}
+      if (!productMap[key]) productMap[key]={qty:0,revenue:0,cost:0}
       productMap[key].qty+=i.quantity
       productMap[key].revenue+=i.quantity*i.unit_price
+      productMap[key].cost+=i.quantity*getCost(i.product_name, i.variant_label||null)
     })
   })
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
@@ -145,9 +167,9 @@ export default function AnalyticsPage() {
           ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
         ] : [
           ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
+          ['Барааны өртөг', fmt(totalCOGS)+'₮', 'text-orange-500'],
           ['Нийт зардал', fmt(totalExpenses)+'₮', 'text-red-500'],
-          ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700':'text-red-600'],
-          ['Захиалга', String(filtered.length), 'text-gray-800'],
+          ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
         ] as const).map(([l,v,c])=>(
           <div key={l} className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="text-xs text-gray-400 mb-1">{l}</div>
@@ -259,15 +281,20 @@ export default function AnalyticsPage() {
           <p className="text-center text-gray-400 text-sm py-6">Мэдээлэл алга</p>
         ):(
           <div className="space-y-3">
-            {ranking.map(([name,{qty,revenue}],idx)=>(
+            {ranking.map(([name,{qty,revenue,cost}],idx)=>{
+              const profit = revenue - cost
+              const margin = revenue > 0 ? Math.round((profit/revenue)*100) : 0
+              return (
               <div key={name} className="flex items-center gap-3">
                 <div className="text-xs text-gray-300 w-4 text-right">{idx+1}</div>
                 <div className="flex-1">
-                  <div className="flex justify-between items-baseline mb-1.5">
+                  <div className="flex justify-between items-baseline mb-1">
                     <span className="text-sm text-gray-700">{name}</span>
-                    <div className="flex items-baseline gap-4">
+                    <div className="flex items-baseline gap-3">
                       <span className="text-xs text-gray-400">{qty} ш</span>
+                      {cost>0&&<span className="text-xs text-orange-400">өртөг: {fmt(cost)}₮</span>}
                       <span className="text-xs font-medium text-emerald-600">{fmt(revenue)}₮</span>
+                      {cost>0&&<span className={`text-xs font-medium px-1.5 py-0.5 rounded ${margin>=30?'bg-emerald-50 text-emerald-600':margin>=15?'bg-amber-50 text-amber-600':'bg-red-50 text-red-500'}`}>{margin}%</span>}
                     </div>
                   </div>
                   <div className="w-full bg-gray-100 rounded-full h-1.5">
@@ -276,7 +303,7 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
-            ))}
+            )})}
           </div>
         )}
       </div>
@@ -291,6 +318,7 @@ export default function AnalyticsPage() {
             ['Нийт борлуулалт', fmt(totalGross)+'₮', ''],
             ['Хүргэлтийн зардал', '−'+fmt(totalDelv)+'₮', 'text-red-400'],
             ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
+            ['Барааны өртөг', '−'+fmt(totalCOGS)+'₮', 'text-orange-500'],
             ['Нийт зардал', '−'+fmt(totalExpenses)+'₮', 'text-red-500'],
             ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
             ['Захиалга тоо', String(filtered.length), ''],
