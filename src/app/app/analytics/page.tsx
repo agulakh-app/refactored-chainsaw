@@ -9,6 +9,7 @@ function fmt(n: number) { return n.toLocaleString() }
 const PERIODS = [['week','7 хоног'],['month','Энэ сар'],['quarter','3 сар'],['all','Бүгд']] as const
 
 const EXPENSE_CATS = [
+  { value: 'cogs', label: 'Бараа өртөг' },
   { value: 'ads', label: 'Зар сурталчилгаа (FB, IG...)' },
   { value: 'delivery', label: 'Хүргэлтийн зардал' },
   { value: 'packaging', label: 'Сав баглаа' },
@@ -138,7 +139,11 @@ export default function AnalyticsPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {([
+        {(isViewer ? [
+          ['Нийт захиалга', String(filtered.length), 'text-gray-800'],
+          ['Хүргэгдсэн', String(delivered), 'text-gray-800'],
+          ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
+        ] : [
           ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
           ['Нийт зардал', fmt(totalExpenses)+'₮', 'text-red-500'],
           ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700':'text-red-600'],
@@ -276,8 +281,8 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      {/* Орлого, зардал, ашгийн дүгнэлт */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {/* Орлого, зардал, ашгийн дүгнэлт — зочинд харагдахгүй */}
+      {!isViewer && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm">Санхүүгийн дүгнэлт</h2>
         </div>
@@ -298,7 +303,7 @@ export default function AnalyticsPage() {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
     </div>
   )
