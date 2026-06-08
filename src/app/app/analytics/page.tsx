@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
       productMap[key].cost+=i.quantity*getCost(i.product_name, i.variant_label||null)
     })
   })
-const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
+  const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
   const totalProfit = totalNet - totalExpenses - totalCOGS
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
   const maxQty = ranking[0]?.[1]?.qty||1
@@ -167,7 +167,7 @@ const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
           ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
         ] : [
           ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
-          ['Барааны өртөг', fmt(totalCOGS)+'₮', 'text-orange-500'],
+          ...(totalCOGS>0?[['Барааны өртөг', fmt(totalCOGS)+'₮', 'text-orange-500'] as const]:[]),
           ['Нийт зардал', fmt(totalExpenses)+'₮', 'text-red-500'],
           ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
         ] as const).map(([l,v,c])=>(
@@ -292,7 +292,7 @@ const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
                     <span className="text-sm text-gray-700">{name}</span>
                     <div className="flex items-baseline gap-3">
                       <span className="text-xs text-gray-400">{qty} ш</span>
-                      {cost>0&&<span className="text-xs text-orange-400">өртөг: {fmt(cost)}₮</span>}
+                      {cost>0&&<span className="text-xs text-orange-400 ml-1">өртөг: {fmt(cost)}₮</span>}
                       <span className="text-xs font-medium text-emerald-600">{fmt(revenue)}₮</span>
                       {cost>0&&<span className={`text-xs font-medium px-1.5 py-0.5 rounded ${margin>=30?'bg-emerald-50 text-emerald-600':margin>=15?'bg-amber-50 text-amber-600':'bg-red-50 text-red-500'}`}>{margin}%</span>}
                     </div>
@@ -318,7 +318,7 @@ const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
             ['Нийт борлуулалт', fmt(totalGross)+'₮', ''],
             ['Хүргэлтийн зардал', '−'+fmt(totalDelv)+'₮', 'text-red-400'],
             ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
-            ['Барааны өртөг', '−'+fmt(totalCOGS)+'₮', 'text-orange-500'],
+            ...(totalCOGS>0?[['Барааны өртөг', '−'+fmt(totalCOGS)+'₮', 'text-orange-500'] as const]:[]),
             ['Нийт зардал', '−'+fmt(totalExpenses)+'₮', 'text-red-500'],
             ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
             ['Захиалга тоо', String(filtered.length), ''],
