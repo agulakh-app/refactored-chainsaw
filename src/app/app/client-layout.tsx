@@ -122,7 +122,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-between py-3 border-b border-gray-50">
             <div className="flex items-center gap-2.5">
-              <span className="font-medium text-gray-900 text-sm tracking-tight">
+              <span className="font-bold text-gray-900 text-xl tracking-tight">
                 {isGuest ? ownerName : (bizName || 'OLULA')}
               </span>
               {isGuest && (
