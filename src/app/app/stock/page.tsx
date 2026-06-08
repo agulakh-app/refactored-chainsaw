@@ -28,6 +28,7 @@ export default function StockPage() {
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
   const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
+  const [rCost, setRCost] = useState('')
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
   const [rNote, setRNote] = useState('')
@@ -107,10 +108,11 @@ export default function StockPage() {
       user_id: targetId, product_id: rProd,
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
       quantity: absQty, type: isNeg ? 'out' : 'in',
-      note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null
+      note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
+      cost_per_unit: rCost ? Number(rCost) : null
     })
 
-    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1)
+    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1); setRCost('')
     showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
@@ -489,7 +491,10 @@ export default function StockPage() {
                   <div key={r.id} className="flex justify-between items-center py-2.5 px-4 hover:bg-gray-50 group">
                     <div>
                       <div className="text-sm text-gray-700">{r.product_name}</div>
-                      {r.note&&<div className="text-xs text-gray-400 mt-0.5">{r.note}</div>}
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {r.note}
+                        {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`text-sm font-medium ${r.type==='in'?'text-emerald-600':'text-red-500'}`}>
