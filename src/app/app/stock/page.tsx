@@ -360,26 +360,17 @@ export default function StockPage() {
           </div>
           {variantEnabled && (
             <div className="mt-4">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-400">Variant жагсаалт</span>
+              <div className="flex justify-end mb-1">
                 <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0',cost:''}])}
                   className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
               </div>
-              {nVariants.length>0&&(
-                <div className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 mb-1 px-1">
-                  <span className="text-xs text-gray-400">Хэмжээ</span>
-                  <span className="text-xs text-gray-400">Өнгө</span>
-                  <span className="text-xs text-gray-400">Үнэ (₮)</span>
-                  <span className="text-xs text-gray-400">Тоо</span>
-                  <span></span>
-                </div>
-              )}
+
               {nVariants.length===0 && (
                 <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
               )}
               {nVariants.length>0&&(
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-separate" style={{borderSpacing:'0 4px'}}>
+                  <table className="w-full text-sm border-separate" style={{borderSpacing:'0 6px'}}>
                     <thead>
                       <tr>
                         <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Хэмжээ</th>
@@ -393,22 +384,22 @@ export default function StockPage() {
                     <tbody>
                       {nVariants.map((v,i)=>(
                         <tr key={i}>
-                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                          <td className="pr-2"><input className="w-full px-2 py-2.5 rounded-lg border border-gray-200 text-sm py-2.5"
                             placeholder="150x200..." value={v.size}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
                             placeholder="Цагаан..." value={v.color}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
                             placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
                             placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2" style={{width:70}}><input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                          <td className="pr-2" style={{width:70}}><input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center py-2.5"
                             placeholder="0" min="0" value={v.stock}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/></td>
-                          <td style={{width:28}}><button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
+                          <td style={{width:32}}><button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
                             className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button></td>
                         </tr>
                       ))}
