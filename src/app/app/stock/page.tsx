@@ -377,29 +377,45 @@ export default function StockPage() {
               {nVariants.length===0 && (
                 <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
               )}
-              <div className="space-y-2">
-                {nVariants.map((v,i)=>(
-                  <div key={i} className="grid grid-cols-[1.5fr_1.2fr_110px_110px_70px_28px] gap-2 items-center">
-                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="150x200..." value={v.size}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
-                    <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="Цагаан..." value={v.color}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
-                    <input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
-                    <input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
-                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                      placeholder="0" min="0" value={v.stock}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/>
-                    <button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
-                      className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button>
-                  </div>
-                ))}
-              </div>
+              {nVariants.length>0&&(
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-separate" style={{borderSpacing:'0 4px'}}>
+                    <thead>
+                      <tr>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Хэмжээ</th>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өнгө</th>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Зарах үнэ (₮)</th>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өртөг (₮)</th>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Тоо</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nVariants.map((v,i)=>(
+                        <tr key={i}>
+                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                            placeholder="150x200..." value={v.size}
+                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/></td>
+                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                            placeholder="Цагаан..." value={v.color}
+                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/></td>
+                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                            placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
+                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
+                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                            placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
+                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
+                          <td className="pr-2" style={{width:70}}><input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                            placeholder="0" min="0" value={v.stock}
+                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/></td>
+                          <td style={{width:28}}><button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
+                            className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
           <div className="flex justify-end mt-3">
