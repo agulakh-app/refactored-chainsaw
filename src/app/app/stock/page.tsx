@@ -37,7 +37,7 @@ export default function StockPage() {
   const [nPrice, setNPrice] = useState('')
   const [nQty, setNQty] = useState('0')
   const [nDate, setNDate] = useState(TODAY)
-  const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string}[]>([])
+  const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string,cost:string}[]>([])
 
   // Edit log
   const [editLog, setEditLog] = useState<RestockLog|null>(null)
@@ -128,7 +128,8 @@ export default function StockPage() {
         size: v.size.trim(),
         color: v.color.trim(),
         price: Number(v.price) || 0,
-        stock: Number(v.stock) || 0
+        stock: Number(v.stock) || 0,
+        cost: Number(v.cost) || 0
       }))
 
     const totalStock = validVariants.length > 0
@@ -361,7 +362,7 @@ export default function StockPage() {
             <div className="mt-4">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-400">Variant жагсаалт</span>
-                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0'}])}
+                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0',cost:''}])}
                   className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
               </div>
               {nVariants.length>0&&(
@@ -378,7 +379,7 @@ export default function StockPage() {
               )}
               <div className="space-y-2">
                 {nVariants.map((v,i)=>(
-                  <div key={i} className="grid grid-cols-[1fr_1fr_80px_70px_28px] gap-2 items-center">
+                  <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_70px_28px] gap-2 items-center">
                     <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
                       placeholder="150x200..." value={v.size}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
@@ -386,8 +387,11 @@ export default function StockPage() {
                       placeholder="Цагаан..." value={v.color}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
                     <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="83000" value={v.price}
+                      placeholder="Зарах үнэ" value={v.price}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value}:x))}/>
+                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="Өртөг" value={v.cost}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value}:x))}/>
                     <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
                       placeholder="0" min="0" value={v.stock}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/>
@@ -441,7 +445,9 @@ export default function StockPage() {
                         <div key={i} className="flex items-center justify-between text-xs">
                           <span className="text-gray-500">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
                           <div className="flex items-center gap-4">
+                            {(v as any).cost>0&&<span className="text-gray-400">өртөг: {fmt((v as any).cost)}₮</span>}
                             <span className="text-emerald-600">{fmt(v.price)}₮</span>
+                            {(v as any).cost>0&&<span className="text-xs text-blue-500">{Math.round(((v.price-(v as any).cost)/v.price)*100)}%</span>}
                             <span className={`font-medium ${v.stock === 0 ? 'text-red-500' : v.stock <= 5 ? 'text-amber-500' : 'text-gray-600'}`}>
                               {v.stock}ш
                             </span>
