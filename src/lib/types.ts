@@ -6,6 +6,9 @@ export interface Product {
   stock: number
   added_date: string
   created_at: string
+  store_id?: string | null
+  variants?: {color: string, size: string, price?: number, stock?: number, cost?: number}[] | null
+  cost?: number | null
 }
 
 export interface Order {
