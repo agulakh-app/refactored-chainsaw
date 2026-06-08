@@ -38,9 +38,12 @@ export default function StockPage() {
   const [nQty, setNQty] = useState('0')
   const [nDate, setNDate] = useState(TODAY)
   const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string,cost:string}[]>([])
+  const [nCost, setNCost] = useState('')
 
   // Edit log
   const [editLog, setEditLog] = useState<RestockLog|null>(null)
+  const [selectedLogs, setSelectedLogs] = useState<Set<string>>(new Set())
+  const [selectMode, setSelectMode] = useState(false)
   const [editQty, setEditQty] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editNote, setEditNote] = useState('')
@@ -136,12 +139,16 @@ export default function StockPage() {
       ? validVariants.reduce((a, v) => a + v.stock, 0)
       : Number(nQty) || 0
 
+    // variant-гүй бараанд cost хадгалах
+    const noVariantCost = validVariants.length === 0 && nCost ? Number(nCost) : null
+
     const { data: prod } = await supabase.from('products').insert({
       user_id: targetId, name: nName.trim(),
       unit_price: Number(nPrice) || 0,
       stock: totalStock, added_date: nDate,
       store_id: activeStoreId || null,
-      variants: validVariants.length > 0 ? validVariants : null
+      variants: validVariants.length > 0 ? validVariants : null,
+      cost: noVariantCost
     }).select().single()
 
     if (prod && totalStock > 0) {
@@ -152,7 +159,7 @@ export default function StockPage() {
       })
     }
 
-    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([])
+    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([]); setNCost('')
     showFlash(nName + ' нэмэгдлээ ✓'); load()
   }
 
@@ -170,6 +177,17 @@ export default function StockPage() {
     await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
     setEditProd(null)
     showFlash(editProd.name + ' stock шинэчлэгдлээ ✓')
+    load()
+  }
+
+  async function bulkDeleteLogs() {
+    if (selectedLogs.size === 0) return
+    if (!confirm(`${selectedLogs.size} бүртгэл устгах уу?`)) return
+    for (const id of Array.from(selectedLogs)) {
+      await supabase.from('restock_log').delete().eq('id', id)
+    }
+    setSelectedLogs(new Set())
+    setSelectMode(false)
     load()
   }
 
@@ -342,18 +360,19 @@ export default function StockPage() {
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div><label className="block text-xs text-gray-500 mb-1">Нэр</label>
+          <div className="grid gap-3" style={{gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr'}}>
+            <div><label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
               <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} /></div>
-            <div><label className="block text-xs text-gray-500 mb-1">Нэгж үнэ (₮)</label>
-              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                placeholder="0" value={nPrice} onChange={e=>setNPrice(e.target.value)} /></div>
-            {!variantEnabled && (
-              <div><label className="block text-xs text-gray-500 mb-1">Анхны тоо</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  min="0" value={nQty} onChange={e=>setNQty(e.target.value)} /></div>
-            )}
+            {!variantEnabled&&<div><label className="block text-xs text-gray-500 mb-1">Тоо</label>
+              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                min="0" value={nQty} onChange={e=>setNQty(e.target.value)} /></div>}
+            <div><label className="block text-xs text-gray-500 mb-1">Зарах үнэ (₮)</label>
+              <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="59,000" value={nPrice?Number(nPrice).toLocaleString():''} onChange={e=>setNPrice(e.target.value.replace(/[^0-9]/g,''))} /></div>
+            {!variantEnabled&&<div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮)</label>
+              <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} /></div>}
             <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
               <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={nDate} onChange={e=>setNDate(e.target.value)} /></div>
@@ -499,19 +518,28 @@ export default function StockPage() {
               </div>
               <div className="divide-y divide-gray-50">
                 {grp.map(r=>(
-                  <div key={r.id} className="flex justify-between items-center py-2.5 px-4 hover:bg-gray-50 group">
-                    <div>
-                      <div className="text-sm text-gray-700">{r.product_name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {r.note}
-                        {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
+                  <div key={r.id} className={`flex justify-between items-center py-2.5 px-4 hover:bg-gray-50 group ${selectMode&&selectedLogs.has(r.id)?'bg-blue-50':''}`}
+                    onClick={selectMode?()=>setSelectedLogs(s=>{const n=new Set(s);n.has(r.id)?n.delete(r.id):n.add(r.id);return n}):undefined}
+                    style={selectMode?{cursor:'pointer'}:{}}>
+                    <div className="flex items-center gap-3">
+                      {selectMode&&(
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selectedLogs.has(r.id)?'bg-emerald-500 border-emerald-500':'border-gray-300'}`}>
+                          {selectedLogs.has(r.id)&&<span className="text-white text-xs">✓</span>}
+                        </div>
+                      )}
+                      <div>
+                        <div className="text-sm text-gray-700">{r.product_name}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {r.note}
+                          {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`text-sm font-medium ${r.type==='in'?'text-emerald-600':'text-red-500'}`}>
                         {r.type==='in'?'+':'-'}{r.quantity}ш
                       </span>
-                      {!isViewer && (
+                      {!isViewer&&!selectMode&&(
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'')}}
                             className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50">засах</button>
