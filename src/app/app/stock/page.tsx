@@ -324,10 +324,17 @@ export default function StockPage() {
                 value={rDate} onChange={e=>setRDate(e.target.value)} />
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Нэгжийн өртөг (₮) <span className="text-gray-400">— заавал биш</span></label>
+              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="Нийлүүлэгчээс авсан үнэ..." value={rCost} onChange={e=>setRCost(e.target.value)} />
+            </div>
           </div>
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
           <div className="flex justify-end mt-3">
