@@ -64,7 +64,7 @@ export default function HistoryPage() {
     ? orders.filter(o => o.phone === selectedPhone)
     : []
   const phoneAddresses = selectedPhone
-    ? [...new Set(phoneOrders.map(o => o.address).filter(Boolean))]
+    ? Array.from(new Set(phoneOrders.map(o => o.address).filter(Boolean)))
     : []
 
   // CSV экспорт — дэлгүүрээр ялгасан
