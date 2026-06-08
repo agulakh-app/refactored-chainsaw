@@ -28,7 +28,6 @@ export default function StockPage() {
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
   const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
-  const [rCost, setRCost] = useState('')
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
   const [rNote, setRNote] = useState('')
@@ -109,10 +108,9 @@ export default function StockPage() {
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
       quantity: absQty, type: isNeg ? 'out' : 'in',
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
-      cost_per_unit: rCost ? Number(rCost) : null
     })
 
-    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1); setRCost('')
+    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1)
     showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
@@ -324,17 +322,10 @@ export default function StockPage() {
                 value={rDate} onChange={e=>setRDate(e.target.value)} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Нэгжийн өртөг (₮) <span className="text-gray-400">— заавал биш</span></label>
-              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                placeholder="Нийлүүлэгчээс авсан үнэ..." value={rCost} onChange={e=>setRCost(e.target.value)} />
-            </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
           </div>
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
           <div className="flex justify-end mt-3">
