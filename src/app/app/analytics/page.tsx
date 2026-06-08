@@ -101,8 +101,6 @@ export default function AnalyticsPage() {
   const totalDelv = filtered.reduce((a,o)=>a+(o.delivery_fee||0),0)
   const totalNet = totalGross - totalDelv
   const totalExpenses = filteredExp.reduce((a,e)=>a+Number(e.amount),0)
-  const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
-  const totalProfit = totalNet - totalExpenses - totalCOGS
   const delivered = filtered.filter(o=>o.status==='delivered').length
   const pending = filtered.filter(o=>o.status==='pending').length
 
@@ -134,6 +132,8 @@ export default function AnalyticsPage() {
       productMap[key].cost+=i.quantity*getCost(i.product_name, i.variant_label||null)
     })
   })
+  const totalCOGS = Object.values(productMap).reduce((a,v)=>a+v.cost,0)
+  const totalProfit = totalNet - totalExpenses - totalCOGS
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
   const maxQty = ranking[0]?.[1]?.qty||1
 
