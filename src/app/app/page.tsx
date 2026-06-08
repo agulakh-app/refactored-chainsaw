@@ -22,6 +22,9 @@ export default function DashPage() {
   const [stores,setStores]=useState<any[]>([])
   const [warehouses,setWarehouses]=useState<any[]>([])
   const [flash,setFlash]=useState('')
+  const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void}|null>(null)
+
+  function confirm2(msg:string, onOk:()=>void){ setConfirmModal({msg,onOk}) }
   const [phoneFilter,setPhoneFilter]=useState('')
   const [storeFilter,setStoreFilter]=useState('all')
   const [statusFilter,setStatusFilter]=useState('all')
@@ -191,6 +194,19 @@ export default function DashPage() {
   return (
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {confirmModal&&(
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
+            <div className="flex gap-3">
+              <button onClick={()=>setConfirmModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
+              <button onClick={()=>{confirmModal.onOk();setConfirmModal(null)}}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {!isViewer&&editOrder&&(
@@ -278,7 +294,7 @@ export default function DashPage() {
                         <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                           {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                         </select>
-                        <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
+                        <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} style={{minWidth:52}}/>
                         <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
                         {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
                       </div>
