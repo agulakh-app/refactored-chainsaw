@@ -379,19 +379,19 @@ export default function StockPage() {
               )}
               <div className="space-y-2">
                 {nVariants.map((v,i)=>(
-                  <div key={i} className="grid grid-cols-[1fr_1fr_80px_80px_70px_28px] gap-2 items-center">
+                  <div key={i} className="grid grid-cols-[1.5fr_1.2fr_110px_110px_70px_28px] gap-2 items-center">
                     <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
                       placeholder="150x200..." value={v.size}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/>
                     <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
                       placeholder="Цагаан..." value={v.color}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/>
-                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="Зарах үнэ" value={v.price}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value}:x))}/>
-                    <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
-                      placeholder="Өртөг" value={v.cost}
-                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value}:x))}/>
+                    <input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
+                    <input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                      placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
+                      onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
                     <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
                       placeholder="0" min="0" value={v.stock}
                       onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/>
@@ -445,9 +445,9 @@ export default function StockPage() {
                         <div key={i} className="flex items-center justify-between text-xs">
                           <span className="text-gray-500">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
                           <div className="flex items-center gap-4">
-                            {(v as any).cost>0&&<span className="text-gray-400">өртөг: {fmt((v as any).cost)}₮</span>}
-                            <span className="text-emerald-600">{fmt(v.price)}₮</span>
-                            {(v as any).cost>0&&<span className="text-xs text-blue-500">{Math.round(((v.price-(v as any).cost)/v.price)*100)}%</span>}
+                            {(v as any).cost>0&&<span className="text-gray-400">өртөг: {fmt(Number((v as any).cost))}₮</span>}
+                            <span className="text-emerald-600">{fmt(Number(v.price))}₮</span>
+                            {(v as any).cost>0&&v.price>0&&<span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-500">{Math.round(((v.price-Number((v as any).cost))/v.price)*100)}%</span>}
                             <span className={`font-medium ${v.stock === 0 ? 'text-red-500' : v.stock <= 5 ? 'text-amber-500' : 'text-gray-600'}`}>
                               {v.stock}ш
                             </span>
