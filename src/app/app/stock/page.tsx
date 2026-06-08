@@ -21,6 +21,7 @@ export default function StockPage() {
   const [products, setProducts] = useState<Product[]>([])
   const [logs, setLogs] = useState<RestockLog[]>([])
   const [flash, setFlash] = useState('')
+  const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
   const [logFilter, setLogFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('')
   const [variantEnabled, setVariantEnabled] = useState(false)
@@ -164,9 +165,10 @@ export default function StockPage() {
   }
 
   async function deleteProduct(id: string, name: string) {
-    if (!confirm(name + ' устгах уу?')) return
-    await supabase.from('products').delete().eq('id', id)
-    showFlash(name + ' устгагдлаа'); load()
+    setConfirmModal({msg: name+' устгах уу?', onOk: async()=>{
+      await supabase.from('products').delete().eq('id', id)
+      showFlash(name+' устгагдлаа'); load()
+    }})
   }
 
   async function saveEditVariants() {
@@ -182,13 +184,14 @@ export default function StockPage() {
 
   async function bulkDeleteLogs() {
     if (selectedLogs.size === 0) return
-    if (!confirm(`${selectedLogs.size} бүртгэл устгах уу?`)) return
+    setConfirmModal({msg:`${selectedLogs.size} бүртгэл устгах уу?`, onOk: async()=>{
     for (const id of Array.from(selectedLogs)) {
       await supabase.from('restock_log').delete().eq('id', id)
     }
-    setSelectedLogs(new Set())
-    setSelectMode(false)
-    load()
+      setSelectedLogs(new Set())
+      setSelectMode(false)
+      load()
+    }})
   }
 
   async function deleteLog(log: RestockLog) {
@@ -246,6 +249,19 @@ export default function StockPage() {
   return (
     <div className="space-y-4">
       {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {confirmModal&&(
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
+            <div className="flex gap-3">
+              <button onClick={()=>setConfirmModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
+              <button onClick={()=>{confirmModal.onOk();setConfirmModal(null)}}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit variants stock modal */}
       {!isViewer && editProd && (
