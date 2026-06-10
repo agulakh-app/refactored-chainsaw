@@ -16,23 +16,23 @@ export function useActiveStore() { return useContext(GuestContext).activeStoreId
 export function useSetActiveStore() { return useContext(GuestContext).setActiveStoreId }
 
 const TABS = [
-  { href:'/app',           label:'Самбар'   },
-  { href:'/app/stock',     label:'Агуулах'  },
-  { href:'/app/history',   label:'Түүх'     },
-  { href:'/app/analytics', label:'Тайлан'   },
-  { href:'/app/settings',  label:'Тохиргоо' },
+  { href:'/app',           label:'Самбар',   icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { href:'/app/stock',     label:'Агуулах',  icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+  { href:'/app/history',   label:'Түүх',     icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { href:'/app/analytics', label:'Тайлан',   icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { href:'/app/settings',  label:'Тохиргоо', icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
 
 function timeLeft(d: string | null) {
   if (!d) return ''
   const ms = new Date(d).getTime() - Date.now()
   if (ms <= 0) return '0 минут үлдсэн'
-  const mins = Math.floor(ms / 60000)
-  const hours = Math.floor(ms / 3600000)
   const days = Math.floor(ms / 86400000)
-  if (days >= 2) return `${days} өдөр үлдсэн`
-  if (hours >= 1) return `${hours} цаг үлдсэн`
-  return `${mins} минут үлдсэн`
+  const hours = Math.floor(ms / 3600000)
+  const mins = Math.floor(ms / 60000)
+  if (days >= 2) return `${days} өдөр`
+  if (hours >= 1) return `${hours} цаг`
+  return `${mins} мин`
 }
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -58,42 +58,32 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           setGuestRole(access.role)
           setOwnerId(access.owner_id)
           const { data: ownerProfile } = await supabase.from('profiles')
-            .select('business_name')
-            .eq('id', access.owner_id)
-            .single()
+            .select('business_name').eq('id', access.owner_id).single()
           setOwnerName(ownerProfile?.business_name || 'OLULA')
           setReady(true)
           return
         } catch {}
       }
-
       const { data } = await supabase.auth.getUser()
       if (!data.user) { router.push('/'); return }
-
       const [{ data: p }, { data: sts }] = await Promise.all([
         supabase.from('profiles')
           .select('business_name,subscription_status,trial_ends_at,subscription_ends_at')
-          .eq('id', data.user.id)
-          .single(),
+          .eq('id', data.user.id).single(),
         supabase.from('stores').select('*').eq('user_id', data.user.id).order('created_at')
       ])
-
       if (p) {
         setBizName(p.business_name || '')
         setSubStatus(p.subscription_status)
         setTrialEndsAt(p.trial_ends_at || null)
         setSubEndsAt(p.subscription_ends_at || null)
-        if (p.subscription_status === 'expired') {
-          router.push('/pricing')
-          return
-        }
+        if (p.subscription_status === 'expired') { router.push('/pricing'); return }
         const storeList = sts || []
         setStores(storeList)
         if (storeList.length > 0) setActiveStoreId(storeList[0].id)
         setReady(true)
         return
       }
-
       router.push('/')
     }
     init()
@@ -117,19 +107,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     : TABS
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
+      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center justify-between py-3 border-b border-gray-50">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-0.5 h-7 bg-emerald-500 rounded-full"/>
-                <div className="leading-tight">
-                  <div className="font-medium text-gray-900 text-base">
-                    {isGuest ? ownerName : (bizName || 'OLULA')}
-                  </div>
-                  <div className="text-xs text-gray-400">Агуулахаа гартаа атга</div>
+          {/* Top row */}
+          <div className="flex items-center justify-between py-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-0.5 h-7 bg-emerald-500 rounded-full"/>
+              <div className="leading-tight">
+                <div className="font-medium text-gray-900 text-base">
+                  {isGuest ? ownerName : (bizName || 'OLULA')}
                 </div>
+                <div className="text-xs text-gray-400 hidden sm:block">Агуулахаа гартаа атга</div>
               </div>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
@@ -137,7 +127,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {!isGuest && subStatus === 'trial' && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-600 border border-amber-100">
                   Туршилт · {timeLeft(trialEndsAt)}
@@ -148,55 +138,57 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
-              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
+              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">
                 Гарах
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex overflow-x-auto">
+
+          {/* Desktop tabs + store selector */}
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex">
               {visibleTabs.map(t => (
-                <button
-                  key={t.href}
-                  onClick={() => router.push(t.href)}
+                <button key={t.href} onClick={() => router.push(t.href)}
                   className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
                     path === t.href
                       ? 'border-emerald-600 text-emerald-700 font-medium'
                       : 'border-transparent text-gray-400 hover:text-gray-600'
-                  }`}
-                >
+                  }`}>
                   {t.label}
                 </button>
               ))}
             </div>
             {!isGuest && stores.length > 1 && (
               <div className="flex gap-1 pb-1">
-                <button
-                  onClick={() => setActiveStoreId(null)}
-                  className={`px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap ${
-                    activeStoreId === null
-                      ? 'bg-gray-800 text-white'
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                  }`}
-                >
-                  Бүгд
-                </button>
+                <button onClick={() => setActiveStoreId(null)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                    activeStoreId === null ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                  }`}>Бүгд</button>
                 {stores.map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => setActiveStoreId(s.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                      activeStoreId === s.id
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    {s.name}
-                  </button>
+                  <button key={s.id} onClick={() => setActiveStoreId(s.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      activeStoreId === s.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}>{s.name}</button>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Mobile store selector */}
+          {!isGuest && stores.length > 1 && (
+            <div className="flex gap-1 pb-2 md:hidden">
+              <button onClick={() => setActiveStoreId(null)}
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                  activeStoreId === null ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-400'
+                }`}>Бүгд</button>
+              {stores.map(s => (
+                <button key={s.id} onClick={() => setActiveStoreId(s.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    activeStoreId === s.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500'
+                  }`}>{s.name}</button>
+              ))}
+            </div>
+          )}
         </div>
       </header>
 
@@ -206,11 +198,32 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
       )}
 
-      <main className="max-w-5xl mx-auto px-4 py-5">
+      <main className="max-w-5xl mx-auto px-4 py-4">
         <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId }}>
           {children}
         </GuestContext.Provider>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 safe-area-pb">
+        <div className="flex items-center justify-around px-2 py-1">
+          {visibleTabs.map(t => {
+            const active = path === t.href
+            return (
+              <button key={t.href} onClick={() => router.push(t.href)}
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${
+                  active ? 'text-emerald-600' : 'text-gray-400'
+                }`}>
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={t.icon}/>
+                </svg>
+                <span className={`text-xs truncate ${active ? 'font-medium' : ''}`}>{t.label}</span>
+                {active && <div className="w-1 h-1 bg-emerald-500 rounded-full"/>}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }
