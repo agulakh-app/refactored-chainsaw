@@ -307,7 +307,7 @@ export default function StockPage() {
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editQty} onChange={e=>setEditQty(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
@@ -354,7 +354,7 @@ export default function StockPage() {
             </div>
             <div className="w-36">
               <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={rDate} onChange={e=>setRDate(e.target.value)} />
             </div>
           </div>
@@ -391,7 +391,7 @@ export default function StockPage() {
               <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} /></div>}
             <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={nDate} onChange={e=>setNDate(e.target.value)} /></div>
           </div>
           {variantEnabled && (
