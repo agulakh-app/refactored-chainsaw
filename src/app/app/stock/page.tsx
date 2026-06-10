@@ -195,9 +195,10 @@ export default function StockPage() {
   }
 
   async function deleteLog(log: RestockLog) {
-    if (!confirm('Энэ бүртгэлийг устгах уу?')) return
-    await supabase.from('restock_log').delete().eq('id', log.id)
-    showFlash('Устгагдлаа'); load()
+    setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?', onOk: async()=>{
+      await supabase.from('restock_log').delete().eq('id', log.id)
+      showFlash('Устгагдлаа'); load()
+    }})
   }
 
   async function saveEditLog() {
@@ -507,8 +508,32 @@ export default function StockPage() {
 
       {/* Цэнэглэлтийн бүртгэл */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100">
+        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-medium text-gray-800 text-sm">Агуулах дахь бараа</h2>
+          {!isViewer&&(
+            <div className="flex items-center gap-2">
+              {selectMode&&selectedLogs.size>0&&(
+                <button onClick={bulkDeleteLogs}
+                  className="px-3 py-1 bg-red-50 text-red-500 rounded-lg text-xs font-medium hover:bg-red-100">
+                  {selectedLogs.size}ш устгах
+                </button>
+              )}
+              {selectMode&&filteredLogs.length>0&&(
+                <button onClick={()=>setSelectedLogs(
+                  selectedLogs.size===filteredLogs.length
+                    ? new Set()
+                    : new Set(filteredLogs.map((l:any)=>l.id))
+                )}
+                  className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">
+                  {selectedLogs.size===filteredLogs.length?'Болих':'Бүгд'}
+                </button>
+              )}
+              <button onClick={()=>{setSelectMode((s:boolean)=>!s);setSelectedLogs(new Set())}}
+                className={`px-3 py-1 rounded-lg text-xs ${selectMode?'bg-gray-200 text-gray-700':'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
+                {selectMode?'Болих':'Сонгох'}
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
           <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
