@@ -158,7 +158,7 @@ export default function DashPage() {
   }
 
   async function deleteOrder(o:Order){
-    if(!confirm('Захиалга устгах уу?')) return
+    setConfirmModal({msg:'Захиалга устгах уу?', onOk: async()=>{
     setOpenDropdown(null)
     if(o.status==='pending'){
       for(const it of(o.order_items||[])){
