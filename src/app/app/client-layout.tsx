@@ -119,7 +119,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <div className="font-medium text-gray-900 text-base">
                   {isGuest ? ownerName : (bizName || 'OLULA')}
                 </div>
-                <div className="text-xs text-gray-400 hidden sm:block">Агуулахаа гартаа атга</div>
+                <div className="text-xs text-gray-400">Агуулахаа гартаа атга</div>
               </div>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
