@@ -122,17 +122,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-between py-3 border-b border-gray-50">
             <div className="flex items-center gap-3">
-              <div>
-                <span className="font-bold text-gray-900 text-xl tracking-tight">
+              <div className="leading-tight">
+                <div className="font-bold text-gray-900 text-xl tracking-tight">
                   {isGuest ? ownerName : (bizName || 'OLULA')}
-                </span>
-                <span className="text-xs text-gray-400 ml-2">Агуулахаа гартаа атга</span>
+                </div>
+                <div className="text-xs text-gray-400">Агуулахаа гартаа атга</div>
               </div>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
                   {guestRole === 'editor' ? 'Засварлагч' : 'Харагч'}
                 </span>
               )}
+            </div>
+            <div className="flex items-center gap-3">
               {!isGuest && subStatus === 'trial' && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-600 border border-amber-100">
                   Туршилт · {timeLeft(trialEndsAt)}
@@ -143,10 +145,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
+              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
+                Гарах
+              </button>
             </div>
-            <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
-              Гарах
-            </button>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex overflow-x-auto">
