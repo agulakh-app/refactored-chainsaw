@@ -243,92 +243,76 @@ export default function DashPage() {
       {/* Order form */}
       {!isViewer&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-800 text-sm">Шинэ захиалга</h2>
-            {activeStoreId&&stores.length>0&&(
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                {stores.find(s=>s.id===activeStoreId)?.name}
-              </span>
-            )}
-          </div>
+          <h2 className="font-medium text-gray-800 text-sm mb-3">Шинэ захиалга</h2>
           <div className="space-y-3">
-            {/* Мөр 1: Утас | Огноо | Хүргэлт */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
+              <input className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
+            <div className="grid grid-cols-2 gap-3">
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
+                <input type="date" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm appearance-none" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">({fmt(defaultDelivery)}₮)</span>}</label>
+                <input type="number" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
-            {/* Мөр 2: Хаяг | Бараа — ижил өндөр */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-              <div className="flex flex-col">
-                <label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <textarea
-                  className="flex-1 w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none min-h-[80px]"
-                  placeholder="Дүүрэг, хороо, байр..."
-                  value={oAddr} onChange={e=>setOAddr(e.target.value)}/>
-                {warehouses.length>0&&(
-                  <div className="mt-2"><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                      <option value="">— Сонгох —</option>
-                      {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select></div>
-                )}
+            <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
+              <input className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/>
+            </div>
+            {warehouses.length>0&&(
+              <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
+                <select className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
+                  <option value="">— Сонгох —</option>
+                  {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
+                </select>
               </div>
-              <div className="flex flex-col">
-                <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
-                <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 flex-1">
-                  <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 mb-1 px-1">
-                    <div className="text-xs text-gray-400">Бараа</div>
-                    <div className="text-xs text-gray-400 text-center">Тоо</div>
-                    <div className="text-xs text-gray-400">Үнэ (₮)</div>
-                    <div></div>
-                  </div>
-                  {oItems.map((it,idx)=>{
-                    const selProd=products.find(p=>p.id===it.product_id)
-                    const variants:any[]=(selProd as any)?.variants||[]
-                    return(
-                    <div key={idx} className="space-y-1.5">
-                      <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 items-center">
-                        <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                          {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                        </select>
-                        <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} style={{minWidth:52}}/>
-                        <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
-                        {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
-                      </div>
-                      {variantEnabled&&variants.length>0&&(
-                        <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
-                          value={it.variant_label}
-                          onChange={e=>{
-                            const v=variants.find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===e.target.value)
-                            setItem(idx,'variant_label',e.target.value)
-                            if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
-                          }}>
-                          <option value="">— Хэмжээ / Өнгө сонгох —</option>
-                          {variants.map((v:any,vi:number)=>(
-                            <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
-                              {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+            )}
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
+              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2">
+                <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 mb-1 px-1">
+                  <div className="text-xs text-gray-400">Бараа</div>
+                  <div className="text-xs text-gray-400 text-center">Тоо</div>
+                  <div className="text-xs text-gray-400">Үнэ (₮)</div>
+                  <div></div>
+                </div>
+                {oItems.map((it,idx)=>{
+                  const selProd=products.find(p=>p.id===it.product_id)
+                  const variants:any[]=(selProd as any)?.variants||[]
+                  return(
+                  <div key={idx} className="space-y-1.5">
+                    <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 items-center">
+                      <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
+                      </select>
+                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
+                      <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
+                      {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
                     </div>
-                  )})}
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
-                  {gross>0&&<span className="text-xs text-gray-400">
-                    {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = `+fmt(net)+'₮':''}
-                  </span>}
-                </div>
-                <div className="flex justify-end mt-2">
-                  <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
-                </div>
+                    {variantEnabled&&variants.length>0&&(
+                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+                        value={it.variant_label}
+                        onChange={e=>{
+                          const v=variants.find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===e.target.value)
+                          setItem(idx,'variant_label',e.target.value)
+                          if(v?.price) setOItems(items=>items.map((it2,i2)=>i2===idx?{...it2,price:String(v.price)}:it2))
+                        }}>
+                        <option value="">— Хэмжээ / Өнгө сонгох —</option>
+                        {variants.map((v:any,vi:number)=>(
+                          <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
+                            {[v.size,v.color].filter(Boolean).join(' / ')}{v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )})}
+              </div>
+              <div className="flex items-center justify-between mt-2">
+                <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
+                {gross>0&&<span className="text-xs text-gray-400">
+                  {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = `+fmt(net)+'₮':''}
+                </span>}
               </div>
             </div>
+            <button onClick={submitOrder} className="w-full py-3 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
           </div>
         </div>
       )}
