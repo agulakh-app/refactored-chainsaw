@@ -169,6 +169,7 @@ export default function DashPage() {
     await supabase.from('order_items').delete().eq('order_id',o.id)
     await supabase.from('orders').delete().eq('id',o.id)
     showFlash('Устгагдлаа');load()
+    }})
   }
 
   function copyOrderInfo(o:Order){
