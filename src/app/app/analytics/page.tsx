@@ -182,7 +182,7 @@ export default function AnalyticsPage() {
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 text-sm mb-3">Зардал бүртгэх</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             <div><label className="block text-xs text-gray-400 mb-1">Огноо</label>
               <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 value={eDate} onChange={e=>setEDate(e.target.value)}/></div>
