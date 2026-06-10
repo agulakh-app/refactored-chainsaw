@@ -253,7 +253,7 @@ export default function DashPage() {
           </div>
           <div className="space-y-3">
             {/* Мөр 1: Утас | Огноо | Хүргэлт */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
@@ -262,7 +262,7 @@ export default function DashPage() {
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
             {/* Мөр 2: Хаяг | Бараа — ижил өндөр */}
-            <div className="grid grid-cols-2 gap-3 items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
               <div className="flex flex-col">
                 <label className="block text-xs text-gray-500 mb-1">Хаяг</label>
                 <textarea
@@ -338,7 +338,7 @@ export default function DashPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
         </div>
-        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
+        <div className="flex gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
           <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
