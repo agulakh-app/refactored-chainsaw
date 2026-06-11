@@ -4,7 +4,7 @@
   "description": "Агуулахаа гартаа атга",
   "start_url": "/app",
   "display": "standalone",
-  "background_color": "#f9fafb",
+  "background_color": "#059669",
   "theme_color": "#059669",
   "orientation": "portrait",
   "icons": [
