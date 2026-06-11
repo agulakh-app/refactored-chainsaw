@@ -513,18 +513,15 @@ export default function StockPage() {
                   {pvs.length > 0 && (
                     <div className="mt-1.5 space-y-1">
                       {pvs.map((v, i) => (
-                        <div key={i} className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
-                          <div className="flex items-center gap-4">
-                            {(v as any).cost>0&&<span className="text-gray-400">өртөг: {fmt(Number((v as any).cost))}₮</span>}
-                            <span className="text-emerald-600">{fmt(Number(v.price))}₮</span>
-                            {(v as any).cost>0&&v.price>0&&<span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-500">{Math.round(((v.price-Number((v as any).cost))/v.price)*100)}%</span>}
-                            <span className={`font-medium ${v.stock === 0 ? 'text-red-500' : v.stock <= 5 ? 'text-amber-500' : 'text-gray-600'}`}>
-                              {v.stock}ш
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+  <div key={i} className="flex items-center justify-between text-xs py-0.5">
+    <span className="text-gray-500 w-32 truncate">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
+    <div className="flex items-center gap-3 flex-shrink-0">
+      {(v as any).cost>0&&<span className="text-gray-400 w-24 text-right">өртөг: {fmt(Number((v as any).cost))}₮</span>}
+      <span className="text-emerald-600 w-20 text-right">{fmt(Number(v.price))}₮</span>
+      <span className={`w-10 text-right font-medium ${v.stock===0?'text-red-500':v.stock<=5?'text-amber-500':'text-gray-600'}`}>{v.stock}ш</span>
+    </div>
+  </div>
+))}
                     </div>
                   )}
                 </div>
