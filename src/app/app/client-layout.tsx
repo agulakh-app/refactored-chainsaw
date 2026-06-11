@@ -26,7 +26,7 @@ const TABS = [
 function timeLeft(d: string | null) {
   if (!d) return ''
   const ms = new Date(d).getTime() - Date.now()
-  if (ms <= 0) return '0 минут үлдсэн'
+  if (ms <= 0) return '0 мин'
   const days = Math.floor(ms / 86400000)
   const hours = Math.floor(ms / 3600000)
   const mins = Math.floor(ms / 60000)
@@ -48,6 +48,34 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [ownerName, setOwnerName] = useState('')
   const [stores, setStores] = useState<any[]>([])
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  useEffect(() => {
+    // PWA install prompt
+    const handler = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // Аль хэдийн суулгагдсан эсэх
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function installApp() {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') {
+      setInstallPrompt(null)
+      setIsInstalled(true)
+    }
+  }
 
   useEffect(() => {
     async function init() {
@@ -108,10 +136,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4">
-          {/* Top row */}
           <div className="flex items-center justify-between py-2.5">
             <div className="flex items-center gap-2.5">
               <div className="w-0.5 h-7 bg-emerald-500 rounded-full"/>
@@ -119,11 +145,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <div className="font-medium text-gray-900 text-base">
                   {isGuest ? ownerName : (bizName || 'OLULA')}
                 </div>
-                <div className="text-xs text-gray-400 hidden sm:block">Агуулахаа гартаа атга</div>
               </div>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
-                  {guestRole === 'editor' ? 'Засварлагч' : 'Харагч'}
+                  {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
                 </span>
               )}
             </div>
@@ -138,13 +163,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
+              {/* Install button — зөвхөн суулгаагүй үед */}
+              {installPrompt && !isInstalled && (
+                <button onClick={installApp}
+                  className="text-xs px-2.5 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                  Апп суулгах
+                </button>
+              )}
               <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">
                 Гарах
               </button>
             </div>
           </div>
 
-          {/* Desktop tabs + store selector */}
           <div className="hidden md:flex items-center justify-between">
             <div className="flex">
               {visibleTabs.map(t => (
@@ -174,7 +205,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </div>
 
-          {/* Mobile store selector */}
           {!isGuest && stores.length > 1 && (
             <div className="flex gap-1 pb-2 md:hidden">
               <button onClick={() => setActiveStoreId(null)}
@@ -204,8 +234,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </GuestContext.Provider>
       </main>
 
-      {/* Mobile bottom navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30 safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
         <div className="flex items-center justify-around px-2 py-1">
           {visibleTabs.map(t => {
             const active = path === t.href
