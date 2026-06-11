@@ -66,4 +66,90 @@ export default function LandingPage() {
 
       {/* Navbar */}
       <nav className="nav">
-        <a href="/" className="nav-brand">OLULA
+        <a href="/" className="nav-brand">OLULA</a>
+        <div className="nav-links">
+          <a href="/" className="nav-link">Нүүр</a>
+          <a href="/pricing" className="nav-link">Үнэ тариф</a>
+          <a href="/login" className="nav-btn">Нэвтрэх</a>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <div className="hero">
+        <div className="hero-brand">OLULA</div>
+        <h1>Агуулахаа гартаа атга</h1>
+        <p className="hero-sub">Бараа бүртгэл &nbsp;|&nbsp; Захиалга бүртгэл &nbsp;|&nbsp; Орлого, ашгийн тооцоо</p>
+        <div className="hero-btns">
+          <a href="/login" className="btn-main">Үнэгүй 7 хоног туршаад үз →</a>
+          <a href="#price" className="btn-out">Үнийн мэдээлэл</a>
+        </div>
+      </div>
+
+      {/* Асуудал */}
+      <div className="section">
+        <div className="label">Асуудал</div>
+        <div className="section-title">Танд ийм бэрхшээл тулгардаг уу?</div>
+        <div className="pain-grid">
+          <div className="pain-item"><div className="pain-dot"></div><span className="pain-text">Агуулах дахь барааны тоо, үлдэгдэл зөрөх</span></div>
+          <div className="pain-item"><div className="pain-dot"></div><span className="pain-text">Барааны үлдэгдэл, захиалга бүртгэл удаашрал</span></div>
+          <div className="pain-item"><div className="pain-dot"></div><span className="pain-text">Борлуулалт, ашгаа тооцоолох зав гардаггүй</span></div>
+          <div className="pain-item"><div className="pain-dot"></div><span className="pain-text">Олон дэлгүүр, агуулахыг хянах, бүртгэх хүндрэл</span></div>
+        </div>
+      </div>
+
+      {/* Боломжууд */}
+      <div className="section">
+        <div className="label">Боломжууд</div>
+        <div className="section-title">OLULA-д байгаа зүйлс</div>
+        <div className="feat-grid">
+          <div className="feat-card"><div className="feat-num">01</div><h3>Бараа бүртгэл</h3><p>Variant, хэмжээ, өнгөөр ялгаж бүртгэнэ</p></div>
+          <div className="feat-card"><div className="feat-num">02</div><h3>Захиалга бүртгэл</h3><p>Хурдан шивэх, хаяг хуулах, статус хянах</p></div>
+          <div className="feat-card"><div className="feat-num">03</div><h3>Ашиг тооцоо</h3><p>Өртөг, орлого, ашиг автоматаар тооцно</p></div>
+          <div className="feat-card"><div className="feat-num">04</div><h3>Зочин хандалт</h3><p>Ажилтандаа эрх олгож хамтран ажиллана</p></div>
+        </div>
+      </div>
+
+      {/* Үнэ тариф */}
+      <div className="section" id="price">
+        <div className="label">Үнэ тариф</div>
+        <div className="section-title">Боломжийн | Хэмнэлттэй</div>
+        <table className="pt">
+          <thead>
+            <tr>
+              <th className="pn"></th>
+              <th>1 сар</th>
+              <th>3 сар</th>
+              <th>6 сар</th>
+              <th>1 жил</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td className="pn">Үндсэн</td><td className="price">19,900₮</td><td className="price">55,000₮</td><td className="price">109,000₮</td><td className="price">218,000₮</td></tr>
+            <tr><td className="pn">Стандарт</td><td className="price">29,900₮</td><td className="price">85,000₮</td><td className="price">169,000₮</td><td className="price">318,000₮</td></tr>
+            <tr><td className="pn">Бүрэн эрх</td><td className="price">39,900₮</td><td className="price">115,000₮</td><td className="price">219,000₮</td><td className="price">429,000₮</td></tr>
+            <tr className="sep-row"><td colSpan={5}>Эрхийн ялгаа</td></tr>
+            <tr className="feat-row"><td className="pn">Бараа, захиалга бүртгэл</td><td colSpan={4} style={{textAlign:'center',color:'#07e6ae'}}>✓ Бүгдэд байна</td></tr>
+            <tr className="feat-row"><td className="pn">Зочин нэмэх, тайлан харах</td><td style={{textAlign:'center',color:'#ddd'}}>✕</td><td colSpan={3} style={{textAlign:'center',color:'#04725a',fontSize:12}}>Стандарт, Бүрэн эрхэд байна</td></tr>
+            <tr className="feat-row"><td className="pn">Олон дэлгүүр</td><td colSpan={3} style={{textAlign:'center',color:'#ddd'}}>✕</td><td style={{textAlign:'center',color:'#04725a',fontSize:12}}>Зөвхөн Бүрэн эрхэд</td></tr>
+          </tbody>
+        </table>
+        <div className="free-note">
+          7 хоногийн <strong>ТӨЛБӨРГҮЙ туршилт</strong> — бүртгүүлсний дараа автоматаар эхэлнэ.
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="cta">
+        <div className="label">Эхлэх</div>
+        <h2>Өнөөдрөөс эхлэх үү?</h2>
+        <p>Веб болон гар утасны апп-д ашиглаж болно — одоо эхэлье.</p>
+        <a href="/login" className="btn-main" style={{fontSize:15,padding:'14px 36px'}}>Үнэгүй туршаад үзэх →</a>
+        <div className="trust">
+          <div className="trust-item"><div className="trust-dot"></div>Аюулгүй</div>
+          <div className="trust-item"><div className="trust-dot"></div>Гар утсанд ажиллана</div>
+          <div className="trust-item"><div className="trust-dot"></div>Веб дээр ажиллана</div>
+        </div>
+      </div>
+    </div>
+  )
+}
