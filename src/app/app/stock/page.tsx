@@ -491,13 +491,13 @@ export default function StockPage() {
               return (
                 <div key={p.id} className="px-4 py-3 hover:bg-gray-50">
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-700">{p.name}</span>
-                      {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded">Дууссан</span>}
-                      {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded">Цөөн</span>}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-gray-500">Нийт: {p.stock}ш</span>
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    <span className="text-sm font-medium text-gray-700 truncate">{p.name}</span>
+    {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded flex-shrink-0">Дууссан</span>}
+    {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded flex-shrink-0">Цөөн</span>}
+  </div>
+  <div className="flex items-center gap-3 flex-shrink-0">
+    <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
                       {!isViewer && (
                         <div className="flex items-center gap-1">
                           {pvs.length > 0 && (
