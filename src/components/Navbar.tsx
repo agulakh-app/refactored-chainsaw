@@ -45,25 +45,27 @@ export default function Navbar() {
           justifyContent: "space-between",
         }}>
           {/* Logo */}
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
-            <span style={{
-              fontSize: 20,
-              fontWeight: 800,
-              letterSpacing: "-0.8px",
-              color: scrolled ? "#0a2e24" : "#ffffff",
-              transition: "color 0.35s",
-            }}>
-              OLULA
+          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
+            <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+              <span style={{
+                fontSize: 22,
+                fontWeight: 800,
+                letterSpacing: "-0.5px",
+                color: scrolled ? "#0a2e24" : "#ffffff",
+                transition: "color 0.35s",
+              }}>
+                OL<span style={{ color: "#07e6ae" }}>ULA</span>
+              </span>
+              <span style={{
+                position: "absolute",
+                top: -2,
+                right: -6,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                background: "#07e6ae",
+              }} />
             </span>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "#07e6ae",
-              marginLeft: 2,
-              marginBottom: 10,
-              display: "inline-block",
-            }} />
           </Link>
 
           {/* Desktop nav */}
