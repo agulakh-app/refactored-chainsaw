@@ -1,211 +1,266 @@
-'use client'
-export const dynamic = 'force-dynamic'
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+"use client";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import FacebookChat from "@/components/FacebookChat";
+import PricingTable from "@/components/PricingTable";
+import HeroCarousel from "@/components/HeroCarousel";
 
-export default function AuthPage() {
-  const router = useRouter()
-  const [mode, setMode] = useState<'login'|'register'|'forgot'|'guest'>('login')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [showPw, setShowPw] = useState(false)
-  const [showPw2, setShowPw2] = useState(false)
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [password2, setPassword2] = useState('')
-  const [guestUsername, setGuestUsername] = useState('')
-  const [guestPin, setGuestPin] = useState('')
+// ── Боломжуудын дата ──────────────────────────────────────────
+const FEATURES = [
+  {
+    icon: "📦",
+    title: "Бараа бүртгэл",
+    desc: "Variant, хэмжээ, өнгөөр ялгаж бүртгэнэ. Үлдэгдэл автоматаар тооцно.",
+  },
+  {
+    icon: "📋",
+    title: "Захиалга бүртгэл",
+    desc: "Хурдан шивэх, хаяг хуулах, захиалгын статус хянах.",
+  },
+  {
+    icon: "📊",
+    title: "Ашиг тооцоо",
+    desc: "Өртөг, орлого, ашиг автоматаар тооцно. Тайлан нэг товшилтоор.",
+  },
+  {
+    icon: "👥",
+    title: "Зочин хандалт",
+    desc: "Ажилтандаа эрх олгож, хамтран ажиллана. Эрхийн тусгаарлалт.",
+  },
+  {
+    icon: "🏪",
+    title: "Олон дэлгүүр",
+    desc: "Хэд хэдэн агуулах, дэлгүүрийг нэг эрин дор хянана.",
+  },
+  {
+    icon: "📱",
+    title: "Утас + Веб",
+    desc: "Гар утас, таблет, компьютер дээр тасралтгүй ажиллана.",
+  },
+];
 
-  function phoneToEmail(p: string) { return p.replace(/\D/g,'')+'@agulakh.app' }
-
-  async function handleSubmit() {
-    setLoading(true); setError(''); setSuccess('')
-    if (mode==='register') {
-      if (!phone.trim()) { setError('Утасны дугаар оруулна уу'); setLoading(false); return }
-      if (!email.trim()) { setError('Имэйл хаяг оруулна уу'); setLoading(false); return }
-      if (!password) { setError('Нууц үг оруулна уу'); setLoading(false); return }
-      if (password.length<6) { setError('Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой'); setLoading(false); return }
-      if (password!==password2) { setError('Нууц үг таарахгүй байна'); setLoading(false); return }
-      const { error } = await supabase.auth.signUp({
-        email: phoneToEmail(phone.trim()), password,
-        options: { data: { phone: phone.replace(/\D/g,''), contact_email: email.trim() } }
-      })
-      if (error&&!error.message.includes('confirmation')&&!error.message.includes('email')) {
-        setError(error.message); setLoading(false); return
-      }
-      router.push('/app')
-    } else if (mode==='login') {
-      if (!phone.trim()||!password) { setError('Утас болон нууц үгээ оруулна уу'); setLoading(false); return }
-      const { error } = await supabase.auth.signInWithPassword({ email: phoneToEmail(phone.trim()), password })
-      if (error) setError('Утасны дугаар эсвэл нууц үг буруу байна')
-      else router.push('/app')
-    } else if (mode==='forgot') {
-      if (!email.trim()) { setError('Имэйл хаягаа оруулна уу'); setLoading(false); return }
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/reset-password`
-      })
-      if (error) setError(error.message)
-      else setSuccess('Нууц үг сэргээх холбоос таны имэйлд илгээгдлээ')
-    } else if (mode==='guest') {
-      if (!guestUsername.trim()||!guestPin.trim()) {
-        setError('Нэвтрэх нэр болон PIN оруулна уу'); setLoading(false); return
-      }
-      const { data: access } = await supabase.from('shared_access')
-        .select('id,owner_id,role').eq('username',guestUsername.trim()).eq('pin',guestPin.trim()).single()
-      if (!access) { setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return }
-      document.cookie = `guest_access=${encodeURIComponent(JSON.stringify({
-        owner_id:access.owner_id, role:access.role, username:guestUsername.trim()
-      }))}; path=/; max-age=86400`
-      router.push('/app'); setLoading(false); return
-    }
-    setLoading(false)
-  }
-
+// ── Component ─────────────────────────────────────────────────
+export default function HomePage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{background:'#f8fffe'}}>
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-xs font-semibold tracking-widest mb-1" style={{color:'#07e6ae'}}>OLULA</div>
-          <div className="text-xl font-medium text-gray-900 tracking-wide uppercase">Агуулахаа гартаа атга</div>
-        </div>
+    <>
+      <Navbar />
+      <FacebookChat />
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          {mode!=='forgot'&&mode!=='guest'&&(
-            <div className="flex gap-1 p-1 rounded-xl mb-5" style={{background:'#f0fef9'}}>
-              {(['login','register'] as const).map(m=>(
-                <button key={m} onClick={()=>{setMode(m);setError('');setSuccess('')}}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={mode===m?{background:'white',color:'#0a2e24'}:{color:'#6b7280'}}>
-                  {m==='login'?'Нэвтрэх':'Бүртгүүлэх'}
-                </button>
-              ))}
-            </div>
-          )}
+      {/* ── HERO ── */}
+      <HeroCarousel />
 
-          {mode==='guest'&&(
-            <div className="mb-5">
-              <button onClick={()=>{setMode('login');setError('')}} className="text-xs text-gray-400 mb-3 block">← Буцах</button>
-              <div className="text-sm font-medium text-gray-800 mb-1">Зочны нэвтрэлт</div>
-              <p className="text-xs text-gray-400">Урисан хүний өгсөн нэвтрэх нэр, PIN кодоо оруулна уу</p>
-            </div>
-          )}
-
-          {mode==='forgot'&&(
-            <div className="mb-5">
-              <button onClick={()=>{setMode('login');setError('')}} className="text-xs text-gray-400 mb-3 block">← Буцах</button>
-              <div className="text-sm font-medium text-gray-800 mb-1">Нууц үг сэргээх</div>
-              <p className="text-xs text-gray-400">Бүртгэлийн имэйл хаягаа оруулна уу</p>
-              <a href="https://www.facebook.com/profile.php?id=61588363850286" target="_blank" rel="noopener noreferrer"
-                className="text-xs hover:underline mt-1 block" style={{color:'#07e6ae'}}>
-                Facebook-ээр админтай холбогдох →
-              </a>
-            </div>
-          )}
-
-          {mode==='guest'&&(
-            <>
-              <label className="block text-xs text-gray-400 mb-1">Нэвтрэх нэр</label>
-              <input className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3"
-                placeholder="username" value={guestUsername} onChange={e=>setGuestUsername(e.target.value)}/>
-              <label className="block text-xs text-gray-400 mb-1">PIN код</label>
-              <input type="password" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3"
-                placeholder="••••" value={guestPin} onChange={e=>setGuestPin(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&handleSubmit()}/>
-            </>
-          )}
-
-          {mode!=='forgot'&&mode!=='guest'&&(
-            <>
-              <label className="block text-xs text-gray-400 mb-1">Утасны дугаар</label>
-              <input className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3"
-                placeholder="99001234" value={phone} onChange={e=>setPhone(e.target.value)} inputMode="numeric"/>
-            </>
-          )}
-
-          {(mode==='register'||mode==='forgot')&&(
-            <>
-              <label className="block text-xs text-gray-400 mb-1">Имэйл хаяг</label>
-              <input type="email" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-3"
-                placeholder="example@gmail.com" value={email} onChange={e=>setEmail(e.target.value)}/>
-            </>
-          )}
-
-          {mode!=='forgot'&&mode!=='guest'&&(
-            <>
-              <label className="block text-xs text-gray-400 mb-1">Нууц үг</label>
-              <div className="relative mb-3">
-                <input type={showPw?'text':'password'}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm pr-14"
-                  placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)}
-                  onKeyDown={e=>mode==='login'&&e.key==='Enter'&&handleSubmit()}/>
-                <button type="button" onClick={()=>setShowPw(v=>!v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                  {showPw?'Нуух':'Харах'}
-                </button>
+      {/* ── PROBLEM STRIP ── */}
+      <section style={{
+        background: "#f8fffe",
+        borderTop: "1px solid #e8f5f1",
+        borderBottom: "1px solid #e8f5f1",
+        padding: "48px 24px",
+        textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#07e6ae", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 16 }}>
+            Танд ийм бэрхшээл тулгардаг уу?
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+            {[
+              "Барааны тоо, үлдэгдэл зөрдөг",
+              "Захиалга бүртгэл удаашрал",
+              "Ашгаа тооцоолох зав гардаггүй",
+              "Олон дэлгүүрийг нэгтгэхэд хүнд",
+            ].map((text) => (
+              <div key={text} style={{
+                padding: "16px 20px",
+                borderRadius: 10,
+                background: "#fff",
+                border: "1px solid #e8f5f1",
+                fontSize: 14,
+                color: "#374151",
+                fontWeight: 500,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}>
+                <span style={{ color: "#f59e0b", fontSize: 16 }}>⚠</span>
+                {text}
               </div>
-            </>
-          )}
-
-          {mode==='register'&&(
-            <>
-              <label className="block text-xs text-gray-400 mb-1">Нууц үг давтах</label>
-              <div className="relative mb-3">
-                <input type={showPw2?'text':'password'}
-                  className={`w-full px-3 py-2.5 rounded-lg border text-sm pr-14 ${password2&&password!==password2?'border-red-200 bg-red-50':'border-gray-200'}`}
-                  placeholder="••••••••" value={password2} onChange={e=>setPassword2(e.target.value)}
-                  onKeyDown={e=>e.key==='Enter'&&handleSubmit()}/>
-                <button type="button" onClick={()=>setShowPw2(v=>!v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                  {showPw2?'Нуух':'Харах'}
-                </button>
-              </div>
-              {password2&&password!==password2&&<p className="text-xs text-red-500 -mt-2 mb-3">Нууц үг таарахгүй байна</p>}
-              <div className="text-xs p-3 rounded-lg mb-3" style={{background:'#f0fef9',color:'#04725a',border:'1px solid #b2f0e0'}}>
-                7 хоногийн ТӨЛБӨРГҮЙ туршилт — бүртгүүлсний дараа автоматаар эхэлнэ
-              </div>
-            </>
-          )}
-
-          {mode==='login'&&(
-            <div className="text-right mb-3 -mt-1">
-              <button onClick={()=>{setMode('forgot');setError('')}}
-                className="text-xs hover:underline" style={{color:'#07e6ae'}}>
-                Нууц үг мартсан уу?
-              </button>
-            </div>
-          )}
-
-          {error&&<div className="bg-red-50 border border-red-100 text-red-600 text-xs p-3 rounded-lg mb-3">{error}</div>}
-          {success&&<div className="text-xs p-3 rounded-lg mb-3" style={{background:'#f0fef9',color:'#04725a',border:'1px solid #b2f0e0'}}>{success}</div>}
-
-          <button onClick={handleSubmit} disabled={loading}
-            className="w-full py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
-            style={{background:'#07e6ae',color:'#0a2e24'}}>
-            {loading?'Уншиж байна...'
-              :mode==='login'?'Нэвтрэх'
-              :mode==='register'?'Бүртгүүлэх'
-              :mode==='guest'?'Зочноор нэвтрэх'
-              :'Холбоос илгээх'}
-          </button>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="text-center mt-4 space-y-2">
-          {mode!=='guest'&&(
-            <button onClick={()=>{setMode('guest');setError('')}}
-              className="block w-full text-sm text-gray-500 py-2.5 px-4 rounded-xl border border-gray-200 hover:bg-gray-50">
-              Зочны эрхээр нэвтрэх
-            </button>
-          )}
-          <a href="/landing" className="block text-sm text-center py-2.5 px-4 rounded-xl font-medium"
-            style={{background:'#07e6ae',color:'#0a2e24'}}>
-            Үнийн мэдээлэл →
-          </a>
-          <p className="text-xs text-gray-300">Аюулгүй · HTTPS · Өгөгдөл тусгаарлагдсан</p>
+      {/* ── FEATURES ── */}
+      <section id="features" style={{ padding: "96px 24px", background: "#ffffff" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: 64 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#07e6ae", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>
+              БОЛОМЖУУД
+            </p>
+            <h2 style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 800, color: "#0a2e24", letterSpacing: "-1px", margin: 0 }}>
+              OLULA-д байгаа зүйлс
+            </h2>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 24 }}>
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                style={{
+                  padding: "28px 28px",
+                  borderRadius: 16,
+                  background: "#fafffe",
+                  border: "1px solid #e8f5f1",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "#07e6ae";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 24px rgba(7,230,174,0.1)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "#e8f5f1";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12,
+                  background: "rgba(7,230,174,0.1)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 22, marginBottom: 16,
+                }}>
+                  {f.icon}
+                </div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0a2e24", margin: "0 0 8px", letterSpacing: "-0.3px" }}>
+                  {f.title}
+                </h3>
+                <p style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.6, margin: 0 }}>
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
-  )
+      </section>
+
+      {/* ── PRICING ── */}
+      <section id="pricing" style={{ padding: "96px 24px", background: "#f8fffe" }}>
+        <div style={{ padding: "0 0" }}>
+          <PricingTable />
+        </div>
+      </section>
+
+      {/* ── ABOUT / HOW IT WORKS ── */}
+      <section id="about" style={{ padding: "96px 24px", background: "#fff" }}>
+        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: "#07e6ae", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>
+            БИД
+          </p>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 800, color: "#0a2e24", letterSpacing: "-1px", margin: "0 0 20px" }}>
+            OLULA гэж юу вэ?
+          </h2>
+          <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, maxWidth: 660, margin: "0 auto 48px" }}>
+            Жижиг дэлгүүр, агуулах эзэмшдэг бизнес эрхлэгчдэд зориулсан — бараа, захиалга,
+            ашгийг нэг дороос хянах хялбар систем. Монгол хэлээр, монгол бизнест тохирсон.
+          </p>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 24 }}>
+            {[
+              { num: "500+", label: "Идэвхтэй хэрэглэгч" },
+              { num: "99.9%", label: "Uptime найдвартай байдал" },
+              { num: "< 3 мин", label: "Тохиргоо хийх хугацаа" },
+            ].map((stat) => (
+              <div key={stat.label} style={{
+                padding: "28px 20px",
+                borderRadius: 14,
+                border: "1px solid #e8f5f1",
+                background: "#f8fffe",
+              }}>
+                <div style={{ fontSize: 32, fontWeight: 800, color: "#07e6ae", letterSpacing: "-1px", marginBottom: 6 }}>
+                  {stat.num}
+                </div>
+                <div style={{ fontSize: 14, color: "#6b7280" }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FINAL CTA ── */}
+      <section style={{
+        padding: "80px 24px",
+        background: "linear-gradient(160deg, #0a2e24 0%, #0d3d30 100%)",
+        textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 600, margin: "0 auto" }}>
+          <h2 style={{ fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 800, color: "#fff", letterSpacing: "-1px", margin: "0 0 16px" }}>
+            Өнөөдрөөс эхлэх үү?
+          </h2>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,0.55)", margin: "0 0 36px" }}>
+            7 хоногийн үнэгүй туршилтаар эхлэх — хэзээ ч цуцлах боломжтой.
+          </p>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              href="/login"
+              style={{
+                padding: "14px 32px", borderRadius: 12,
+                background: "#07e6ae", color: "#0a2e24",
+                fontSize: 15, fontWeight: 700, textDecoration: "none",
+                boxShadow: "0 4px 24px rgba(7,230,174,0.3)",
+              }}
+            >
+              Үнэгүй туршаад үзэх →
+            </Link>
+            <a
+              href={`https://refactored-chainsaw-git-main-agulakh-apps-projects.vercel.app/app`}
+              style={{
+                padding: "14px 24px", borderRadius: 12,
+                background: "rgba(255,255,255,0.07)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                color: "rgba(255,255,255,0.8)",
+                fontSize: 15, fontWeight: 500, textDecoration: "none",
+              }}
+            >
+              Ажлын талбар
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer style={{
+        background: "#071c15",
+        borderTop: "1px solid rgba(7,230,174,0.08)",
+        padding: "32px 24px",
+        textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+          <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", letterSpacing: "-0.5px" }}>
+            OLULA<span style={{ color: "#07e6ae" }}>.</span>
+          </span>
+          <div style={{ display: "flex", gap: 24 }}>
+            {["Нэвтрэх", "Зочноор нэвтрэх"].map((label) => (
+              <Link
+                key={label}
+                href="/login"
+                style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)" }}>
+            © 2025 OLULA · Аюулгүй · HTTPS
+          </span>
+        </div>
+      </footer>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(6px); }
+        }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      `}</style>
+    </>
+  );
 }
