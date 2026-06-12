@@ -1,639 +1,289 @@
 'use client'
-export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { RestockLog } from '@/lib/types'
-import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
+import { useRouter, usePathname } from 'next/navigation'
+import { createContext, useContext } from 'react'
 
-const TODAY = new Date().toISOString().slice(0,10)
-function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
-function fmt(n: number) { return n.toLocaleString() }
+type Plan = 'basic' | 'standard' | 'full'
 
-type Variant = { size: string; color: string; price: number; stock: number }
-type Product = { id: string; name: string; stock: number; unit_price: number; store_id?: string|null; variants?: Variant[]|null }
+export const GuestContext = createContext<{
+  guestRole: string | null
+  ownerId: string | null
+  activeStoreId: string | null
+  setActiveStoreId: (id: string | null) => void
+  plan: Plan
+}>({ guestRole: null, ownerId: null, activeStoreId: null, setActiveStoreId: () => {}, plan: 'basic' })
+export function useGuestRole() { return useContext(GuestContext).guestRole }
+export function useOwnerId() { return useContext(GuestContext).ownerId }
+export function useActiveStore() { return useContext(GuestContext).activeStoreId }
+export function useSetActiveStore() { return useContext(GuestContext).setActiveStoreId }
+// Хэрэглэгчийн эрхийн төрөл: 'basic' | 'standard' | 'full'
+export function useUserPlan() { return useContext(GuestContext).plan }
 
-export default function StockPage() {
-  const guestRole = useGuestRole()
-  const ownerId = useOwnerId()
-  const activeStoreId = useActiveStore()
-  const isViewer = guestRole === 'viewer'
+const TABS = [
+  { href:'/app',           label:'Самбар',   icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
+  { href:'/app/stock',     label:'Агуулах',  icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+  { href:'/app/history',   label:'Түүх',     icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+  { href:'/app/analytics', label:'Тайлан',   icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', requiresPlan: 'full' as Plan },
+  { href:'/app/settings',  label:'Тохиргоо', icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+]
 
-  const [products, setProducts] = useState<Product[]>([])
-  const [logs, setLogs] = useState<RestockLog[]>([])
-  const [flash, setFlash] = useState('')
-  const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
-  const [logFilter, setLogFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('')
-  const [variantEnabled, setVariantEnabled] = useState(false)
-
-  // Цэнэглэлт
-  const [rProd, setRProd] = useState('')
-  const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
-  const [rQty, setRQty] = useState('1')
-  const [rDate, setRDate] = useState(TODAY)
-  const [rNote, setRNote] = useState('')
-
-  // Шинэ бараа
-  const [nName, setNName] = useState('')
-  const [nPrice, setNPrice] = useState('')
-  const [nQty, setNQty] = useState('0')
-  const [nDate, setNDate] = useState(TODAY)
-  const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string,cost:string}[]>([])
-  const [nCost, setNCost] = useState('')
-
-  // Edit log
-  const [editLog, setEditLog] = useState<RestockLog|null>(null)
-  const [selectedLogs, setSelectedLogs] = useState<Set<string>>(new Set())
-  const [selectMode, setSelectMode] = useState(false)
-  const [editQty, setEditQty] = useState('')
-  const [editDate, setEditDate] = useState('')
-  const [editNote, setEditNote] = useState('')
-
-  // Edit product variants stock
-  const [editProd, setEditProd] = useState<Product|null>(null)
-  const [editVariantStocks, setEditVariantStocks] = useState<number[]>([])
-
-  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
-
-  const load = useCallback(async () => {
-    const { data:{ user } } = await supabase.auth.getUser()
-    const targetId = ownerId || user?.id
-    if (!targetId) return
-    const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
-      activeStoreId
-        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
-        : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
-      activeStoreId
-        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
-        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
-      activeStoreId
-        ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
-        : Promise.resolve({ data: null })
-    ])
-    setProducts(prods||[])
-    setLogs(ls||[])
-    setVariantEnabled(storeData?.variant_enabled || false)
-    if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
-  },[rProd, ownerId, activeStoreId])
-
-  useEffect(()=>{ load() },[load])
-
-  // Агуулахад бараа нэмэх — variant stock шинэчлэх
-  async function addRestock() {
-    const qty = Number(rQty)
-    if (qty===0) { showFlash('Тоо оруулна уу'); return }
-    const p = products.find(x=>x.id===rProd)
-    if (!p) return
-    const { data:{ user } } = await supabase.auth.getUser()
-    const targetId = ownerId || user?.id
-    if (!targetId) return
-    const isNeg = qty < 0
-    const absQty = Math.abs(qty)
-
-    const pvs: Variant[] = p.variants || []
-    let variantLabel = ''
-
-    if (variantEnabled && pvs.length > 0) {
-      if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
-      const v = pvs[rVariantIdx]
-      if (!v) return
-      variantLabel = [v.size, v.color].filter(Boolean).join(' / ')
-      const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
-      const newVariants = pvs.map((vv, i) => i === rVariantIdx ? {...vv, stock: newVStock} : vv)
-      const newTotalStock = newVariants.reduce((a, vv) => a + vv.stock, 0)
-      await supabase.from('products').update({ variants: newVariants, stock: newTotalStock }).eq('id', rProd)
-    } else {
-      const newStock = isNeg ? Math.max(0, p.stock - absQty) : p.stock + absQty
-      await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
-    }
-
-    await supabase.from('restock_log').insert({
-      user_id: targetId, product_id: rProd,
-      product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
-      quantity: absQty, type: isNeg ? 'out' : 'in',
-      note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
-    })
-
-    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1)
-    showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
-    load()
-  }
-
-  // Шинэ бараа нэмэх
-  async function addNewProduct() {
-    if (!nName.trim()) { showFlash('Нэр оруулна уу'); return }
-    const { data:{ user } } = await supabase.auth.getUser()
-    const targetId = ownerId || user?.id
-    if (!targetId) return
-
-    const validVariants: Variant[] = nVariants
-      .filter(v => v.size.trim() || v.color.trim())
-      .map(v => ({
-        size: v.size.trim(),
-        color: v.color.trim(),
-        price: Number(v.price) || 0,
-        stock: Number(v.stock) || 0,
-        cost: Number(v.cost) || 0
-      }))
-
-    const totalStock = validVariants.length > 0
-      ? validVariants.reduce((a, v) => a + v.stock, 0)
-      : Number(nQty) || 0
-
-    // variant-гүй бараанд cost хадгалах
-    const noVariantCost = validVariants.length === 0 && nCost ? Number(nCost) : null
-
-    const { data: prod, error } = await supabase
-  .from('products')
-  .insert({
-    user_id: targetId,
-    name: nName.trim(),
-    unit_price: Number(nPrice) || 0,
-    stock: totalStock,
-    added_date: nDate,
-    store_id: activeStoreId || null,
-    variants: validVariants.length > 0 ? validVariants : null,
-    cost: noVariantCost
-  })
-  .select()
-  .single()
-
-if (error) {
-  console.error(error)
-  alert(error.message)
-  return
+// Эрхийн зэрэглэл — 'full' нь 'standard'-ийн бүх боломжийг агуулна
+const PLAN_RANK: Record<Plan, number> = { basic: 0, standard: 1, full: 2 }
+function planMeets(userPlan: Plan, required: Plan) {
+  return PLAN_RANK[userPlan] >= PLAN_RANK[required]
 }
 
-    if (prod && totalStock > 0) {
-      await supabase.from('restock_log').insert({
-        user_id: targetId, product_id: prod.id,
-        product_name: nName.trim(), quantity: totalStock,
-        type: 'in', note: 'Шинэ бараа', date: nDate, store_id: activeStoreId||null
-      })
+function timeLeft(d: string | null) {
+  if (!d) return ''
+  const ms = new Date(d).getTime() - Date.now()
+  if (ms <= 0) return '0 мин'
+  const days = Math.floor(ms / 86400000)
+  const hours = Math.floor(ms / 3600000)
+  const mins = Math.floor(ms / 60000)
+  if (days >= 2) return `${days} өдөр`
+  if (hours >= 1) return `${hours} цаг`
+  return `${mins} мин`
+}
+
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter()
+  const path = usePathname()
+  const [bizName, setBizName] = useState('')
+  const [subStatus, setSubStatus] = useState('trial')
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
+  const [subEndsAt, setSubEndsAt] = useState<string | null>(null)
+  const [plan, setPlan] = useState<Plan>('basic')
+  const [ready, setReady] = useState(false)
+  const [guestRole, setGuestRole] = useState<string | null>(null)
+  const [ownerId, setOwnerId] = useState<string | null>(null)
+  const [ownerName, setOwnerName] = useState('')
+  const [stores, setStores] = useState<any[]>([])
+  const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [isInstalled, setIsInstalled] = useState(false)
+
+  useEffect(() => {
+    // PWA install prompt
+    const handler = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // Аль хэдийн суулгагдсан эсэх
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true)
     }
 
-    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([]); setNCost('')
-    showFlash(nName + ' нэмэгдлээ ✓'); load()
-  }
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
 
-  async function deleteProduct(id: string, name: string) {
-    setConfirmModal({msg: name+' устгах уу?', onOk: async()=>{
-      await supabase.from('products').delete().eq('id', id)
-      showFlash(name+' устгагдлаа'); load()
-    }})
-  }
-
-  async function saveEditVariants() {
-    if (!editProd) return
-    const pvs: Variant[] = editProd.variants || []
-    const newVariants = pvs.map((v, i) => ({ ...v, stock: editVariantStocks[i] ?? v.stock }))
-    const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
-    await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
-    setEditProd(null)
-    showFlash(editProd.name + ' stock шинэчлэгдлээ ✓')
-    load()
-  }
-
-  async function bulkDeleteLogs() {
-    if (selectedLogs.size === 0) return
-    setConfirmModal({msg:`${selectedLogs.size} бүртгэл устгах уу?`, onOk: async()=>{
-    for (const id of Array.from(selectedLogs)) {
-      await supabase.from('restock_log').delete().eq('id', id)
+  async function installApp() {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const { outcome } = await installPrompt.userChoice
+    if (outcome === 'accepted') {
+      setInstallPrompt(null)
+      setIsInstalled(true)
     }
-      setSelectedLogs(new Set())
-      setSelectMode(false)
-      load()
-    }})
   }
 
-  async function deleteLog(log: RestockLog) {
-    setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?', onOk: async()=>{
-      await supabase.from('restock_log').delete().eq('id', log.id)
-      showFlash('Устгагдлаа'); load()
-    }})
-  }
-
-  async function saveEditLog() {
-    if (!editLog) return
-    const { data:{ user } } = await supabase.auth.getUser()
-    const targetId = ownerId || user?.id
-    if (!targetId) return
-    const oldQty = editLog.quantity
-    const newQty = Number(editQty)
-    const diff = newQty - oldQty
-
-    // product stock-ийг засах
-    if (diff !== 0) {
-      const prod = products.find(p => p.name === editLog.product_name.split(' · ')[0])
-      if (prod) {
-        const variantLabel = editLog.product_name.includes(' · ') ? editLog.product_name.split(' · ')[1] : null
-        const pvs: Variant[] = prod.variants || []
-        if (variantLabel && pvs.length > 0) {
-          const newVariants = pvs.map(v => [v.size, v.color].filter(Boolean).join(' / ') === variantLabel
-            ? { ...v, stock: Math.max(0, v.stock + (editLog.type === 'in' ? diff : -diff)) }
-            : v
-          )
-          const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
-          await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', prod.id)
-        } else {
-          await supabase.from('products').update({
-            stock: Math.max(0, prod.stock + (editLog.type === 'in' ? diff : -diff))
-          }).eq('id', prod.id)
-        }
+  useEffect(() => {
+    async function init() {
+      const guestCookie = document.cookie.split(';').find(c => c.trim().startsWith('guest_access='))
+      if (guestCookie) {
+        try {
+          const access = JSON.parse(decodeURIComponent(guestCookie.split('=').slice(1).join('=')))
+          setGuestRole(access.role)
+          setOwnerId(access.owner_id)
+          // Зочин — эзэмшигчийн эрхийн төрлөөр хязгаарлагдана
+          const { data: ownerProfile } = await supabase.from('profiles')
+            .select('business_name,plan').eq('id', access.owner_id).single()
+          setOwnerName(ownerProfile?.business_name || 'OLULA')
+          setPlan((ownerProfile?.plan as Plan) || 'basic')
+          setReady(true)
+          return
+        } catch {}
       }
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) { router.push('/'); return }
+      const [{ data: p }, { data: sts }] = await Promise.all([
+        supabase.from('profiles')
+          .select('business_name,subscription_status,trial_ends_at,subscription_ends_at,plan')
+          .eq('id', data.user.id).single(),
+        supabase.from('stores').select('*').eq('user_id', data.user.id).order('created_at')
+      ])
+      if (p) {
+        setBizName(p.business_name || '')
+        setSubStatus(p.subscription_status)
+        setTrialEndsAt(p.trial_ends_at || null)
+        setSubEndsAt(p.subscription_ends_at || null)
+        setPlan((p.plan as Plan) || 'basic')
+        if (p.subscription_status === 'expired') { router.push('/pricing'); return }
+        const storeList = sts || []
+        setStores(storeList)
+        if (storeList.length > 0) setActiveStoreId(storeList[0].id)
+        setReady(true)
+        return
+      }
+      router.push('/')
     }
+    init()
+  }, [router])
 
-    await supabase.from('restock_log').update({
-      quantity: newQty, date: editDate, note: editNote
-    }).eq('id', editLog.id)
-    setEditLog(null); showFlash('Засварлагдлаа ✓'); load()
+  async function logout() {
+    document.cookie = 'guest_access=; path=/; max-age=0'
+    await supabase.auth.signOut()
+    router.push('/')
   }
 
-  let filteredLogs = logs
-  if (logFilter !== 'all') filteredLogs = filteredLogs.filter(l => l.product_name.startsWith(logFilter))
-  if (dateFilter) filteredLogs = filteredLogs.filter(l => l.date === dateFilter)
+  if (!ready) return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-gray-400 text-sm">Ачааллаж байна...</div>
+    </div>
+  )
 
-  const logGroups: Record<string, RestockLog[]> = {}
-  filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
+  const isGuest = !!guestRole
+  // 'Тайлан' зөрхэн 'full' эрхэд харагдана; зочны эрхийг урьдын адил хязгаарлана
+  const visibleTabs = TABS.filter(t => {
+    if (t.requiresPlan && !planMeets(plan, t.requiresPlan)) return false
+    if (isGuest && (t.href === '/app/settings' || t.href === '/app/analytics')) return false
+    return true
+  })
 
-  const rProdData = products.find(p => p.id === rProd)
-  const rVariants: Variant[] = rProdData?.variants || []
+  // Олон дэлгүүрийн сэлгэгч — зөвхөн 'standard'/'full' эрхэд харагдана
+  const showStoreSwitcher = !isGuest && stores.length > 1 && planMeets(plan, 'standard')
 
   return (
-    <div className="space-y-4">
-      {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
-      {confirmModal&&(
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
-            <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
-            <div className="flex gap-3">
-              <button onClick={()=>setConfirmModal(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
-              <button onClick={()=>{confirmModal.onOk();setConfirmModal(null)}}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
+    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
+      <header className="bg-[#0a2e24] sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="flex items-center justify-between py-3 border-b border-white/10">
+            <div className="flex items-center gap-2.5">
+              <span className="relative inline-flex items-center">
+                <span className="font-extrabold text-2xl tracking-tight text-white">
+                  OL<span className="text-[#07e6ae]">ULA</span>
+                </span>
+                <span className="absolute -top-0.5 -right-1.5 w-2 h-2 rounded-full bg-[#07e6ae]"/>
+              </span>
+              {isGuest && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20">
+                  {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {!isGuest && subStatus === 'trial' && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-400/15 text-amber-300 border border-amber-400/20">
+                  Туршилт · {timeLeft(trialEndsAt)}
+                </span>
+              )}
+              {!isGuest && subStatus === 'active' && (
+                <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/15 text-[#07e6ae] border border-[#07e6ae]/25">
+                  Идэвхтэй · {timeLeft(subEndsAt)}
+                </span>
+              )}
+              {/* Install button — зөвхөн суулгаагүй үед */}
+              {installPrompt && !isInstalled && (
+                <button onClick={installApp}
+                  className="text-xs px-2.5 py-1 bg-[#07e6ae] text-[#0a2e24] font-medium rounded-lg hover:bg-[#06d29e]">
+                  Апп суулгах
+                </button>
+              )}
+              <button onClick={logout} className="text-xs text-white/40 hover:text-white/70 px-2 py-1">
+                Гарах
+              </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Edit variants stock modal */}
-      {!isViewer && editProd && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-medium text-gray-800 mb-1">{editProd.name}</h3>
-            <p className="text-xs text-gray-400 mb-4">Variant бүрийн үлдэгдэл тоог засна</p>
-            <div className="space-y-2 mb-5">
-              {(editProd.variants||[]).map((v, i) => (
-                <div key={i} className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-gray-600 flex-1">{[v.size,v.color].filter(Boolean).join(' / ')}</span>
-                  <span className="text-xs text-emerald-600">{fmt(v.price)}₮</span>
-                  <input type="number" min="0"
-                    className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                    value={editVariantStocks[i] ?? v.stock}
-                    onChange={e=>{
-                      const arr = [...editVariantStocks]
-                      arr[i] = Number(e.target.value)
-                      setEditVariantStocks(arr)
-                    }} />
-                  <span className="text-xs text-gray-400">ш</span>
-                </div>
+          <div className="hidden md:flex items-center justify-between">
+            <div className="flex">
+              {visibleTabs.map(t => (
+                <button key={t.href} onClick={() => router.push(t.href)}
+                  className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
+                    path === t.href
+                      ? 'border-[#07e6ae] text-[#07e6ae] font-medium'
+                      : 'border-transparent text-white/45 hover:text-white/70'
+                  }`}>
+                  {t.label}
+                </button>
               ))}
             </div>
-            <div className="flex gap-2">
-              <button onClick={()=>setEditProd(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
-              <button onClick={saveEditVariants} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit modal */}
-      {!isViewer && editLog && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-medium text-gray-800 mb-4">Цэнэглэлт засварлах</h3>
-            <div className="space-y-3">
-              <div><label className="block text-xs text-gray-500 mb-1">Бараа</label>
-                <div className="text-sm bg-gray-50 px-3 py-2 rounded-lg text-gray-700">{editLog.product_name}</div></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Тоо ширхэг</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  value={editQty} onChange={e=>setEditQty(e.target.value)} /></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button onClick={()=>setEditLog(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
-              <button onClick={saveEditLog} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Агуулахад бараа нэмэх */}
-      {!isViewer && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <div className="flex-1 min-w-[140px]">
-              <label className="block text-xs text-gray-500 mb-1">Бараа</label>
-              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
-                {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-              </select>
-            </div>
-            {variantEnabled && rVariants.length > 0 && (
-              <div className="flex-1 min-w-[140px]">
-                <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
-                  <option value={-1}>— Сонгох —</option>
-                  {rVariants.map((v, i) => (
-                    <option key={i} value={i}>
-                      {[v.size, v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
-                    </option>
-                  ))}
-                </select>
+            {showStoreSwitcher && (
+              <div className="flex gap-1 pb-1">
+                <button onClick={() => setActiveStoreId(null)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                    activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/70'
+                  }`}>Бүгд</button>
+                {stores.map(s => (
+                  <button key={s.id} onClick={() => setActiveStoreId(s.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60 hover:bg-white/15'
+                    }`}>{s.name}</button>
+                ))}
               </div>
             )}
-            <div className="w-20">
-              <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-              <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
-            </div>
-            <div className="w-36">
-              <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={rDate} onChange={e=>setRDate(e.target.value)} />
-            </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
-          </div>
-          {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
-          <div className="flex justify-end mt-3">
-            <button onClick={addRestock}
-              className={`px-5 py-2 rounded-lg text-sm font-medium text-white ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
-              {Number(rQty)<0?'Хасах':'Агуулахад бараа нэмэх'}
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Шинэ бараа */}
-      {!isViewer && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
-          {/* Variant байхгүй — нэг мөрт */}
-          {!variantEnabled && (
-            <div className="grid gap-2" style={{gridTemplateColumns:'2fr 0.8fr 1.3fr 1.3fr 1.3fr'}}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                  min="0" value={nQty} onChange={e=>setNQty(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Зарах үнэ (₮)</label>
-                <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="59,000" value={nPrice?Number(nPrice).toLocaleString():''} onChange={e=>setNPrice(e.target.value.replace(/[^0-9]/g,''))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Өртөг (₮)</label>
-                <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={nDate} onChange={e=>setNDate(e.target.value)} />
-              </div>
+          {showStoreSwitcher && (
+            <div className="flex gap-1 pb-2 md:hidden">
+              <button onClick={() => setActiveStoreId(null)}
+                className={`px-3 py-1 rounded-lg text-xs transition-all ${
+                  activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45'
+                }`}>Бүгд</button>
+              {stores.map(s => (
+                <button key={s.id} onClick={() => setActiveStoreId(s.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60'
+                  }`}>{s.name}</button>
+              ))}
             </div>
           )}
-          {/* Variant байгаа — нэр + огноо дээр, variant table доор */}
-          {variantEnabled && (
-            <div className="grid gap-2 mb-3" style={{gridTemplateColumns:'1fr 1fr'}}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={nDate} onChange={e=>setNDate(e.target.value)} />
-              </div>
-            </div>
-          )}
-          {variantEnabled && (
-            <div className="mt-4">
-              <div className="flex justify-end mb-1">
-                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0',cost:''}])}
-                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
-              </div>
 
-              {nVariants.length===0 && (
-                <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
-              )}
-              {nVariants.length>0&&(
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border-separate" style={{borderSpacing:'0 6px'}}>
-                    <thead>
-                      <tr>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Хэмжээ</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өнгө</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Зарах үнэ (₮)</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өртөг (₮)</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Тоо</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {nVariants.map((v,i)=>(
-                        <tr key={i}>
-                          <td className="pr-2"><input className="w-full px-2 py-2.5 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="150x200..." value={v.size}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="Цагаан..." value={v.color}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2" style={{width:70}}><input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center py-2.5"
-                            placeholder="0" min="0" value={v.stock}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/></td>
-                          <td style={{width:32}}><button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
-                            className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-          <div className="flex justify-end mt-3">
-            <button onClick={addNewProduct} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Нэмэх</button>
-          </div>
-        </div>
-      )}
-
-      {/* Бараа жагсаалт */}
-      {products.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {products.map(p => {
-              const pvs: Variant[] = p.variants || []
-              return (
-                <div key={p.id} className="px-4 py-3 hover:bg-gray-50">
-                  <div className="flex items-center justify-between mb-1">
-  <div className="flex items-center gap-2 flex-1 min-w-0">
-    <span className="text-sm font-medium text-gray-700 truncate">{p.name}</span>
-    {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded flex-shrink-0">Дууссан</span>}
-    {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded flex-shrink-0">Цөөн</span>}
-  </div>
-  <div className="flex items-center gap-3 flex-shrink-0">
-    <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
-                      {!isViewer && (
-                        <div className="flex items-center gap-1">
-                          {pvs.length > 0 && (
-                            <button onClick={()=>{setEditProd(p);setEditVariantStocks(pvs.map(v=>v.stock))}}
-                              className="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">засах</button>
-                          )}
-                          <button onClick={()=>deleteProduct(p.id, p.name)}
-                            className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {pvs.length > 0 && (
-                    <div className="mt-1.5 space-y-1">
-                      {pvs.map((v, i) => (
-  <div key={i} className="flex items-center justify-between text-xs py-0.5">
-    <span className="text-gray-500 w-32 truncate">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
-    <div className="flex items-center gap-3 flex-shrink-0">
-      {(v as any).cost>0&&<span className="text-gray-400 w-24 text-right">өртөг: {fmt(Number((v as any).cost))}₮</span>}
-      <span className="text-emerald-600 w-20 text-right">{fmt(Number(v.price))}₮</span>
-      <span className={`w-10 text-right font-medium ${v.stock===0?'text-red-500':v.stock<=5?'text-amber-500':'text-gray-600'}`}>{v.stock}ш</span>
-    </div>
-  </div>
-))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Цэнэглэлтийн бүртгэл */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-medium text-gray-800 text-sm">Агуулах дахь бараа</h2>
-          {!isViewer&&(
-            <div className="flex items-center gap-2">
-              {selectMode&&selectedLogs.size>0&&(
-                <button onClick={bulkDeleteLogs}
-                  className="px-3 py-1 bg-red-50 text-red-500 rounded-lg text-xs font-medium hover:bg-red-100">
-                  {selectedLogs.size}ш устгах
-                </button>
-              )}
-              {selectMode&&filteredLogs.length>0&&(
-                <button onClick={()=>setSelectedLogs(
-                  selectedLogs.size===filteredLogs.length
-                    ? new Set()
-                    : new Set(filteredLogs.map((l:any)=>l.id))
-                )}
-                  className="px-3 py-1 border border-gray-200 text-gray-500 rounded-lg text-xs hover:bg-gray-50">
-                  {selectedLogs.size===filteredLogs.length?'Болих':'Бүгд'}
-                </button>
-              )}
-              <button onClick={()=>{setSelectMode((s:boolean)=>!s);setSelectedLogs(new Set())}}
-                className={`px-3 py-1 rounded-lg text-xs ${selectMode?'bg-gray-200 text-gray-700':'border border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
-                {selectMode?'Болих':'Сонгох'}
+          {/* Олон дэлгүүр эрхгүй (basic) хэрэглэгчид сэргийлэн мэдээлэл */}
+          {!isGuest && stores.length > 1 && !planMeets(plan, 'standard') && (
+            <div className="pb-2">
+              <button onClick={() => router.push('/pricing')}
+                className="text-xs px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-300 border border-amber-400/20 hover:bg-amber-400/25">
+                🔒 Олон дэлгүүр — Стандарт/Бүрэн эрхэд багтсан. Эрхээ сайжруулах →
               </button>
             </div>
           )}
         </div>
-        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
-            <option value="all">Бүх бараа</option>
-            {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
-          </select>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-            value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
-          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
+      </header>
+
+      {isGuest && guestRole === 'viewer' && (
+        <div className="bg-[#0a2e24] border-t border-white/10 px-4 py-2 text-center text-xs text-white/40">
+          Зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
         </div>
-        {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
-          const grp = logGroups[date]
-          const totalIn = grp.filter(r=>r.type==='in').reduce((a,r)=>a+r.quantity,0)
-          const totalOut = grp.filter(r=>r.type==='out').reduce((a,r)=>a+r.quantity,0)
-          return (
-            <div key={date}>
-              <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-600">{fmtD(date)}</span>
-                <div className="flex gap-2">
-                  {totalIn>0&&<span className="text-xs text-emerald-600">+{totalIn}ш</span>}
-                  {totalOut>0&&<span className="text-xs text-red-500">−{totalOut}ш</span>}
-                </div>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {grp.map(r=>(
-                  <div key={r.id} className={`flex justify-between items-center py-2.5 px-4 hover:bg-gray-50 group ${selectMode&&selectedLogs.has(r.id)?'bg-blue-50':''}`}
-                    onClick={selectMode?()=>setSelectedLogs(s=>{const n=new Set(s);n.has(r.id)?n.delete(r.id):n.add(r.id);return n}):undefined}
-                    style={selectMode?{cursor:'pointer'}:{}}>
-                    <div className="flex items-center gap-3">
-                      {selectMode&&(
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${selectedLogs.has(r.id)?'bg-emerald-500 border-emerald-500':'border-gray-300'}`}>
-                          {selectedLogs.has(r.id)&&<span className="text-white text-xs">✓</span>}
-                        </div>
-                      )}
-                      <div>
-                        <div className="text-sm text-gray-700">{r.product_name}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          {r.note}
-                          {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-sm font-medium ${r.type==='in'?'text-emerald-600':'text-red-500'}`}>
-                        {r.type==='in'?'+':'-'}{r.quantity}ш
-                      </span>
-                      {!isViewer&&!selectMode&&(
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'')}}
-                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50">засах</button>
-                          <button onClick={()=>deleteLog(r)}
-                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-red-500 hover:bg-red-50">устгах</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-        {filteredLogs.length===0&&<p className="text-center text-gray-400 text-sm py-8">Бүртгэл алга</p>}
-      </div>
+      )}
+
+      <main className="max-w-5xl mx-auto px-4 py-4">
+        <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId, plan }}>
+          {children}
+        </GuestContext.Provider>
+      </main>
+
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
+        <div className="flex items-center justify-around px-2 py-1">
+          {visibleTabs.map(t => {
+            const active = path === t.href
+            return (
+              <button key={t.href} onClick={() => router.push(t.href)}
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${
+                  active ? 'text-[#07e6ae]' : 'text-gray-400'
+                }`}>
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d={t.icon}/>
+                </svg>
+                <span className={`text-xs truncate ${active ? 'font-medium' : ''}`}>{t.label}</span>
+                {active && <div className="w-1 h-1 bg-[#07e6ae] rounded-full"/>}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }
