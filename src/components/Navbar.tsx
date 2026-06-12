@@ -69,14 +69,38 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 4 }}>
             {[
-              { label: "Танд", id: "hero" },
-              { label: "Боломжууд", id: "features" },
-              { label: "Үнэ тариф", id: "pricing" },
-              { label: "Бид", id: "about" },
-            ].map((item) => (
+              { label: "Таны боломж", id: "features", type: "scroll" as const },
+              { label: "Үйлчилгээний эрх", href: "/pricing", type: "link" as const },
+              { label: "Бид", id: "about", type: "scroll" as const },
+            ].map((item) =>
+              item.type === "link" ? (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: scrolled ? "#374151" : "rgba(255,255,255,0.9)",
+                    textDecoration: "none",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = scrolled ? "#f0fdf9" : "rgba(255,255,255,0.1)";
+                    (e.currentTarget as HTMLAnchorElement).style.color = scrolled ? "#07e6ae" : "#ffffff";
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = "none";
+                    (e.currentTarget as HTMLAnchorElement).style.color = scrolled ? "#374151" : "rgba(255,255,255,0.9)";
+                  }}
+                >
+                  {item.label}
+                </Link>
+              ) : (
               <button
                 key={item.id}
-                onClick={() => scrollTo(item.id)}
+                onClick={() => scrollTo(item.id!)}
                 style={{
                   background: "none",
                   border: "none",
@@ -99,13 +123,14 @@ export default function Navbar() {
               >
                 {item.label}
               </button>
-            ))}
+              )
+            )}
           </div>
 
           {/* Right actions */}
           <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <a
-              href="https://m.me/YOUR_PAGE_ID"
+              href="https://m.me/992480210614049"
               target="_blank"
               rel="noopener noreferrer"
               style={{
@@ -124,7 +149,7 @@ export default function Navbar() {
               <svg width="16" height="16" viewBox="0 0 28 28" fill="currentColor">
                 <path d="M14 2C7.373 2 2 7.06 2 13.32c0 3.28 1.395 6.23 3.641 8.33V26l4.283-2.35c1.143.315 2.355.49 3.612.49 6.627 0 12-5.06 12-11.32C25.536 7.06 20.627 2 14 2z"/>
               </svg>
-              М туслах
+              OLULA туслах
             </a>
             <Link
               href="/login"
@@ -182,14 +207,33 @@ export default function Navbar() {
           padding: "8px 16px 16px",
         }}>
           {[
-            { label: "Танд", id: "hero" },
-            { label: "Боломжууд", id: "features" },
-            { label: "Үнэ тариф", id: "pricing" },
-            { label: "Бид", id: "about" },
-          ].map((item) => (
+            { label: "Таны боломж", id: "features", type: "scroll" as const },
+            { label: "Үйлчилгээний эрх", href: "/pricing", type: "link" as const },
+            { label: "Бид", id: "about", type: "scroll" as const },
+          ].map((item) =>
+            item.type === "link" ? (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "13px 16px",
+                  fontSize: 15,
+                  fontWeight: 500,
+                  color: "#374151",
+                  borderRadius: 8,
+                  textDecoration: "none",
+                }}
+              >
+                {item.label}
+              </Link>
+            ) : (
             <button
               key={item.id}
-              onClick={() => scrollTo(item.id)}
+              onClick={() => scrollTo(item.id!)}
               style={{
                 display: "block",
                 width: "100%",
@@ -206,7 +250,31 @@ export default function Navbar() {
             >
               {item.label}
             </button>
-          ))}
+            )
+          )}
+          {/* OLULA туслах — mobile */}
+          <a
+            href="https://m.me/992480210614049"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setMobileOpen(false)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "13px 16px",
+              fontSize: 15,
+              fontWeight: 500,
+              color: "#374151",
+              borderRadius: 8,
+              textDecoration: "none",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 28 28" fill="currentColor">
+              <path d="M14 2C7.373 2 2 7.06 2 13.32c0 3.28 1.395 6.23 3.641 8.33V26l4.283-2.35c1.143.315 2.355.49 3.612.49 6.627 0 12-5.06 12-11.32C25.536 7.06 20.627 2 14 2z"/>
+            </svg>
+            OLULA туслах
+          </a>
           <div style={{ height: 1, background: "#e8f5f1", margin: "8px 0" }} />
           <Link
             href="/login"
