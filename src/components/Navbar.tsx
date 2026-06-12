@@ -48,20 +48,19 @@ export default function Navbar() {
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
             <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
               <span style={{
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: 800,
                 letterSpacing: "-0.5px",
-                color: scrolled ? "#0a2e24" : "#ffffff",
-                transition: "color 0.35s",
+                color: "#07e6ae",
               }}>
-                OL<span style={{ color: "#07e6ae" }}>ULA</span>
+                OLULA
               </span>
               <span style={{
                 position: "absolute",
-                top: -2,
-                right: -6,
-                width: 8,
-                height: 8,
+                top: 1,
+                right: -4,
+                width: 6,
+                height: 6,
                 borderRadius: "50%",
                 background: "#07e6ae",
               }} />
