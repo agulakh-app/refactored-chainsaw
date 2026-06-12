@@ -4,24 +4,35 @@ import { supabase } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { createContext, useContext } from 'react'
 
+type Plan = 'basic' | 'standard' | 'full'
+
 export const GuestContext = createContext<{
   guestRole: string | null
   ownerId: string | null
   activeStoreId: string | null
   setActiveStoreId: (id: string | null) => void
-}>({ guestRole: null, ownerId: null, activeStoreId: null, setActiveStoreId: () => {} })
+  plan: Plan
+}>({ guestRole: null, ownerId: null, activeStoreId: null, setActiveStoreId: () => {}, plan: 'basic' })
 export function useGuestRole() { return useContext(GuestContext).guestRole }
 export function useOwnerId() { return useContext(GuestContext).ownerId }
 export function useActiveStore() { return useContext(GuestContext).activeStoreId }
 export function useSetActiveStore() { return useContext(GuestContext).setActiveStoreId }
+// Хэрэглэгчийн эрхийн төрөл: 'basic' | 'standard' | 'full'
+export function useUserPlan() { return useContext(GuestContext).plan }
 
 const TABS = [
   { href:'/app',           label:'Самбар',   icon:'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { href:'/app/stock',     label:'Агуулах',  icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
   { href:'/app/history',   label:'Түүх',     icon:'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-  { href:'/app/analytics', label:'Тайлан',   icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
+  { href:'/app/analytics', label:'Тайлан',   icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', requiresPlan: 'full' as Plan },
   { href:'/app/settings',  label:'Тохиргоо', icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ]
+
+// Эрхийн зэрэглэл — 'full' нь 'standard'-ийн бүх боломжийг агуулна
+const PLAN_RANK: Record<Plan, number> = { basic: 0, standard: 1, full: 2 }
+function planMeets(userPlan: Plan, required: Plan) {
+  return PLAN_RANK[userPlan] >= PLAN_RANK[required]
+}
 
 function timeLeft(d: string | null) {
   if (!d) return ''
@@ -42,6 +53,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [subStatus, setSubStatus] = useState('trial')
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [subEndsAt, setSubEndsAt] = useState<string | null>(null)
+  const [plan, setPlan] = useState<Plan>('basic')
   const [ready, setReady] = useState(false)
   const [guestRole, setGuestRole] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
@@ -85,9 +97,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           const access = JSON.parse(decodeURIComponent(guestCookie.split('=').slice(1).join('=')))
           setGuestRole(access.role)
           setOwnerId(access.owner_id)
+          // Зочин — эзэмшигчийн эрхийн төрлөөр хязгаарлагдана
           const { data: ownerProfile } = await supabase.from('profiles')
-            .select('business_name').eq('id', access.owner_id).single()
+            .select('business_name,plan').eq('id', access.owner_id).single()
           setOwnerName(ownerProfile?.business_name || 'OLULA')
+          setPlan((ownerProfile?.plan as Plan) || 'basic')
           setReady(true)
           return
         } catch {}
@@ -96,7 +110,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       if (!data.user) { router.push('/'); return }
       const [{ data: p }, { data: sts }] = await Promise.all([
         supabase.from('profiles')
-          .select('business_name,subscription_status,trial_ends_at,subscription_ends_at')
+          .select('business_name,subscription_status,trial_ends_at,subscription_ends_at,plan')
           .eq('id', data.user.id).single(),
         supabase.from('stores').select('*').eq('user_id', data.user.id).order('created_at')
       ])
@@ -105,6 +119,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         setSubStatus(p.subscription_status)
         setTrialEndsAt(p.trial_ends_at || null)
         setSubEndsAt(p.subscription_ends_at || null)
+        setPlan((p.plan as Plan) || 'basic')
         if (p.subscription_status === 'expired') { router.push('/pricing'); return }
         const storeList = sts || []
         setStores(storeList)
@@ -130,9 +145,15 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   )
 
   const isGuest = !!guestRole
-  const visibleTabs = isGuest
-    ? TABS.filter(t => t.href !== '/app/settings' && t.href !== '/app/analytics')
-    : TABS
+  // 'Тайлан' зөрхэн 'full' эрхэд харагдана; зочны эрхийг урьдын адил хязгаарлана
+  const visibleTabs = TABS.filter(t => {
+    if (t.requiresPlan && !planMeets(plan, t.requiresPlan)) return false
+    if (isGuest && (t.href === '/app/settings' || t.href === '/app/analytics')) return false
+    return true
+  })
+
+  // Олон дэлгүүрийн сэлгэгч — зөвхөн 'standard'/'full' эрхэд харагдана
+  const showStoreSwitcher = !isGuest && stores.length > 1 && planMeets(plan, 'standard')
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
@@ -189,7 +210,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </button>
               ))}
             </div>
-            {!isGuest && stores.length > 1 && (
+            {showStoreSwitcher && (
               <div className="flex gap-1 pb-1">
                 <button onClick={() => setActiveStoreId(null)}
                   className={`px-3 py-1 rounded-lg text-xs transition-all ${
@@ -205,7 +226,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             )}
           </div>
 
-          {!isGuest && stores.length > 1 && (
+          {showStoreSwitcher && (
             <div className="flex gap-1 pb-2 md:hidden">
               <button onClick={() => setActiveStoreId(null)}
                 className={`px-3 py-1 rounded-lg text-xs transition-all ${
@@ -219,6 +240,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               ))}
             </div>
           )}
+
+          {/* Олон дэлгүүр эрхгүй (basic) хэрэглэгчид сэргийлэн мэдээлэл */}
+          {!isGuest && stores.length > 1 && !planMeets(plan, 'standard') && (
+            <div className="pb-2">
+              <button onClick={() => router.push('/pricing')}
+                className="text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100">
+                🔒 Олон дэлгүүр — Стандарт/Бүрэн эрхэд багтсан. Эрхээ сайжруулах →
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -229,7 +260,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       )}
 
       <main className="max-w-5xl mx-auto px-4 py-4">
-        <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId }}>
+        <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId, plan }}>
           {children}
         </GuestContext.Provider>
       </main>
