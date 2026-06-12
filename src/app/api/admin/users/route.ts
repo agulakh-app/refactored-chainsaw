@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-
 export async function GET() {
   try {
     const admin = createClient(
@@ -17,7 +16,6 @@ export async function GET() {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }
-
 export async function POST(req: Request) {
   try {
     const { action, id, data } = await req.json()
@@ -27,7 +25,11 @@ export async function POST(req: Request) {
     )
     if (action==='confirm_payment') {
       await admin.from('payments').update({ status:'confirmed', confirmed_at:new Date().toISOString() }).eq('id',id)
-      await admin.from('profiles').update({ subscription_status:'active', subscription_ends_at:data.period_end }).eq('id',data.user_id)
+      await admin.from('profiles').update({
+        subscription_status:'active',
+        subscription_ends_at:data.period_end,
+        plan: data.plan || 'basic',
+      }).eq('id',data.user_id)
     }
     if (action==='reject_payment') await admin.from('payments').update({ status:'failed' }).eq('id',id)
     if (action==='toggle_access') await admin.from('profiles').update({ subscription_status:data.new_status }).eq('id',id)
