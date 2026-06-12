@@ -17,12 +17,6 @@ const PLAN_OPTIONS = [
   { label:'1 жил',            days:365, status:'active' },
 ]
 
-// payments.plan-д хадгалагдсан утга → дэлгэцэн дээр харуулах нэр
-const PLAN_LABELS: Record<string, string> = {
-  basic: 'Үндсэн',
-  standard: 'Стандарт',
-  full: 'Бүрэн эрх',
-}
 
 export default function AdminPage() {
   const router = useRouter()
@@ -85,13 +79,6 @@ export default function AdminPage() {
     }).eq('id', extendUserId)
     setExtendUserId(null)
     showFlash('✓ Хугацаа тохируулагдлаа')
-    load()
-  }
-
-  // ── Хэрэглэгчийн эрхийн төрлийг шууд admin дээрээс солих ──
-  async function setUserPlan(userId: string, plan: string) {
-    await supabase.from('profiles').update({ plan }).eq('id', userId)
-    showFlash('✓ Эрх шинэчлэгдлээ')
     load()
   }
 
@@ -172,7 +159,7 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50">
-                  {['Имэйл','Утас','Эрх','Хугацаа','Статус','Тохируулга'].map(h=>(
+                  {['Имэйл','Утас','Хугацаа','Статус','Тохируулга'].map(h=>(
                     <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr></thead>
@@ -193,17 +180,6 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-xs text-gray-600">{u.phone || '—'}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={u.plan || 'basic'}
-                            onChange={e => setUserPlan(u.id, e.target.value)}
-                            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-                          >
-                            <option value="basic">Үндсэн</option>
-                            <option value="standard">Стандарт</option>
-                            <option value="full">Бүрэн эрх</option>
-                          </select>
                         </td>
                         <td className="px-4 py-3 text-xs text-gray-500">
                           {endDate ? fmtD(endDate) : '—'}
@@ -245,11 +221,6 @@ export default function AdminPage() {
                       <div>
                         <div className="font-medium text-gray-800">
                           {u?.contact_email||u?.email||p.user_id.slice(0,12)}
-                          {p.plan && (
-                            <span className="ml-2 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-medium">
-                              {PLAN_LABELS[p.plan] || p.plan}
-                            </span>
-                          )}
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5">Утас: <b>{u?.phone||'—'}</b> · Дүн: <b>{fmt(p.amount)}₮</b> · Гүйлгээ: <b>{p.reference_code}</b></div>
                         <div className="text-xs text-gray-400">{fmtD(p.created_at)}</div>
@@ -272,7 +243,7 @@ export default function AdminPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead><tr className="bg-gray-50">
-                    {['Хэрэглэгч','Эрх','Дүн','Гүйлгээний №','Хугацаа','Огноо','Статус'].map(h=>(
+                    {['Хэрэглэгч','Дүн','Гүйлгээний №','Хугацаа','Огноо','Статус'].map(h=>(
                       <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
                     ))}
                   </tr></thead>
@@ -287,7 +258,6 @@ export default function AdminPage() {
                       return (
                         <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="px-4 py-3 text-xs">{u?.contact_email||u?.email||p.user_id.slice(0,12)}</td>
-                          <td className="px-4 py-3 text-xs">{p.plan ? (PLAN_LABELS[p.plan] || p.plan) : '—'}</td>
                           <td className="px-4 py-3 font-medium">{fmt(p.amount)}₮</td>
                           <td className="px-4 py-3 text-xs text-gray-500">{p.reference_code||'—'}</td>
                           <td className="px-4 py-3 text-xs text-gray-500">{p.period_start} → {p.period_end}</td>
