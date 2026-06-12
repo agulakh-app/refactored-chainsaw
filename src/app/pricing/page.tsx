@@ -90,12 +90,12 @@ export default function PricingPage() {
   }
 
   async function submitPayment() {
-    if (!refCode.trim() || !option || option.isTrial) return
+    if (!refCode.trim() || !option || option.id === 'trial') return
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
     const now = new Date()
-    const end = new Date(now.getTime() + (option as any).days * 86400000)
+    const end = new Date(now.getTime() + ((option as any).days || 30) * 86400000)
     await supabase.from('payments').insert({
       user_id: user.id, amount: option.price, method: 'bank_transfer', status: 'pending',
       reference_code: refCode.trim(),
@@ -141,7 +141,7 @@ export default function PricingPage() {
                     borderRadius: 16, padding: '20px 12px', textAlign: 'center', cursor: 'pointer',
                     transition: 'all 0.15s',
                     background: '#ffffff',
-                    border: isSelected ? '2px solid #0a2e24' : (opt.isTrial ? '1px solid #07e6ae' : '1px solid #e8f5f1'),
+                    border: isSelected ? '2px solid #0a2e24' : (opt.id === 'trial' ? '1px solid #07e6ae' : '1px solid #e8f5f1'),
                     boxShadow: isSelected ? '0 4px 24px rgba(10,46,36,0.12)' : 'none',
                   }}
                 >
@@ -149,12 +149,12 @@ export default function PricingPage() {
                     {opt.label}
                   </div>
                   <div style={{
-                    fontSize: opt.isTrial ? 17 : 19, fontWeight: 800,
-                    color: opt.isTrial ? '#048a6a' : '#0a2e24',
+                    fontSize: opt.id === 'trial' ? 17 : 19, fontWeight: 800,
+                    color: opt.id === 'trial' ? '#048a6a' : '#0a2e24',
                   }}>
-                    {opt.isTrial ? 'Үнэгүй' : fmt(opt.price)}
+                    {opt.id === 'trial' ? 'Үнэгүй' : fmt(opt.price)}
                   </div>
-                  {opt.isTrial && (
+                  {opt.id === 'trial' && (
                     <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
                       туршилт
                     </div>
@@ -173,7 +173,7 @@ export default function PricingPage() {
             }}>
 
               {/* Trial сонгосон */}
-              {option.isTrial ? (
+              {option.id === 'trial' ? (
                 <div>
                   <div style={{ marginBottom: 20 }}>
                     <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 4 }}>Сонгосон</div>
