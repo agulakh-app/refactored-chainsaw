@@ -40,16 +40,16 @@ export default function PricingTable() {
           <div key={opt.id} style={{
             borderRadius: 16, padding: "20px 12px", textAlign: "center",
             background: "#ffffff",
-            border: opt.isTrial ? "1px solid #07e6ae" : "1px solid #e8f5f1",
+            border: opt.id === 'trial' ? "1px solid #07e6ae" : "1px solid #e8f5f1",
           }}>
             <div style={{ fontSize: 13, marginBottom: 8, color: "#9ca3af" }}>{opt.label}</div>
             <div style={{
-              fontSize: opt.isTrial ? 17 : 19, fontWeight: 800,
-              color: opt.isTrial ? "#048a6a" : "#0a2e24",
+              fontSize: opt.id === 'trial' ? 17 : 19, fontWeight: 800,
+              color: opt.id === 'trial' ? "#048a6a" : "#0a2e24",
             }}>
-              {opt.isTrial ? "Үнэгүй" : fmt(opt.price)}
+              {opt.id === 'trial' ? "Үнэгүй" : fmt(opt.price)}
             </div>
-            {opt.isTrial && (
+            {opt.id === 'trial' && (
               <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>туршилт</div>
             )}
           </div>
