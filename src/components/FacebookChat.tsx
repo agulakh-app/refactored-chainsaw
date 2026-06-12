@@ -2,7 +2,7 @@
 import { useState } from "react";
 
 // Энэ файлд YOUR_PAGE_ID-г өөрийн Facebook Page ID-р солино уу
-const FB_PAGE_ID = "YOUR_PAGE_ID";
+const FB_PAGE_ID = "992480210614049"; 
 const FB_MESSENGER_URL = `https://m.me/${FB_PAGE_ID}`;
 
 export default function FacebookChat() {
