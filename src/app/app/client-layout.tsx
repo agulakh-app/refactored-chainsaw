@@ -157,32 +157,33 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
+      <header className="bg-[#0a2e24] sticky top-0 z-20">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center justify-between py-3 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-lg tracking-tight text-[#0a2e24]">
+              <span className="font-extrabold text-lg tracking-tight text-white">
                 OL<span className="text-[#07e6ae]">ULA</span>
               </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#07e6ae] inline-block"/>
               {(isGuest ? ownerName : bizName) && (
-                <span className="text-xs text-gray-400 border-l border-gray-200 pl-2.5 truncate max-w-[140px]">
+                <span className="text-xs text-white/40 border-l border-white/15 pl-2.5 truncate max-w-[140px]">
                   {isGuest ? ownerName : bizName}
                 </span>
               )}
               {isGuest && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20">
                   {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               {!isGuest && subStatus === 'trial' && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-600 border border-amber-100">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-400/15 text-amber-300 border border-amber-400/20">
                   Туршилт · {timeLeft(trialEndsAt)}
                 </span>
               )}
               {!isGuest && subStatus === 'active' && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/10 text-[#048a6a] border border-[#07e6ae]/20">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/15 text-[#07e6ae] border border-[#07e6ae]/25">
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
@@ -193,7 +194,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   Апп суулгах
                 </button>
               )}
-              <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-1">
+              <button onClick={logout} className="text-xs text-white/40 hover:text-white/70 px-2 py-1">
                 Гарах
               </button>
             </div>
@@ -205,8 +206,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <button key={t.href} onClick={() => router.push(t.href)}
                   className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
                     path === t.href
-                      ? 'border-[#07e6ae] text-[#048a6a] font-medium'
-                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                      ? 'border-[#07e6ae] text-[#07e6ae] font-medium'
+                      : 'border-transparent text-white/45 hover:text-white/70'
                   }`}>
                   {t.label}
                 </button>
@@ -216,12 +217,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <div className="flex gap-1 pb-1">
                 <button onClick={() => setActiveStoreId(null)}
                   className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                    activeStoreId === null ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                    activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/70'
                   }`}>Бүгд</button>
                 {stores.map(s => (
                   <button key={s.id} onClick={() => setActiveStoreId(s.id)}
                     className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      activeStoreId === s.id ? 'bg-[#0a2e24] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60 hover:bg-white/15'
                     }`}>{s.name}</button>
                 ))}
               </div>
@@ -232,12 +233,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className="flex gap-1 pb-2 md:hidden">
               <button onClick={() => setActiveStoreId(null)}
                 className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                  activeStoreId === null ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-400'
+                  activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45'
                 }`}>Бүгд</button>
               {stores.map(s => (
                 <button key={s.id} onClick={() => setActiveStoreId(s.id)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                    activeStoreId === s.id ? 'bg-[#0a2e24] text-white' : 'bg-gray-100 text-gray-500'
+                    activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60'
                   }`}>{s.name}</button>
               ))}
             </div>
@@ -247,7 +248,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           {!isGuest && stores.length > 1 && !planMeets(plan, 'standard') && (
             <div className="pb-2">
               <button onClick={() => router.push('/pricing')}
-                className="text-xs px-2.5 py-1 rounded-lg bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100">
+                className="text-xs px-2.5 py-1 rounded-lg bg-amber-400/15 text-amber-300 border border-amber-400/20 hover:bg-amber-400/25">
                 🔒 Олон дэлгүүр — Стандарт/Бүрэн эрхэд багтсан. Эрхээ сайжруулах →
               </button>
             </div>
@@ -256,7 +257,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </header>
 
       {isGuest && guestRole === 'viewer' && (
-        <div className="border-b border-gray-100 px-4 py-2 text-center text-xs text-gray-400">
+        <div className="bg-[#0a2e24] border-t border-white/10 px-4 py-2 text-center text-xs text-white/40">
           Зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
         </div>
       )}
