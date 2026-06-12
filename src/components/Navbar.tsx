@@ -12,12 +12,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  const scrollTo = (id: string) => {
-    setMobileOpen(false);
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
     <>
       <nav
@@ -68,66 +62,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {/* Desktop nav */}
-          <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {[
-              { label: "Таны боломж", id: "features", type: "scroll" as const },
-              { label: "Үйлчилгээний эрх", href: "/pricing", type: "link" as const },
-              { label: "Бид", id: "about", type: "scroll" as const },
-            ].map((item) =>
-              item.type === "link" ? (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: scrolled ? "#374151" : "rgba(255,255,255,0.9)",
-                    textDecoration: "none",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.background = scrolled ? "#f0fdf9" : "rgba(255,255,255,0.1)";
-                    (e.currentTarget as HTMLAnchorElement).style.color = scrolled ? "#07e6ae" : "#ffffff";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.background = "none";
-                    (e.currentTarget as HTMLAnchorElement).style.color = scrolled ? "#374151" : "rgba(255,255,255,0.9)";
-                  }}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-              <button
-                key={item.id}
-                onClick={() => scrollTo(item.id!)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "8px 14px",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: scrolled ? "#374151" : "rgba(255,255,255,0.9)",
-                  transition: "all 0.2s",
-                }}
-                onMouseEnter={e => {
-                  (e.target as HTMLButtonElement).style.background = scrolled ? "#f0fdf9" : "rgba(255,255,255,0.1)";
-                  (e.target as HTMLButtonElement).style.color = scrolled ? "#07e6ae" : "#ffffff";
-                }}
-                onMouseLeave={e => {
-                  (e.target as HTMLButtonElement).style.background = "none";
-                  (e.target as HTMLButtonElement).style.color = scrolled ? "#374151" : "rgba(255,255,255,0.9)";
-                }}
-              >
-                {item.label}
-              </button>
-              )
-            )}
-          </div>
 
           {/* Right actions */}
           <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -208,52 +142,6 @@ export default function Navbar() {
           borderBottom: "1px solid #e8f5f1",
           padding: "8px 16px 16px",
         }}>
-          {[
-            { label: "Таны боломж", id: "features", type: "scroll" as const },
-            { label: "Үйлчилгээний эрх", href: "/pricing", type: "link" as const },
-            { label: "Бид", id: "about", type: "scroll" as const },
-          ].map((item) =>
-            item.type === "link" ? (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  padding: "13px 16px",
-                  fontSize: 15,
-                  fontWeight: 500,
-                  color: "#374151",
-                  borderRadius: 8,
-                  textDecoration: "none",
-                }}
-              >
-                {item.label}
-              </Link>
-            ) : (
-            <button
-              key={item.id}
-              onClick={() => scrollTo(item.id!)}
-              style={{
-                display: "block",
-                width: "100%",
-                textAlign: "left",
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "13px 16px",
-                fontSize: 15,
-                fontWeight: 500,
-                color: "#374151",
-                borderRadius: 8,
-              }}
-            >
-              {item.label}
-            </button>
-            )
-          )}
           {/* OLULA туслах — mobile */}
           <a
             href="https://m.me/992480210614049"
