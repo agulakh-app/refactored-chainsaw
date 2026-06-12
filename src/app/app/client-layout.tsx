@@ -161,12 +161,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-between py-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-0.5 h-7 bg-emerald-500 rounded-full"/>
-              <div className="leading-tight">
-                <div className="font-medium text-gray-900 text-base">
-                  {isGuest ? ownerName : (bizName || 'OLULA')}
-                </div>
-              </div>
+              <span className="font-extrabold text-lg tracking-tight text-[#0a2e24]">
+                OL<span className="text-[#07e6ae]">ULA</span>
+              </span>
+              {(isGuest ? ownerName : bizName) && (
+                <span className="text-xs text-gray-400 border-l border-gray-200 pl-2.5 truncate max-w-[140px]">
+                  {isGuest ? ownerName : bizName}
+                </span>
+              )}
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-50 text-blue-600 border border-blue-100">
                   {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
@@ -180,14 +182,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </span>
               )}
               {!isGuest && subStatus === 'active' && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-600 border border-emerald-100">
+                <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/10 text-[#048a6a] border border-[#07e6ae]/20">
                   Идэвхтэй · {timeLeft(subEndsAt)}
                 </span>
               )}
               {/* Install button — зөвхөн суулгаагүй үед */}
               {installPrompt && !isInstalled && (
                 <button onClick={installApp}
-                  className="text-xs px-2.5 py-1 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                  className="text-xs px-2.5 py-1 bg-[#07e6ae] text-[#0a2e24] font-medium rounded-lg hover:bg-[#06d29e]">
                   Апп суулгах
                 </button>
               )}
@@ -203,7 +205,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <button key={t.href} onClick={() => router.push(t.href)}
                   className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
                     path === t.href
-                      ? 'border-emerald-600 text-emerald-700 font-medium'
+                      ? 'border-[#07e6ae] text-[#048a6a] font-medium'
                       : 'border-transparent text-gray-400 hover:text-gray-600'
                   }`}>
                   {t.label}
@@ -219,7 +221,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {stores.map(s => (
                   <button key={s.id} onClick={() => setActiveStoreId(s.id)}
                     className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      activeStoreId === s.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      activeStoreId === s.id ? 'bg-[#0a2e24] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                     }`}>{s.name}</button>
                 ))}
               </div>
@@ -235,7 +237,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               {stores.map(s => (
                 <button key={s.id} onClick={() => setActiveStoreId(s.id)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                    activeStoreId === s.id ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500'
+                    activeStoreId === s.id ? 'bg-[#0a2e24] text-white' : 'bg-gray-100 text-gray-500'
                   }`}>{s.name}</button>
               ))}
             </div>
@@ -272,13 +274,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             return (
               <button key={t.href} onClick={() => router.push(t.href)}
                 className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${
-                  active ? 'text-emerald-600' : 'text-gray-400'
+                  active ? 'text-[#07e6ae]' : 'text-gray-400'
                 }`}>
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d={t.icon}/>
                 </svg>
                 <span className={`text-xs truncate ${active ? 'font-medium' : ''}`}>{t.label}</span>
-                {active && <div className="w-1 h-1 bg-emerald-500 rounded-full"/>}
+                {active && <div className="w-1 h-1 bg-[#07e6ae] rounded-full"/>}
               </button>
             )
           })}
