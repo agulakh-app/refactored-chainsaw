@@ -63,6 +63,7 @@ export default function Navbar() {
                 height: 6,
                 borderRadius: "50%",
                 background: "#07e6ae",
+                boxShadow: "0 0 8px rgba(7,230,174,0.9)",
               }} />
             </span>
           </Link>
