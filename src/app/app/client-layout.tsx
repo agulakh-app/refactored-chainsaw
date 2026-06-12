@@ -161,15 +161,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <div className="max-w-5xl mx-auto px-4">
           <div className="flex items-center justify-between py-3 border-b border-white/10">
             <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-lg tracking-tight text-white">
-                OL<span className="text-[#07e6ae]">ULA</span>
-              </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#07e6ae] inline-block"/>
-              {(isGuest ? ownerName : bizName) && (
-                <span className="text-xs text-white/40 border-l border-white/15 pl-2.5 truncate max-w-[140px]">
-                  {isGuest ? ownerName : bizName}
+              <span className="relative inline-flex items-center">
+                <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">
+                  OLULA
                 </span>
-              )}
+                <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae]"/>
+              </span>
               {isGuest && (
                 <span className="px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20">
                   {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
