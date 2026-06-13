@@ -67,12 +67,6 @@ export default function HistoryPage() {
     load()
   }
 
-  async function deleteOrder(o: Order) {
-    if (!confirm(`${o.phone} — ${fmtD(o.date)} захиалгыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.`)) return
-    await supabase.from('order_items').delete().eq('order_id', o.id)
-    await supabase.from('orders').delete().eq('id', o.id)
-    load()
-  }
 
   // Утасны хайлт — тухайн хүний бүх захиалга + хаягийн түүх
   const phoneOrders = selectedPhone
