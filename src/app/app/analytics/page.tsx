@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useOwnerId, useActiveStore, useGuestRole } from '../client-layout'
 
@@ -143,15 +143,102 @@ export default function AnalyticsPage() {
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
   const maxQty = ranking[0]?.[1]?.qty||1
 
-  const dailyMap: Record<string,number> = {}
-  filtered.forEach(o=>{
+  // ── Долоо хоногийн өдрөөр борлуулалт (бүх захиалгаас) ──
+  const weekdayTotals = [0,0,0,0,0,0,0] // 0=Ням..6=Бямба
+  orders.forEach(o=>{
+    if (!o.date) return
+    const d = new Date(o.date)
+    if (isNaN(d.getTime())) return
     const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
-    dailyMap[o.date]=(dailyMap[o.date]||0)+gross-(o.delivery_fee||0)
+    weekdayTotals[d.getDay()] += gross - (o.delivery_fee||0)
   })
-  const allDailyDays = Object.keys(dailyMap).sort()
-  const dailyDays14 = allDailyDays.slice(-14)
-  const dailyDays7 = allDailyDays.slice(-7)
-  const maxDay = Math.max(...Object.values(dailyMap),1)
+  // Даваа эхэлж, Ням төгсөх дараалал
+  const weekdayOrder = [1,2,3,4,5,6,0]
+  const weekdayChartData = weekdayOrder.map(i=>weekdayTotals[i])
+  const weekdayChartLabels = weekdayOrder.map(i=>WEEKDAY_LABELS[i])
+
+  // ── Сараар, шилдэг бараануудын борлуулалт (бүх захиалгаас) ──
+  const monthlyProductMap: Record<string, number[]> = {}
+  const productTotalsAll: Record<string, number> = {}
+  orders.forEach(o=>{
+    if (!o.date) return
+    const d = new Date(o.date)
+    if (isNaN(d.getTime())) return
+    const m = d.getMonth()
+    ;(o.order_items||[]).forEach((i:any)=>{
+      const key = i.product_name + (i.variant_label ? ' · '+i.variant_label : '')
+      const rev = i.quantity*i.unit_price
+      if (!monthlyProductMap[key]) monthlyProductMap[key]=Array(12).fill(0)
+      monthlyProductMap[key][m]+=rev
+      productTotalsAll[key]=(productTotalsAll[key]||0)+rev
+    })
+  })
+  const topProducts = Object.entries(productTotalsAll).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k])=>k)
+  const seasonalLabels = ['1 сар','2 сар','3 сар','4 сар','5 сар','6 сар','7 сар','8 сар','9 сар','10 сар','11 сар','12 сар']
+  const seasonalColors = ['#1D9E75','#378ADD','#EF9F27','#D85A30']
+
+  // ── Chart.js динамикаар ачаалж, 2 chart зурах ──
+  const weekdayCanvasRef = useRef<HTMLCanvasElement>(null)
+  const seasonalCanvasRef = useRef<HTMLCanvasElement>(null)
+  const weekdayChartRef = useRef<any>(null)
+  const seasonalChartRef = useRef<any>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const loadChartJS = (): Promise<any> => new Promise(resolve => {
+      if ((window as any).Chart) { resolve((window as any).Chart); return }
+      const s = document.createElement('script')
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js'
+      s.onload = () => resolve((window as any).Chart)
+      document.head.appendChild(s)
+    })
+
+    loadChartJS().then(Chart => {
+      if (cancelled || !Chart) return
+
+      if (weekdayChartRef.current) weekdayChartRef.current.destroy()
+      if (weekdayCanvasRef.current) {
+        const wMax = Math.max(...weekdayChartData, 1)
+        weekdayChartRef.current = new Chart(weekdayCanvasRef.current, {
+          type: 'bar',
+          data: {
+            labels: weekdayChartLabels,
+            datasets: [{ data: weekdayChartData, backgroundColor: weekdayChartData.map(v=>v===wMax?'#1D9E75':'#9FE1CB'), borderRadius: 4 }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display:false }, tooltip: { callbacks: { label:(c:any)=>fmt(Math.round(c.parsed.y))+'₮' } } },
+            scales: { y: { ticks: { callback:(v:any)=>v>=1000?Math.round(v/1000)+'к':v }, beginAtZero:true } }
+          }
+        })
+      }
+
+      if (seasonalChartRef.current) seasonalChartRef.current.destroy()
+      if (seasonalCanvasRef.current) {
+        seasonalChartRef.current = new Chart(seasonalCanvasRef.current, {
+          type: 'bar',
+          data: {
+            labels: seasonalLabels,
+            datasets: topProducts.map((name,idx)=>({
+              label: name,
+              data: monthlyProductMap[name],
+              backgroundColor: seasonalColors[idx % seasonalColors.length]
+            }))
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display:false }, tooltip: { callbacks: { label:(c:any)=>c.dataset.label+': '+fmt(Math.round(c.parsed.y))+'₮' } } },
+            scales: {
+              x: { stacked:true, ticks: { autoSkip:false, maxRotation:60, font:{size:10} } },
+              y: { stacked:true, ticks: { callback:(v:any)=>v>=1000?Math.round(v/1000)+'к':v }, beginAtZero:true }
+            }
+          }
+        })
+      }
+    })
+
+    return () => { cancelled = true }
+  }, [JSON.stringify(weekdayChartData), JSON.stringify(topProducts)])
 
   // ── Хамгийн их борлуулалттай сар/гариг (бүх захиалгаас, period-той хамаарахгүй) ──
   const byMonth: Record<string, number> = {}
@@ -205,6 +292,32 @@ export default function AnalyticsPage() {
           </div>
         ))}
       </div>
+
+      {/* Долоо хоног / Улирлын борлуулалтын дүн шинжилгээ */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <h2 className="font-medium text-gray-800 text-sm mb-1">Долоо хоногийн өдрөөр борлуулалт</h2>
+        <p className="text-xs text-gray-400 mb-3">Хэдийн өдөр хамгийн их захиалга өгдгийг харна (бүх захиалгаас)</p>
+        <div className="relative w-full" style={{height:180}}>
+          <canvas ref={weekdayCanvasRef}/>
+        </div>
+      </div>
+
+      {topProducts.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <h2 className="font-medium text-gray-800 text-sm mb-1">Сараар — шилдэг бараануудын борлуулалт</h2>
+          <div className="flex flex-wrap gap-3 mb-2">
+            {topProducts.map((name,idx)=>(
+              <span key={name} className="text-xs flex items-center gap-1.5 text-gray-500">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{background:seasonalColors[idx%seasonalColors.length]}}/>
+                {name}
+              </span>
+            ))}
+          </div>
+          <div className="relative w-full" style={{height:220}}>
+            <canvas ref={seasonalCanvasRef}/>
+          </div>
+        </div>
+      )}
 
       {/* Зардал бүртгэх */}
       {!isViewer && (
@@ -278,54 +391,6 @@ export default function AnalyticsPage() {
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Өдрийн орлогын chart */}
-      {dailyDays14.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 text-sm mb-4">Өдрийн цэвэр орлого</h2>
-
-          {/* Mobile: 7 хоног, утга тогтмол харагдана */}
-          <div className="sm:hidden flex items-end gap-1 h-40">
-            {dailyDays7.map(d=>{
-              const val = dailyMap[d]||0
-              const h = Math.max(4, Math.round((val/maxDay)*100))
-              const [,m,day] = d.split('-')
-              return (
-                <div key={d} className="flex-1 flex flex-col items-center gap-1 min-w-0">
-                  <div className="text-[10px] text-gray-500 font-medium leading-tight text-center">
-                    {val>=1000?Math.round(val/1000)+'к':fmt(val)}
-                  </div>
-                  <div className="w-full bg-emerald-500 rounded-t" style={{height:`${h}%`,minHeight:4}}/>
-                  <div className="text-[10px] text-gray-400">{parseInt(m)}/{parseInt(day)}</div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Desktop: 14 хоног, hover tooltip */}
-          <div className="hidden sm:flex items-end gap-1.5 h-32">
-            {dailyDays14.map(d=>{
-              const val = dailyMap[d]||0
-              const h = Math.max(4, Math.round((val/maxDay)*100))
-              const [,m,day] = d.split('-')
-              return (
-                <div key={d} className="flex-1 flex flex-col items-center gap-1 group">
-                  <div className="text-xs text-gray-400 font-medium">
-                    {val>=1000?Math.round(val/1000)+'к':fmt(val)}
-                  </div>
-                  <div className="w-full bg-emerald-500 rounded-t hover:bg-emerald-600 transition-all relative"
-                    style={{height:`${h}%`}}>
-                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 z-10 pointer-events-none">
-                      {fmt(val)}₮
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-300">{parseInt(m)}/{parseInt(day)}</div>
-                </div>
-              )
-            })}
-          </div>
         </div>
       )}
 
