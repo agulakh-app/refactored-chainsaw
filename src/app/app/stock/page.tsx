@@ -468,8 +468,8 @@ if (error) {
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
           {/* Variant байхгүй — нэг мөрт */}
           {!variantEnabled && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_0.8fr_1.3fr_1.3fr_1.3fr]">
-              <div className="col-span-2 sm:col-span-1">
+            <div className="grid gap-2" style={{gridTemplateColumns:'2fr 0.8fr 1.3fr 1.3fr 1.3fr'}}>
+              <div>
                 <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
@@ -489,7 +489,7 @@ if (error) {
                 <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} />
               </div>
-              <div className="col-span-2 sm:col-span-1">
+              <div>
                 <label className="block text-xs text-gray-500 mb-1">Огноо</label>
                 <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                   value={nDate} onChange={e=>setNDate(e.target.value)} />
