@@ -88,6 +88,15 @@ export default function HistoryPage() {
     })
   }
 
+  async function markAllDelivered(date: string, list: Order[]) {
+    const toMark = list.filter(o=>o.status!=='delivered'&&o.status!=='cancelled')
+    if (toMark.length===0) return
+    for (const o of toMark) {
+      await supabase.from('orders').update({status:'delivered'}).eq('id', o.id)
+    }
+    load()
+  }
+
 
   // Утасны хайлт — тухайн хүний бүх захиалга + хаягийн түүх
   const phoneOrders = selectedPhone
@@ -386,6 +395,12 @@ export default function HistoryPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-400">{grp.length} захиалга</span>
                   <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
+                  {!isViewer && grp.some(o=>o.status!=='delivered'&&o.status!=='cancelled') && (
+                    <button onClick={()=>markAllDelivered(date, grp)}
+                      className="text-xs px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium whitespace-nowrap">
+                      Бүгдийг хүргэсэн болгох
+                    </button>
+                  )}
                   {!isViewer && grp.some(o=>o.status==='cancelled') && (
                     <button onClick={()=>deleteAllCancelled(date, grp)}
                       className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
@@ -438,6 +453,13 @@ export default function HistoryPage() {
                                 {o.status==='pending'&&(
                                   <button onClick={()=>setOrderStatus(o.id,'cancelled')}
                                     className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500">✕</button>
+                                )}
+                                {o.status==='cancelled'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'pending')}
+                                    title="Хүлээгдэж байна руу буцаах"
+                                    className="px-2 py-1 rounded-lg text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 font-medium">
+                                    ↩
+                                  </button>
                                 )}
                                 {o.status==='cancelled'&&(
                                   <button onClick={()=>deleteOrder(o)}
