@@ -9,14 +9,20 @@ function fmt(n: number) { return n.toLocaleString() }
 const PERIODS = [['week','7 хоног'],['month','Энэ сар'],['quarter','3 сар'],['all','Бүгд']] as const
 
 const EXPENSE_CATS = [
-  { value: 'cogs', label: 'Бараа өртөг' },
   { value: 'ads', label: 'Зар сурталчилгаа (FB, IG...)' },
-  { value: 'delivery', label: 'Хүргэлтийн зардал' },
+  { value: 'delivery', label: 'Карго зардал' },
   { value: 'packaging', label: 'Сав баглаа' },
   { value: 'salary', label: 'Цалин' },
   { value: 'rent', label: 'Түрээс' },
   { value: 'other', label: 'Бусад' },
 ]
+
+// Хуучин бичлэгүүдийн нэрийг (cogs гэх мэт) дэлгэцэнд харуулах нэмэлт нэрс
+const LEGACY_CAT_LABELS: Record<string,string> = {
+  cogs: 'Бараа өртөг (хуучин)',
+}
+
+const WEEKDAY_LABELS = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба']
 
 export default function AnalyticsPage() {
   const ownerId = useOwnerId()
@@ -142,8 +148,30 @@ export default function AnalyticsPage() {
     const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
     dailyMap[o.date]=(dailyMap[o.date]||0)+gross-(o.delivery_fee||0)
   })
-  const dailyDays = Object.keys(dailyMap).sort().slice(-14)
+  const allDailyDays = Object.keys(dailyMap).sort()
+  const dailyDays14 = allDailyDays.slice(-14)
+  const dailyDays7 = allDailyDays.slice(-7)
   const maxDay = Math.max(...Object.values(dailyMap),1)
+
+  // ── Хамгийн их борлуулалттай сар/гариг (бүх захиалгаас, period-той хамаарахгүй) ──
+  const byMonth: Record<string, number> = {}
+  const byWeekday: Record<number, number> = {}
+  orders.forEach(o=>{
+    if (!o.date) return
+    const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
+    const net = gross - (o.delivery_fee||0)
+    const month = String(o.date).slice(0,7)
+    byMonth[month] = (byMonth[month]||0) + net
+    const d = new Date(o.date)
+    if (!isNaN(d.getTime())) {
+      const wd = d.getDay()
+      byWeekday[wd] = (byWeekday[wd]||0) + net
+    }
+  })
+  const bestMonthEntry = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0]
+  const bestWeekdayEntry = Object.entries(byWeekday).sort((a,b)=>b[1]-a[1])[0]
+  const bestMonthLabel = bestMonthEntry ? `${bestMonthEntry[0].slice(0,4)} оны ${parseInt(bestMonthEntry[0].slice(5,7))} сар (${fmt(bestMonthEntry[1])}₮)` : '—'
+  const bestWeekdayLabel = bestWeekdayEntry ? `${WEEKDAY_LABELS[Number(bestWeekdayEntry[0])]} (${fmt(bestWeekdayEntry[1])}₮)` : '—'
 
   return (
     <div className="space-y-4">
@@ -171,9 +199,9 @@ export default function AnalyticsPage() {
           ['Нийт зардал', fmt(totalExpenses)+'₮', 'text-red-500'],
           ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
         ] as const).map(([l,v,c])=>(
-          <div key={l} className="bg-white rounded-xl border border-gray-100 p-4">
+          <div key={l} className="bg-white rounded-xl border border-gray-100 p-4 overflow-hidden">
             <div className="text-xs text-gray-400 mb-1">{l}</div>
-            <div className={`text-xl font-medium ${c}`}>{v}</div>
+            <div className={`text-xl sm:text-2xl font-semibold ${c} truncate`}>{v}</div>
           </div>
         ))}
       </div>
@@ -184,7 +212,7 @@ export default function AnalyticsPage() {
           <h2 className="font-medium text-gray-800 text-sm mb-3">Зардал бүртгэх</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
             <div><label className="block text-xs text-gray-400 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                 value={eDate} onChange={e=>setEDate(e.target.value)}/></div>
             <div><label className="block text-xs text-gray-400 mb-1">Ангилал</label>
               <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -198,6 +226,9 @@ export default function AnalyticsPage() {
               <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="50000" value={eAmt} onChange={e=>setEAmt(e.target.value)}/></div>
           </div>
+          <p className="text-xs text-gray-400 -mt-1 mb-3">
+            ⚠️ Барааны өртөг (COGS) "Агуулах"-д бараа бүртгэхдээ оруулсан Өртөг (₮)-өөс автоматаар тооцогддог — энд дахин оруулах шаардлагагүй.
+          </p>
           <div className="flex justify-end">
             <button onClick={addExpense}
               className="px-5 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700">
@@ -215,7 +246,8 @@ export default function AnalyticsPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-400">{e.date.slice(5).replace('-','/')}</span>
                       <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
-                        {EXPENSE_CATS.find(c=>c.value===e.category)?.label.split('(')[0].trim()||e.category}
+                        {EXPENSE_CATS.find(c=>c.value===e.category)?.label.split('(')[0].trim()
+                          || LEGACY_CAT_LABELS[e.category] || e.category}
                       </span>
                       {e.note&&<span className="text-xs text-gray-500">{e.note}</span>}
                     </div>
@@ -234,7 +266,10 @@ export default function AnalyticsPage() {
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(expByCat).map(([cat,amt])=>(
                       <div key={cat} className="flex items-center gap-1.5 px-2.5 py-1 bg-red-50 rounded-lg">
-                        <span className="text-xs text-gray-500">{EXPENSE_CATS.find(c=>c.value===cat)?.label.split('(')[0].trim()||cat}</span>
+                        <span className="text-xs text-gray-500">
+                          {EXPENSE_CATS.find(c=>c.value===cat)?.label.split('(')[0].trim()
+                            || LEGACY_CAT_LABELS[cat] || cat}
+                        </span>
                         <span className="text-xs font-medium text-red-500">{fmt(amt)}₮</span>
                       </div>
                     ))}
@@ -247,18 +282,38 @@ export default function AnalyticsPage() {
       )}
 
       {/* Өдрийн орлогын chart */}
-      {dailyDays.length > 0 && (
+      {dailyDays14.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 text-sm mb-4">Өдрийн цэвэр орлого</h2>
-          <div className="flex items-end gap-1.5 h-28">
-            {dailyDays.map(d=>{
+
+          {/* Mobile: 7 хоног, утга тогтмол харагдана */}
+          <div className="sm:hidden flex items-end gap-1 h-40">
+            {dailyDays7.map(d=>{
+              const val = dailyMap[d]||0
+              const h = Math.max(4, Math.round((val/maxDay)*100))
+              const [,m,day] = d.split('-')
+              return (
+                <div key={d} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                  <div className="text-[10px] text-gray-500 font-medium leading-tight text-center">
+                    {val>=1000?Math.round(val/1000)+'к':fmt(val)}
+                  </div>
+                  <div className="w-full bg-emerald-500 rounded-t" style={{height:`${h}%`,minHeight:4}}/>
+                  <div className="text-[10px] text-gray-400">{parseInt(m)}/{parseInt(day)}</div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Desktop: 14 хоног, hover tooltip */}
+          <div className="hidden sm:flex items-end gap-1.5 h-32">
+            {dailyDays14.map(d=>{
               const val = dailyMap[d]||0
               const h = Math.max(4, Math.round((val/maxDay)*100))
               const [,m,day] = d.split('-')
               return (
                 <div key={d} className="flex-1 flex flex-col items-center gap-1 group">
-                  <div className="text-xs text-gray-300 font-medium group-hover:text-gray-500">
-                    {val>=1000?Math.round(val/1000)+'к':''}
+                  <div className="text-xs text-gray-400 font-medium">
+                    {val>=1000?Math.round(val/1000)+'к':fmt(val)}
                   </div>
                   <div className="w-full bg-emerald-500 rounded-t hover:bg-emerald-600 transition-all relative"
                     style={{height:`${h}%`}}>
@@ -287,12 +342,12 @@ export default function AnalyticsPage() {
               return (
               <div key={name} className="flex items-center gap-3">
                 <div className="text-xs text-gray-300 w-4 text-right">{idx+1}</div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-baseline mb-1">
-                    <span className="text-sm text-gray-700">{name}</span>
-                    <div className="flex items-baseline gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap justify-between items-baseline mb-1 gap-x-3 gap-y-0.5">
+                    <span className="text-sm text-gray-700 truncate">{name}</span>
+                    <div className="flex items-baseline gap-3 flex-wrap">
                       <span className="text-xs text-gray-400">{qty} ш</span>
-                      {cost>0&&<span className="text-xs text-orange-400 ml-1">өртөг: {fmt(cost)}₮</span>}
+                      {cost>0&&<span className="text-xs text-orange-400">өртөг: {fmt(cost)}₮</span>}
                       <span className="text-xs font-medium text-emerald-600">{fmt(revenue)}₮</span>
                       {cost>0&&<span className={`text-xs font-medium px-1.5 py-0.5 rounded ${margin>=30?'bg-emerald-50 text-emerald-600':margin>=15?'bg-amber-50 text-amber-600':'bg-red-50 text-red-500'}`}>{margin}%</span>}
                     </div>
@@ -324,10 +379,12 @@ export default function AnalyticsPage() {
             ['Захиалга тоо', String(filtered.length), ''],
             ['Дундаж захиалга', filtered.length?fmt(Math.round(totalNet/filtered.length))+'₮':'—', ''],
             ['Хүргэгдсэн / Нийт', `${delivered} / ${filtered.length}`, ''],
+            ['Хамгийн их борлуулалттай сар', bestMonthLabel, ''],
+            ['Хамгийн их борлуулалттай гараг', bestWeekdayLabel, ''],
           ].map(([k,v,c],i)=>(
-            <div key={k} className={`flex justify-between px-4 py-2.5 ${i>0?'border-t border-gray-100':''} ${k==='Цэвэр ашиг'?'bg-gray-50':''}`}>
-              <span className="text-sm text-gray-500">{k}</span>
-              <span className={`text-sm ${c||'text-gray-800'}`}>{v}</span>
+            <div key={k} className={`flex justify-between px-4 py-2.5 gap-3 ${i>0?'border-t border-gray-100':''} ${k==='Цэвэр ашиг'?'bg-gray-50':''}`}>
+              <span className="text-sm text-gray-500 flex-shrink-0">{k}</span>
+              <span className={`text-sm text-right ${c||'text-gray-800'}`}>{v}</span>
             </div>
           ))}
         </div>
