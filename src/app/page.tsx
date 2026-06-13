@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import FacebookChat from "@/components/FacebookChat";
 import PricingTable from "@/components/PricingTable";
 import HeroCarousel from "@/components/HeroCarousel";
 
@@ -44,8 +43,7 @@ export default function HomePage() {
   return (
     <>
       <Navbar />
-      <FacebookChat />
-
+      
       {/* ── HERO ── */}
       <HeroCarousel />
 
@@ -208,18 +206,6 @@ export default function HomePage() {
             >
               Үнэгүй туршаад үзэх →
             </Link>
-            <a
-              href={`https://refactored-chainsaw-git-main-agulakh-apps-projects.vercel.app/app`}
-              style={{
-                padding: "14px 24px", borderRadius: 12,
-                background: "rgba(255,255,255,0.07)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.8)",
-                fontSize: 15, fontWeight: 500, textDecoration: "none",
-              }}
-            >
-              Ажлын талбар
-            </a>
           </div>
         </div>
       </section>
