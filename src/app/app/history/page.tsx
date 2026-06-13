@@ -441,12 +441,6 @@ export default function HistoryPage() {
                                 )}
                                 {o.status==='cancelled'&&(
                                   <button onClick={()=>deleteOrder(o)}
-                                    className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium">
-                                    устгах
-                                  </button>
-                                )}
-                                {o.status==='cancelled'&&(
-                                  <button onClick={()=>deleteOrder(o)}
                                     className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
                                     🗑 Устгах
                                   </button>
