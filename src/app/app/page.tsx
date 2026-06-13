@@ -258,9 +258,11 @@ export default function DashPage() {
                 placeholder="Дүүрэг, хороо, байр..."
                 value={oAddr} onChange={e=>setOAddr(e.target.value)}/>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
             {warehouses.length>0&&(
               <div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
@@ -271,28 +273,30 @@ export default function DashPage() {
             )}
             <div className="flex flex-col">
               <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
-              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2">
-                <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 mb-1 px-1">
-                  <div className="text-xs text-gray-400">Бараа</div>
-                  <div className="text-xs text-gray-400 text-center">Тоо</div>
-                  <div className="text-xs text-gray-400">Үнэ (₮)</div>
-                  <div></div>
-                </div>
+              <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-3">
                 {oItems.map((it,idx)=>{
                   const selProd=products.find(p=>p.id===it.product_id)
                   const variants:any[]=(selProd as any)?.variants||[]
                   return(
-                  <div key={idx} className="space-y-1.5">
-                    <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 items-center">
-                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                  <div key={idx} className="space-y-1.5 pb-2 border-b border-gray-100 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-2">
+                      <select className="flex-1 w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                         {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                       </select>
-                      <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} style={{minWidth:52}}/>
-                      <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
-                      {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+                      {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-sm">✕</button>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Тоо</label>
+                        <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Үнэ (₮)</label>
+                        <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
+                      </div>
                     </div>
                     {variantEnabled&&variants.length>0&&(
-                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
+                      <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
                         value={it.variant_label}
                         onChange={e=>{
                           const v=variants.find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===e.target.value)
@@ -316,10 +320,6 @@ export default function DashPage() {
                   {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = `+fmt(net)+'₮':''}
                 </span>}
               </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
-              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
             </div>
             <div className="flex justify-end">
               <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
@@ -418,25 +418,35 @@ export default function DashPage() {
           <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 sm:hidden">Утас</label>
             <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
           </div>
-          <div className="flex gap-2">
-            <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-            {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white flex-shrink-0">✕</button>}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 sm:hidden">Огноо</label>
+            <div className="flex gap-2">
+              <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+              {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white flex-shrink-0">✕</button>}
+            </div>
           </div>
           {stores.length>0&&(
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
-              <option value="all">Бүх дэлгүүр</option>
-              {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-            </select>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-gray-500 sm:hidden">Дэлгүүр</label>
+              <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
+                <option value="all">Бүх дэлгүүр</option>
+                {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+              </select>
+            </div>
           )}
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-            <option value="all">Бүх статус</option>
-            <option value="pending">Хүлээгдэж байна</option>
-            <option value="delivered">Хүргэгдсэн</option>
-            <option value="cancelled">Цуцлагдсан</option>
-          </select>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 sm:hidden">Статус</label>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+              <option value="all">Бүх статус</option>
+              <option value="pending">Хүлээгдэж байна</option>
+              <option value="delivered">Хүргэгдсэн</option>
+              <option value="cancelled">Цуцлагдсан</option>
+            </select>
+          </div>
         </div>
 
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
@@ -460,7 +470,7 @@ export default function DashPage() {
                   const isCancelled=o.status==='cancelled'
                   return (
                     <div key={o.id} className="px-4 py-3 bg-white">
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-start justify-between gap-2 mb-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600">
                             {o.phone}
@@ -468,7 +478,7 @@ export default function DashPage() {
                           {!activeStoreId&&storeName&&(
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">{storeName}</span>
                           )}
-                          <span className="text-xs text-gray-400">{o.address}</span>
+                          <span className="hidden sm:inline text-xs text-gray-400">{o.address}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
@@ -504,6 +514,7 @@ export default function DashPage() {
                           )}
                         </div>
                       </div>
+                      <div className="sm:hidden text-xs text-gray-400 mb-2">{o.address}</div>
                       <div className="space-y-1 mb-2">
                         {(o.order_items||[]).map((item:any,idx:number)=>(
                           <div key={idx} className="flex justify-between items-baseline">
