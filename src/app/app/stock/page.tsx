@@ -468,8 +468,8 @@ if (error) {
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
           {/* Variant байхгүй — нэг мөрт */}
           {!variantEnabled && (
-            <div className="grid gap-2" style={{gridTemplateColumns:'2fr 0.8fr 1.3fr 1.3fr 1.3fr'}}>
-              <div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-[2fr_0.8fr_1.3fr_1.3fr_1.3fr]">
+              <div className="col-span-2 sm:col-span-1">
                 <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
@@ -489,7 +489,7 @@ if (error) {
                 <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} />
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <label className="block text-xs text-gray-500 mb-1">Огноо</label>
                 <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                   value={nDate} onChange={e=>setNDate(e.target.value)} />
@@ -653,13 +653,21 @@ if (error) {
           )}
         </div>
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
-            <option value="all">Бүх бараа</option>
-            {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
-          </select>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-            value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
-          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 sm:hidden">Бараа</label>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
+              <option value="all">Бүх бараа</option>
+              {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-gray-500 sm:hidden">Огноо</label>
+            <div className="flex gap-2">
+              <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+              {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
+            </div>
+          </div>
         </div>
         {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp = logGroups[date]
