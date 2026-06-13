@@ -106,30 +106,36 @@ export default function SettingsPage() {
     showFlash('✓ Зочин нэмэгдлээ'); loadAll()
   }
 
+  async function updateViewerRole(id: string, role: string) {
+    await supabase.from('shared_access').update({ role }).eq('id', id)
+    showFlash('✓ Эрх шинэчлэгдлээ')
+    loadAll()
+  }
+
   return (
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
       {/* Туршилт / дууссан мэдэгдэл */}
       {subStatus === 'trial' && trialEndsAt && (
-        <div className="bg-white rounded-xl border border-amber-100 px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="bg-white rounded-xl border border-amber-100 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <div className="text-sm font-medium text-amber-700">Үнэгүй туршилт</div>
             <div className="text-xs text-gray-400 mt-0.5">
               {Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))} өдөр үлдсэн
               · {new Date(trialEndsAt).toLocaleDateString('mn-MN')} дуусна
             </div>
           </div>
-          <a href="/pricing" className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700">Сунгах</a>
+          <a href="/pricing" className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 flex-shrink-0">Сунгах</a>
         </div>
       )}
       {subStatus === 'expired' && (
-        <div className="bg-white rounded-xl border border-red-100 px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="bg-white rounded-xl border border-red-100 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
             <div className="text-sm font-medium text-red-600">Эрх дууссан</div>
             <div className="text-xs text-gray-400 mt-0.5">Үргэлжлүүлэн ашиглахын тулд төлбөр төлнө үү</div>
           </div>
-          <a href="/pricing" className="px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600">Сунгах</a>
+          <a href="/pricing" className="px-3 py-1.5 bg-red-500 text-white text-xs rounded-lg hover:bg-red-600 flex-shrink-0">Сунгах</a>
         </div>
       )}
 
@@ -217,7 +223,7 @@ export default function SettingsPage() {
           <input type="number" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
             value={deliveryFee} onChange={e=>setDeliveryFee(e.target.value)} placeholder="7000" />
           <button onClick={saveDelivery}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all ${deliverySaved?'bg-gray-100 text-gray-500':'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-all flex-shrink-0 ${deliverySaved?'bg-gray-100 text-gray-500':'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
             {deliverySaved?'Хадгалагдлаа':'Хадгалах'}
           </button>
         </div>
@@ -228,7 +234,7 @@ export default function SettingsPage() {
         <h2 className="font-medium text-gray-800 mb-1 text-sm">Зочин хандалт</h2>
         <p className="text-xs text-gray-400 mb-4">Нэвтрэх нэр, PIN-ээр таны өгөгдлийг харна</p>
         <div className="space-y-3 mb-4">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Имэйл</label>
               <input type="email" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
@@ -242,7 +248,7 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Нэвтрэх нэр</label>
               <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
@@ -266,22 +272,26 @@ export default function SettingsPage() {
         {viewers.length>0?(
           <div className="space-y-2">
             {viewers.map(v=>(
-              <div key={v.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700">{v.viewer_email}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${v.role==='editor'?'bg-blue-50 text-blue-600 border-blue-100':'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                      {v.role==='editor'?'Засварлагч':'Харагч'}
-                    </span>
+              <div key={v.id} className="bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-gray-700 break-all">{v.viewer_email}</div>
+                    {v.username&&(
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {v.username} · PIN: {v.pin}
+                      </div>
+                    )}
                   </div>
-                  {v.username&&(
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      {v.username} · PIN: {v.pin}
-                    </div>
-                  )}
+                  <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
+                    className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 flex-shrink-0">устгах</button>
                 </div>
-                <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
-                  className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                <div className="mt-2">
+                  <select value={v.role} onChange={e=>updateViewerRole(v.id, e.target.value)}
+                    className={`text-xs px-2 py-1 rounded-full border bg-white ${v.role==='editor'?'text-blue-600 border-blue-100':'text-gray-500 border-gray-200'}`}>
+                    <option value="viewer">Харагч</option>
+                    <option value="editor">Засварлагч</option>
+                  </select>
+                </div>
               </div>
             ))}
           </div>
