@@ -87,6 +87,37 @@ export default function AdminPage() {
   const activeUsers = users.filter(u=>u.subscription_status==='active').length
   const trialUsers = users.filter(u=>u.subscription_status==='trial').length
 
+  // ── Захиалгын дүн тооцох (order_items байгаа бол ашиглана) ──
+  function orderAmount(o:any) {
+    if (Array.isArray(o.order_items)) {
+      const gross = o.order_items.reduce((a:number,i:any)=>a+(i.quantity||0)*(i.unit_price||0),0)
+      return gross - (o.delivery_fee||0)
+    }
+    return o.amount || o.total || 0
+  }
+
+  const WEEKDAY_LABELS = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба']
+
+  // Сараар нийт борлуулалт
+  const byMonth: Record<string, number> = {}
+  // Гарагаар нийт борлуулалт
+  const byWeekday: Record<number, number> = {}
+  for (const o of orders) {
+    if (!o.date) continue
+    const amt = orderAmount(o)
+    const month = String(o.date).slice(0,7) // YYYY-MM
+    byMonth[month] = (byMonth[month]||0) + amt
+    const d = new Date(o.date)
+    if (!isNaN(d.getTime())) {
+      const wd = d.getDay()
+      byWeekday[wd] = (byWeekday[wd]||0) + amt
+    }
+  }
+  const bestMonthEntry = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0]
+  const bestWeekdayEntry = Object.entries(byWeekday).sort((a,b)=>b[1]-a[1])[0]
+  const bestMonthLabel = bestMonthEntry ? bestMonthEntry[0].replace('-',' оны ') + ' сар' : '—'
+  const bestWeekdayLabel = bestWeekdayEntry ? WEEKDAY_LABELS[Number(bestWeekdayEntry[0])] : '—'
+
   if (!ready) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-gray-400">Ачааллаж байна...</div>
@@ -159,7 +190,7 @@ export default function AdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="bg-gray-50">
-                  {['Имэйл','Утас','Хугацаа','Статус','Тохируулга'].map(h=>(
+                  {['Утас','Огноо','Статус','Тохируулга','Имэйл'].map(h=>(
                     <th key={h} className="px-4 py-3 text-xs font-medium text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}
                 </tr></thead>
@@ -176,12 +207,9 @@ export default function AdminPage() {
                     return (
                       <tr key={u.id} className="border-t border-gray-100 hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          <div className="text-xs font-medium text-gray-800">{u.contact_email || u.email || '—'}</div>
+                          <div className="text-xs font-medium text-gray-800 whitespace-nowrap">{u.phone || '—'}</div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="text-xs text-gray-600">{u.phone || '—'}</div>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
+                        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
                           {endDate ? fmtD(endDate) : '—'}
                         </td>
                         <td className="px-4 py-3">{badge}</td>
@@ -196,6 +224,9 @@ export default function AdminPage() {
                               {u.subscription_status==='expired'?'Нээх':'Хаах'}
                             </button>
                           </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-xs font-medium text-gray-800">{u.contact_email || u.email || '—'}</div>
                         </td>
                       </tr>
                     )
@@ -292,7 +323,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
               <h3 className="font-semibold text-gray-800 mb-4">💰 Орлогын дүгнэлт</h3>
-              {[['Нийт баталгаажсан',fmt(totalRevenue)+'₮'],['Хүлээгдэж буй',fmt(payments.filter(p=>p.status==='pending').reduce((a,p)=>a+p.amount,0))+'₮'],['Нийт төлбөр',String(payments.length)],['Нийт захиалга',String(orders.length)]].map(([l,v])=>(
+              {[['Нийт баталгаажсан',fmt(totalRevenue)+'₮'],['Хүлээгдэж буй',fmt(payments.filter(p=>p.status==='pending').reduce((a,p)=>a+p.amount,0))+'₮'],['Нийт төлбөр',String(payments.length)],['Нийт захиалга',String(orders.length)],['Хамгийн их борлуулалттай сар',bestMonthLabel],['Хамгийн их борлуулалттай гараг',bestWeekdayLabel]].map(([l,v])=>(
                 <div key={String(l)} className="flex justify-between py-1.5 border-b border-gray-50 last:border-0">
                   <span className="text-sm text-gray-500">{l}</span>
                   <span className="text-sm font-semibold">{v}</span>
