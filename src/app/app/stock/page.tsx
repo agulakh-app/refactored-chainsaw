@@ -653,21 +653,13 @@ if (error) {
           )}
         </div>
         <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 sm:hidden">Бараа</label>
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
-              <option value="all">Бүх бараа</option>
-              {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 sm:hidden">Огноо</label>
-            <div className="flex gap-2">
-              <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
-              {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
-            </div>
-          </div>
+          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
+            <option value="all">Бүх бараа</option>
+            {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
+          </select>
+          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+            value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
         </div>
         {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp = logGroups[date]
