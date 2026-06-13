@@ -9,8 +9,8 @@ const TODAY = new Date().toISOString().slice(0,10)
 function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
 function fmt(n: number) { return n.toLocaleString() }
 
-type Variant = { size: string; color: string; price: number; stock: number }
-type Product = { id: string; name: string; stock: number; unit_price: number; store_id?: string|null; variants?: Variant[]|null }
+type Variant = { size: string; color: string; price: number; stock: number; cost?: number }
+type Product = { id: string; name: string; stock: number; unit_price: number; store_id?: string|null; variants?: Variant[]|null; cost?: number|null }
 
 export default function StockPage() {
   const guestRole = useGuestRole()
@@ -49,9 +49,13 @@ export default function StockPage() {
   const [editDate, setEditDate] = useState('')
   const [editNote, setEditNote] = useState('')
 
-  // Edit product variants stock
+  // Edit product (stock + price + cost), variant эсвэл variant-гүй аль аль нь
   const [editProd, setEditProd] = useState<Product|null>(null)
   const [editVariantStocks, setEditVariantStocks] = useState<number[]>([])
+  const [editVariantPrices, setEditVariantPrices] = useState<string[]>([])
+  const [editVariantCosts, setEditVariantCosts] = useState<string[]>([])
+  const [editUnitPrice, setEditUnitPrice] = useState('')
+  const [editUnitCost, setEditUnitCost] = useState('')
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
@@ -183,14 +187,39 @@ if (error) {
     }})
   }
 
+  function openEditProd(p: Product) {
+    setEditProd(p)
+    const pvs: Variant[] = p.variants || []
+    if (pvs.length > 0) {
+      setEditVariantStocks(pvs.map(v=>v.stock))
+      setEditVariantPrices(pvs.map(v=>String(v.price ?? '')))
+      setEditVariantCosts(pvs.map(v=>String((v as any).cost ?? '')))
+    } else {
+      setEditUnitPrice(String(p.unit_price ?? ''))
+      setEditUnitCost(String(p.cost ?? ''))
+    }
+  }
+
   async function saveEditVariants() {
     if (!editProd) return
     const pvs: Variant[] = editProd.variants || []
-    const newVariants = pvs.map((v, i) => ({ ...v, stock: editVariantStocks[i] ?? v.stock }))
-    const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
-    await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
+    if (pvs.length > 0) {
+      const newVariants = pvs.map((v, i) => ({
+        ...v,
+        stock: editVariantStocks[i] ?? v.stock,
+        price: editVariantPrices[i] !== undefined && editVariantPrices[i] !== '' ? Number(editVariantPrices[i]) : v.price,
+        cost: editVariantCosts[i] !== undefined && editVariantCosts[i] !== '' ? Number(editVariantCosts[i]) : (v as any).cost,
+      }))
+      const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
+      await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
+    } else {
+      await supabase.from('products').update({
+        unit_price: Number(editUnitPrice) || 0,
+        cost: editUnitCost ? Number(editUnitCost) : null,
+      }).eq('id', editProd.id)
+    }
     setEditProd(null)
-    showFlash(editProd.name + ' stock шинэчлэгдлээ ✓')
+    showFlash(editProd.name + ' шинэчлэгдлээ ✓')
     load()
   }
 
@@ -276,29 +305,77 @@ if (error) {
         </div>
       )}
 
-      {/* Edit variants stock modal */}
+      {/* Edit product modal — stock, зарах үнэ, өртөг */}
       {!isViewer && editProd && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-medium text-gray-800 mb-1">{editProd.name}</h3>
-            <p className="text-xs text-gray-400 mb-4">Variant бүрийн үлдэгдэл тоог засна</p>
-            <div className="space-y-2 mb-5">
-              {(editProd.variants||[]).map((v, i) => (
-                <div key={i} className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-gray-600 flex-1">{[v.size,v.color].filter(Boolean).join(' / ')}</span>
-                  <span className="text-xs text-emerald-600">{fmt(v.price)}₮</span>
-                  <input type="number" min="0"
-                    className="w-20 px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                    value={editVariantStocks[i] ?? v.stock}
-                    onChange={e=>{
-                      const arr = [...editVariantStocks]
-                      arr[i] = Number(e.target.value)
-                      setEditVariantStocks(arr)
-                    }} />
-                  <span className="text-xs text-gray-400">ш</span>
+            <p className="text-xs text-gray-400 mb-4">Үлдэгдэл, зарах үнэ, өртөгийг засна</p>
+
+            {(editProd.variants||[]).length > 0 ? (
+              <div className="space-y-3 mb-5 max-h-80 overflow-y-auto">
+                {(editProd.variants||[]).map((v, i) => (
+                  <div key={i} className="border border-gray-100 rounded-lg p-2.5">
+                    <div className="text-sm text-gray-600 mb-2">{[v.size,v.color].filter(Boolean).join(' / ')}</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Тоо</label>
+                        <input type="number" min="0"
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center"
+                          value={editVariantStocks[i] ?? v.stock}
+                          onChange={e=>{
+                            const arr = [...editVariantStocks]
+                            arr[i] = Number(e.target.value)
+                            setEditVariantStocks(arr)
+                          }} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Зарах (₮)</label>
+                        <input type="text" inputMode="numeric"
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm"
+                          value={editVariantPrices[i] ? Number(editVariantPrices[i]).toLocaleString() : ''}
+                          onChange={e=>{
+                            const arr=[...editVariantPrices]
+                            arr[i]=e.target.value.replace(/[^0-9]/g,'')
+                            setEditVariantPrices(arr)
+                          }} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Өртөг (₮)</label>
+                        <input type="text" inputMode="numeric"
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm"
+                          value={editVariantCosts[i] ? Number(editVariantCosts[i]).toLocaleString() : ''}
+                          onChange={e=>{
+                            const arr=[...editVariantCosts]
+                            arr[i]=e.target.value.replace(/[^0-9]/g,'')
+                            setEditVariantCosts(arr)
+                          }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Зарах үнэ (₮)</label>
+                  <input type="text" inputMode="numeric"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    placeholder="59,000"
+                    value={editUnitPrice ? Number(editUnitPrice).toLocaleString() : ''}
+                    onChange={e=>setEditUnitPrice(e.target.value.replace(/[^0-9]/g,''))} />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Өртөг (₮)</label>
+                  <input type="text" inputMode="numeric"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    placeholder="37,000"
+                    value={editUnitCost ? Number(editUnitCost).toLocaleString() : ''}
+                    onChange={e=>setEditUnitCost(e.target.value.replace(/[^0-9]/g,''))} />
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button onClick={()=>setEditProd(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
               <button onClick={saveEditVariants} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
@@ -509,13 +586,16 @@ if (error) {
     {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded flex-shrink-0">Цөөн</span>}
   </div>
   <div className="flex items-center gap-3 flex-shrink-0">
+    {pvs.length===0 && (
+      <span className="text-xs text-gray-400 hidden sm:inline">
+        {fmt(p.unit_price)}₮{p.cost?<span className="text-orange-400 ml-1">(өртөг {fmt(p.cost)}₮)</span>:null}
+      </span>
+    )}
     <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
                       {!isViewer && (
                         <div className="flex items-center gap-1">
-                          {pvs.length > 0 && (
-                            <button onClick={()=>{setEditProd(p);setEditVariantStocks(pvs.map(v=>v.stock))}}
-                              className="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">засах</button>
-                          )}
+                          <button onClick={()=>openEditProd(p)}
+                            className="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">засах</button>
                           <button onClick={()=>deleteProduct(p.id, p.name)}
                             className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
                         </div>
