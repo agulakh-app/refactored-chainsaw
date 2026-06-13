@@ -92,6 +92,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           const access = JSON.parse(decodeURIComponent(guestCookie.split('=').slice(1).join('=')))
           setGuestRole(access.role)
           setOwnerId(access.owner_id)
+          // Зочин — тодорхой 1 дэлгүүрт уясан бол switcher-гүйгээр зөвхөн тэр дэлгүүрийг харна
+          if (access.store_id) setActiveStoreId(access.store_id)
           // Зочин — эзэмшигчийн эрхийн төрлөөр хязгаарлагдана
           const { data: ownerProfile } = await supabase.from('profiles')
             .select('business_name,plan').eq('id', access.owner_id).single()
