@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [newRole, setNewRole] = useState('viewer')
   const [newUsername, setNewUsername] = useState('')
   const [newPin, setNewPin] = useState('')
+  const [newStoreId, setNewStoreId] = useState('')
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
@@ -100,10 +101,17 @@ export default function SettingsPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     await supabase.from('shared_access').insert({
       owner_id:user!.id, viewer_email:newEmail.trim(),
-      role:newRole, username:newUsername.trim(), pin:newPin.trim()
+      role:newRole, username:newUsername.trim(), pin:newPin.trim(),
+      store_id: newStoreId || null
     })
-    setNewEmail(''); setNewUsername(''); setNewPin('')
+    setNewEmail(''); setNewUsername(''); setNewPin(''); setNewStoreId('')
     showFlash('✓ Зочин нэмэгдлээ'); loadAll()
+  }
+
+  async function updateViewerStore(id: string, storeId: string) {
+    await supabase.from('shared_access').update({ store_id: storeId || null }).eq('id', id)
+    showFlash('✓ Дэлгүүр шинэчлэгдлээ')
+    loadAll()
   }
 
   async function updateViewerRole(id: string, role: string) {
@@ -260,6 +268,16 @@ export default function SettingsPage() {
                 placeholder="••••" value={newPin} onChange={e=>setNewPin(e.target.value)} />
             </div>
           </div>
+          {stores.length>0 && (
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Дэлгүүр</label>
+              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={newStoreId} onChange={e=>setNewStoreId(e.target.value)}>
+                <option value="">Бүх дэлгүүр (сонголтгүй)</option>
+                {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">Зочин зөвхөн сонгосон дэлгүүрийн захиалга, бараа барааг харна</p>
+            </div>
+          )}
           <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-400 space-y-1 border border-gray-100">
             <div><span className="text-gray-600">Харагч</span> — бараа, захиалга зөвхөн харах</div>
             <div><span className="text-gray-600">Засварлагч</span> — захиалга, бараа нэмэх, засах боломжтой</div>
@@ -285,12 +303,19 @@ export default function SettingsPage() {
                   <button onClick={async()=>{ await supabase.from('shared_access').delete().eq('id',v.id); loadAll() }}
                     className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50 flex-shrink-0">устгах</button>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <select value={v.role} onChange={e=>updateViewerRole(v.id, e.target.value)}
                     className={`text-xs px-2 py-1 rounded-full border bg-white ${v.role==='editor'?'text-blue-600 border-blue-100':'text-gray-500 border-gray-200'}`}>
                     <option value="viewer">Харагч</option>
                     <option value="editor">Засварлагч</option>
                   </select>
+                  {stores.length>0 && (
+                    <select value={v.store_id||''} onChange={e=>updateViewerStore(v.id, e.target.value)}
+                      className="text-xs px-2 py-1 rounded-full border bg-white text-gray-500 border-gray-200">
+                      <option value="">Бүх дэлгүүр</option>
+                      {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                  )}
                 </div>
               </div>
             ))}
