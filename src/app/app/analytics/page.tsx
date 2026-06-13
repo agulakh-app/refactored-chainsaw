@@ -17,12 +17,12 @@ const EXPENSE_CATS = [
   { value: 'other', label: 'Бусад' },
 ]
 
-// Хуучин бичлэгүүдийн нэрийг (cogs гэх мэт) дэлгэцэнд харуулах нэмэлт нэрс
 const LEGACY_CAT_LABELS: Record<string,string> = {
   cogs: 'Бараа өртөг (хуучин)',
 }
 
 const WEEKDAY_LABELS = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба']
+const EXP_PAGE_SIZE = 5
 
 export default function AnalyticsPage() {
   const ownerId = useOwnerId()
@@ -34,12 +34,12 @@ export default function AnalyticsPage() {
   const [expenses, setExpenses] = useState<any[]>([])
   const [period, setPeriod] = useState('month')
 
-  // Зардал бүртгэх form
   const [eDate, setEDate] = useState(new Date().toISOString().slice(0,10))
   const [eCat, setECat] = useState('ads')
   const [eNote, setENote] = useState('')
   const [eAmt, setEAmt] = useState('')
   const [flash, setFlash] = useState('')
+  const [expPage, setExpPage] = useState(1)
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
@@ -80,7 +80,7 @@ export default function AnalyticsPage() {
       note: eNote || EXPENSE_CATS.find(c=>c.value===eCat)?.label || eCat,
       amount: Number(eAmt)
     })
-    setEAmt(''); setENote('')
+    setEAmt(''); setENote(''); setExpPage(1)
     showFlash('Зардал бүртгэгдлээ ✓')
     load()
   }
@@ -110,11 +110,9 @@ export default function AnalyticsPage() {
   const delivered = filtered.filter(o=>o.status==='delivered').length
   const pending = filtered.filter(o=>o.status==='pending').length
 
-  // Зардлыг ангиллаар нэгтгэх
   const expByCat: Record<string,number> = {}
   filteredExp.forEach(e=>{ expByCat[e.category]=(expByCat[e.category]||0)+Number(e.amount) })
 
-  // Бараа бүрийн өртөг тооцоолох
   const getCost = (productName: string, variantLabel: string|null) => {
     for (const p of products) {
       if (p.name !== productName) continue
@@ -123,6 +121,7 @@ export default function AnalyticsPage() {
         const v = pvs.find((vv: any) => [vv.size, vv.color].filter(Boolean).join(' / ') === variantLabel)
         if (v?.cost) return Number(v.cost)
       }
+      if (p.cost) return Number(p.cost)
       return 0
     }
     return 0
@@ -143,8 +142,13 @@ export default function AnalyticsPage() {
   const ranking = Object.entries(productMap).sort((a,b)=>b[1].qty-a[1].qty)
   const maxQty = ranking[0]?.[1]?.qty||1
 
-  // ── Долоо хоногийн өдрөөр борлуулалт (бүх захиалгаас) ──
-  const weekdayTotals = [0,0,0,0,0,0,0] // 0=Ням..6=Бямба
+  // Зардлын хуудасжуулалт
+  const totalExpPages = Math.ceil(filteredExp.length / EXP_PAGE_SIZE)
+  const pagedExp = filteredExp.slice(0, expPage * EXP_PAGE_SIZE)
+  const hasMoreExp = expPage * EXP_PAGE_SIZE < filteredExp.length
+
+  // Долоо хоногийн өдрөөр
+  const weekdayTotals = [0,0,0,0,0,0,0]
   orders.forEach(o=>{
     if (!o.date) return
     const d = new Date(o.date)
@@ -152,12 +156,11 @@ export default function AnalyticsPage() {
     const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
     weekdayTotals[d.getDay()] += gross - (o.delivery_fee||0)
   })
-  // Даваа эхэлж, Ням төгсөх дараалал
   const weekdayOrder = [1,2,3,4,5,6,0]
   const weekdayChartData = weekdayOrder.map(i=>weekdayTotals[i])
   const weekdayChartLabels = weekdayOrder.map(i=>WEEKDAY_LABELS[i])
 
-  // ── Сараар, шилдэг бараануудын борлуулалт (бүх захиалгаас) ──
+  // Сараар шилдэг бараанууд
   const monthlyProductMap: Record<string, number[]> = {}
   const productTotalsAll: Record<string, number> = {}
   orders.forEach(o=>{
@@ -177,7 +180,6 @@ export default function AnalyticsPage() {
   const seasonalLabels = ['1 сар','2 сар','3 сар','4 сар','5 сар','6 сар','7 сар','8 сар','9 сар','10 сар','11 сар','12 сар']
   const seasonalColors = ['#1D9E75','#378ADD','#EF9F27','#D85A30']
 
-  // ── Chart.js динамикаар ачаалж, 2 chart зурах ──
   const weekdayCanvasRef = useRef<HTMLCanvasElement>(null)
   const seasonalCanvasRef = useRef<HTMLCanvasElement>(null)
   const weekdayChartRef = useRef<any>(null)
@@ -254,7 +256,6 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Summary cards — зөвхөн зочинд (бусад нь доорх "Санхүүгийн дүгнэлт"-д давхардсан) */}
       {isViewer && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {([
@@ -270,18 +271,18 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {/* Долоо хоног / Улирлын борлуулалтын дүн шинжилгээ */}
+      {/* Chart 1: Борлуулалт гаригаар */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <h2 className="font-medium text-gray-800 text-sm mb-1">Долоо хоногийн өдрөөр борлуулалт</h2>
-        <p className="text-xs text-gray-400 mb-3">Хэдийн өдөр хамгийн их захиалга өгдгийг харна (бүх захиалгаас)</p>
+        <h2 className="font-medium text-gray-800 text-sm mb-3">Борлуулалт гаригаар (Нийт борлуулалтаас)</h2>
         <div className="relative w-full" style={{height:180}}>
           <canvas ref={weekdayCanvasRef}/>
         </div>
       </div>
 
+      {/* Chart 2: Сараар шилдэг бараа */}
       {topProducts.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 text-sm mb-1">Сараар — шилдэг бараануудын борлуулалт</h2>
+          <h2 className="font-medium text-gray-800 text-sm mb-2">Сараар — шилдэг бараануудын борлуулалт</h2>
           <div className="flex flex-wrap gap-3 mb-2">
             {topProducts.map((name,idx)=>(
               <span key={name} className="text-xs flex items-center gap-1.5 text-gray-500">
@@ -316,9 +317,6 @@ export default function AnalyticsPage() {
               <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="50000" value={eAmt} onChange={e=>setEAmt(e.target.value)}/></div>
           </div>
-          <p className="text-xs text-gray-400 -mt-1 mb-3">
-            ⚠️ Барааны өртөг (COGS) "Агуулах"-д бараа бүртгэхдээ оруулсан Өртөг (₮)-өөс автоматаар тооцогддог — энд дахин оруулах шаардлагагүй.
-          </p>
           <div className="flex justify-end">
             <button onClick={addExpense}
               className="px-5 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700">
@@ -326,22 +324,24 @@ export default function AnalyticsPage() {
             </button>
           </div>
 
-          {/* Зардлын жагсаалт */}
+          {/* Зардлын жагсаалт — хуудасжуулалттай */}
           {filteredExp.length > 0 && (
             <div className="mt-4 border-t border-gray-100 pt-3">
-              <div className="text-xs text-gray-400 mb-2">Бүртгэгдсэн зардлууд:</div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-400">Бүртгэгдсэн зардлууд ({filteredExp.length})</span>
+              </div>
               <div className="space-y-1.5">
-                {filteredExp.map(e=>(
+                {pagedExp.map(e=>(
                   <div key={e.id} className="flex justify-between items-center py-1.5 hover:bg-gray-50 px-2 rounded-lg group">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-gray-400">{e.date.slice(5).replace('-','/')}</span>
-                      <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs text-gray-400 flex-shrink-0">{e.date.slice(5).replace('-','/')}</span>
+                      <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full flex-shrink-0">
                         {EXPENSE_CATS.find(c=>c.value===e.category)?.label.split('(')[0].trim()
                           || LEGACY_CAT_LABELS[e.category] || e.category}
                       </span>
-                      {e.note&&<span className="text-xs text-gray-500">{e.note}</span>}
+                      {e.note&&<span className="text-xs text-gray-500 truncate">{e.note}</span>}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-sm font-medium text-red-500">−{fmt(Number(e.amount))}₮</span>
                       <button onClick={()=>deleteExpense(e.id)}
                         className="opacity-0 group-hover:opacity-100 text-xs text-gray-300 hover:text-red-500 transition-all">✕</button>
@@ -349,6 +349,12 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               </div>
+              {hasMoreExp && (
+                <button onClick={()=>setExpPage(p=>p+1)}
+                  className="mt-2 w-full text-xs text-gray-400 hover:text-gray-600 py-1.5 border border-gray-100 rounded-lg hover:bg-gray-50">
+                  Дэлгэх ({filteredExp.length - expPage*EXP_PAGE_SIZE} үлдсэн)
+                </button>
+              )}
               {/* Ангиллаар нэгтгэл */}
               {Object.keys(expByCat).length > 1 && (
                 <div className="mt-3 pt-3 border-t border-gray-100">
@@ -405,7 +411,7 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      {/* Орлого, зардал, ашгийн дүгнэлт — зочинд харагдахгүй */}
+      {/* Санхүүгийн дүгнэлт */}
       {!isViewer && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm">Санхүүгийн дүгнэлт</h2>
@@ -415,7 +421,7 @@ export default function AnalyticsPage() {
             ['Нийт борлуулалт', fmt(totalGross)+'₮', ''],
             ['Хүргэлтийн зардал', '−'+fmt(totalDelv)+'₮', 'text-red-400'],
             ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
-            ...(totalCOGS>0?[['Барааны өртөг', '−'+fmt(totalCOGS)+'₮', 'text-orange-500'] as const]:[]),
+            ['Барааны өртөг (COGS)', '−'+fmt(totalCOGS)+'₮', 'text-orange-500'],
             ['Нийт зардал', '−'+fmt(totalExpenses)+'₮', 'text-red-500'],
             ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
             ['Захиалга тоо', String(filtered.length), ''],
