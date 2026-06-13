@@ -55,16 +55,37 @@ export default function HistoryPage() {
 
   useEffect(()=>{ load() },[load])
 
+  const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
+
   async function setOrderStatus(id: string, s: string) {
     await supabase.from('orders').update({status:s}).eq('id',id)
     load()
   }
 
   async function deleteOrder(o: Order) {
-    if (!window.confirm('Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.')) return
-    await supabase.from('order_items').delete().eq('order_id', o.id)
-    await supabase.from('orders').delete().eq('id', o.id)
-    load()
+    setConfirmModal({
+      msg: 'Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.',
+      onOk: async () => {
+        await supabase.from('order_items').delete().eq('order_id', o.id)
+        await supabase.from('orders').delete().eq('id', o.id)
+        load()
+      }
+    })
+  }
+
+  async function deleteAllCancelled(date: string, list: Order[]) {
+    const cancelled = list.filter(o=>o.status==='cancelled')
+    if (cancelled.length===0) return
+    setConfirmModal({
+      msg: `${fmtD(date)} өдрийн ${cancelled.length} цуцлагдсан захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.`,
+      onOk: async () => {
+        for (const o of cancelled) {
+          await supabase.from('order_items').delete().eq('order_id', o.id)
+          await supabase.from('orders').delete().eq('id', o.id)
+        }
+        load()
+      }
+    })
   }
 
 
@@ -365,6 +386,12 @@ export default function HistoryPage() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-400">{grp.length} захиалга</span>
                   <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
+                  {!isViewer && grp.some(o=>o.status==='cancelled') && (
+                    <button onClick={()=>deleteAllCancelled(date, grp)}
+                      className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
+                      Цуцлагдсаныг устгах ({grp.filter(o=>o.status==='cancelled').length})
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -438,6 +465,20 @@ export default function HistoryPage() {
         })}
         {filtered.length===0&&<p className="text-center text-gray-400 text-sm py-10">Захиалга олдсонгүй</p>}
       </div>
+
+      {/* Confirm modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center">
+            <p className="text-sm text-gray-800 mb-5 leading-relaxed">{confirmModal.msg}</p>
+            <div className="flex gap-2">
+              <button onClick={()=>setConfirmModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600">Болих</button>
+              <button onClick={async()=>{ await confirmModal.onOk(); setConfirmModal(null) }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
