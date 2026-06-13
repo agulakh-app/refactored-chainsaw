@@ -9,7 +9,7 @@ export async function GET() {
     const [{ data: profiles }, { data: payments }, { data: orders }] = await Promise.all([
       admin.from('profiles').select('*').order('created_at', { ascending: false }),
       admin.from('payments').select('*').order('created_at', { ascending: false }),
-      admin.from('orders').select('user_id'),
+      admin.from('orders').select('user_id, date, delivery_fee, order_items(quantity, unit_price)'),
     ])
     return NextResponse.json({ profiles: profiles||[], payments: payments||[], orders: orders||[] })
   } catch(e) {
