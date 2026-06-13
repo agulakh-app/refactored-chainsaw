@@ -70,8 +70,28 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <a href="/" className="text-xs font-semibold tracking-widest" style={{color:'#07e6ae'}}>OLULA</a>
-          <div className="text-xl font-medium text-gray-900 tracking-wide uppercase mt-1">Агуулахаа гартаа атга</div>
+          <a href="/" className="relative inline-flex items-center justify-center">
+            <span style={{
+              fontSize: 20,
+              fontWeight: 800,
+              letterSpacing: '-0.5px',
+              color: '#07e6ae',
+              lineHeight: 1,
+            }}>
+              OLULA
+            </span>
+            <span style={{
+              position: 'absolute',
+              top: 1,
+              right: -4,
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#07e6ae',
+              boxShadow: '0 0 8px rgba(7,230,174,0.9)',
+            }} />
+          </a>
+          <div className="text-xl font-medium text-gray-900 tracking-wide uppercase mt-2">Агуулахаа гартаа атга</div>
         </div>
 
         <div className="bg-white rounded-2xl p-6" style={{border:'1px solid #e5e7eb'}}>
