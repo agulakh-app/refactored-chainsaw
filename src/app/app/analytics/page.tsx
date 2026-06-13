@@ -240,26 +240,6 @@ export default function AnalyticsPage() {
     return () => { cancelled = true }
   }, [JSON.stringify(weekdayChartData), JSON.stringify(topProducts)])
 
-  // ── Хамгийн их борлуулалттай сар/гариг (бүх захиалгаас, period-той хамаарахгүй) ──
-  const byMonth: Record<string, number> = {}
-  const byWeekday: Record<number, number> = {}
-  orders.forEach(o=>{
-    if (!o.date) return
-    const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
-    const net = gross - (o.delivery_fee||0)
-    const month = String(o.date).slice(0,7)
-    byMonth[month] = (byMonth[month]||0) + net
-    const d = new Date(o.date)
-    if (!isNaN(d.getTime())) {
-      const wd = d.getDay()
-      byWeekday[wd] = (byWeekday[wd]||0) + net
-    }
-  })
-  const bestMonthEntry = Object.entries(byMonth).sort((a,b)=>b[1]-a[1])[0]
-  const bestWeekdayEntry = Object.entries(byWeekday).sort((a,b)=>b[1]-a[1])[0]
-  const bestMonthLabel = bestMonthEntry ? `${bestMonthEntry[0].slice(0,4)} оны ${parseInt(bestMonthEntry[0].slice(5,7))} сар (${fmt(bestMonthEntry[1])}₮)` : '—'
-  const bestWeekdayLabel = bestWeekdayEntry ? `${WEEKDAY_LABELS[Number(bestWeekdayEntry[0])]} (${fmt(bestWeekdayEntry[1])}₮)` : '—'
-
   return (
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
@@ -274,24 +254,21 @@ export default function AnalyticsPage() {
         ))}
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {(isViewer ? [
-          ['Нийт захиалга', String(filtered.length), 'text-gray-800'],
-          ['Хүргэгдсэн', String(delivered), 'text-gray-800'],
-          ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
-        ] : [
-          ['Цэвэр орлого', fmt(totalNet)+'₮', 'text-emerald-700'],
-          ...(totalCOGS>0?[['Барааны өртөг', fmt(totalCOGS)+'₮', 'text-orange-500'] as const]:[]),
-          ['Нийт зардал', fmt(totalExpenses)+'₮', 'text-red-500'],
-          ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
-        ] as const).map(([l,v,c])=>(
-          <div key={l} className="bg-white rounded-xl border border-gray-100 p-4 overflow-hidden">
-            <div className="text-xs text-gray-400 mb-1">{l}</div>
-            <div className={`text-xl sm:text-2xl font-semibold ${c} truncate`}>{v}</div>
-          </div>
-        ))}
-      </div>
+      {/* Summary cards — зөвхөн зочинд (бусад нь доорх "Санхүүгийн дүгнэлт"-д давхардсан) */}
+      {isViewer && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {([
+            ['Нийт захиалга', String(filtered.length), 'text-gray-800'],
+            ['Хүргэгдсэн', String(delivered), 'text-gray-800'],
+            ['Хүлээгдэж байна', String(pending), 'text-amber-600'],
+          ] as const).map(([l,v,c])=>(
+            <div key={l} className="bg-white rounded-xl border border-gray-100 p-4 overflow-hidden">
+              <div className="text-xs text-gray-400 mb-1">{l}</div>
+              <div className={`text-xl sm:text-2xl font-semibold ${c} truncate`}>{v}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Долоо хоног / Улирлын борлуулалтын дүн шинжилгээ */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -442,10 +419,7 @@ export default function AnalyticsPage() {
             ['Нийт зардал', '−'+fmt(totalExpenses)+'₮', 'text-red-500'],
             ['Цэвэр ашиг', fmt(totalProfit)+'₮', totalProfit>=0?'text-emerald-700 font-semibold':'text-red-600 font-semibold'],
             ['Захиалга тоо', String(filtered.length), ''],
-            ['Дундаж захиалга', filtered.length?fmt(Math.round(totalNet/filtered.length))+'₮':'—', ''],
             ['Хүргэгдсэн / Нийт', `${delivered} / ${filtered.length}`, ''],
-            ['Хамгийн их борлуулалттай сар', bestMonthLabel, ''],
-            ['Хамгийн их борлуулалттай гараг', bestWeekdayLabel, ''],
           ].map(([k,v,c],i)=>(
             <div key={k} className={`flex justify-between px-4 py-2.5 gap-3 ${i>0?'border-t border-gray-100':''} ${k==='Цэвэр ашиг'?'bg-gray-50':''}`}>
               <span className="text-sm text-gray-500 flex-shrink-0">{k}</span>
