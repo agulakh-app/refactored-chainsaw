@@ -35,6 +35,7 @@ export default function HistoryPage() {
   const [storeFilter, setStoreFilter] = useState('all')
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
+  const [importExpanded, setImportExpanded] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Утасны хайлтын дэлгэрэнгүй
@@ -113,6 +114,7 @@ export default function HistoryPage() {
     setImporting(true); setImportMsg('Файл уншиж байна...')
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) { setImporting(false); return }
+    const targetId = ownerId || user.id
     const loadXLSX = (): Promise<any> => new Promise(resolve => {
       if ((window as any).XLSX) { resolve((window as any).XLSX); return }
       const s = document.createElement('script')
@@ -144,19 +146,55 @@ export default function HistoryPage() {
         grouped[key].items.push({product_name:prod,variant_label:variant||null,quantity:qty,unit_price:price})
         if (delv) grouped[key].delv=delv
       }
+
+      // Агуулахаас хасахын тулд бараануудыг урьдчилан ачаална
+      const { data: products } = await supabase.from('products').select('*').eq('user_id', targetId)
+
       let cnt=0
-      for (const g of Object.values(grouped)) {
+      let stockMissCount=0
+      for (const g of Object.values(grouped) as any[]) {
         const { data: ord } = await supabase.from('orders').insert({
-          user_id:user.id, date:g.date, day_seq:1,
+          user_id:targetId, date:g.date, day_seq:1,
           phone:g.phone, address:g.addr||'-',
           delivery_fee:g.delv, status:g.status,
           store_id:activeStoreId||null
         }).select().single()
         if (ord&&g.items.length>0)
           await supabase.from('order_items').insert(g.items.map((it:any)=>({order_id:ord.id,...it})))
+
+        // ── Агуулахаас хасах (барааны нэрээр тааруулна) ──
+        for (const it of g.items as any[]) {
+          const prod = (products||[]).find((p:any)=>p.name.trim().toLowerCase()===it.product_name.trim().toLowerCase())
+          if (!prod) { stockMissCount++; continue }
+
+          if (Array.isArray(prod.variants) && prod.variants.length>0 && it.variant_label) {
+            const vIdx = prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===it.variant_label)
+            if (vIdx>=0) {
+              const newVariants = [...prod.variants]
+              newVariants[vIdx] = { ...newVariants[vIdx], stock: Math.max(0,(newVariants[vIdx].stock||0)-it.quantity) }
+              const newTotal = newVariants.reduce((a:number,v:any)=>a+(v.stock||0),0)
+              await supabase.from('products').update({ variants:newVariants, stock:newTotal }).eq('id',prod.id)
+              prod.variants = newVariants
+              prod.stock = newTotal
+            } else { stockMissCount++; continue }
+          } else if (!Array.isArray(prod.variants) || prod.variants.length===0) {
+            const newStock = Math.max(0,(prod.stock||0)-it.quantity)
+            await supabase.from('products').update({ stock:newStock }).eq('id',prod.id)
+            prod.stock = newStock
+          } else { stockMissCount++; continue }
+
+          await supabase.from('restock_log').insert({
+            user_id:targetId, product_id:prod.id, product_name:prod.name,
+            quantity: it.quantity, type:'out', note:`Импорт — ${g.phone}`,
+            date: g.date, store_id: activeStoreId||null
+          })
+        }
         cnt++
       }
-      setImportMsg(`${cnt} захиалга импортлогдлоо`)
+      setImportMsg(
+        `${cnt} захиалга импортлогдлоо` +
+        (stockMissCount>0 ? `, ${stockMissCount} бараа агуулахад олдсонгүй (тооноос хасагдсангүй)` : ', агуулахаас тоо ширхэг хасагдлаа')
+      )
       load()
     } catch(err:any) { setImportMsg('Алдаа: '+err.message) }
     setImporting(false)
@@ -228,33 +266,44 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* Import / Export */}
+      {/* Import / Export — collapsible */}
       {!isViewer && (
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 text-sm mb-3">Импорт / Экспорт</h2>
-          <div className="flex flex-wrap gap-2">
-            <input type="file" accept=".xlsx,.xls,.csv" ref={fileRef} className="hidden"
-              onChange={e=>{ if(e.target.files?.[0]){ handleExcelImport(e.target.files[0]); e.target.value='' } }} />
-            <button onClick={()=>fileRef.current?.click()} disabled={importing}
-              className="px-3 py-2 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-700 disabled:opacity-50">
-              {importing?'Оруулж байна...':'↑ Файл импортлох'}
-            </button>
-            <button onClick={downloadTemplate}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
-              ↓ Template татах
-            </button>
-            <button onClick={()=>exportCSV()}
-              className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
-              ↓ CSV (бүгд)
-            </button>
-            {stores.map(s=>(
-              <button key={s.id} onClick={()=>exportCSV(s.id)}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
-                ↓ CSV ({s.name})
-              </button>
-            ))}
-            {importMsg&&<span className={`text-xs self-center font-medium ${importMsg.startsWith('Алдаа')?'text-red-500':'text-emerald-600'}`}>{importMsg}</span>}
-          </div>
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <button onClick={()=>setImportExpanded(v=>!v)}
+            className="w-full flex items-center justify-between px-4 py-3">
+            <h2 className="font-medium text-gray-800 text-sm">Импорт / Экспорт</h2>
+            <span className="text-gray-400 text-xs">{importExpanded?'▲':'▼'}</span>
+          </button>
+          {importExpanded && (
+            <div className="px-4 pb-4">
+              <div className="flex flex-wrap gap-2">
+                <input type="file" accept=".xlsx,.xls,.csv" ref={fileRef} className="hidden"
+                  onChange={e=>{ if(e.target.files?.[0]){ handleExcelImport(e.target.files[0]); e.target.value='' } }} />
+                <button onClick={()=>fileRef.current?.click()} disabled={importing}
+                  className="px-3 py-2 bg-gray-900 text-white rounded-lg text-xs font-medium hover:bg-gray-700 disabled:opacity-50">
+                  {importing?'Оруулж байна...':'↑ Файл импортлох'}
+                </button>
+                <button onClick={downloadTemplate}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                  ↓ Template татах
+                </button>
+                <button onClick={()=>exportCSV()}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                  ↓ CSV (бүгд)
+                </button>
+                {stores.map(s=>(
+                  <button key={s.id} onClick={()=>exportCSV(s.id)}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50">
+                    ↓ CSV ({s.name})
+                  </button>
+                ))}
+              </div>
+              {importMsg&&<p className={`text-xs mt-2 font-medium ${importMsg.startsWith('Алдаа')?'text-red-500':'text-emerald-600'}`}>{importMsg}</p>}
+              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                ⚠️ Импорт хийхэд "Тоо ширхэг" нь захиалгын барааны нэртэй (variant бол variant нэртэй) <b>яг таарсан</b> барааны үлдэгдлээс автоматаар хасагдана. Нэр таараагүй бараа агуулахаас хасагдахгүй (захиалга үүснэ, мэдэгдэл харагдана).
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -303,8 +352,8 @@ export default function HistoryPage() {
           },0)
           return (
             <div key={date}>
-              <div className="px-4 py-2.5 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-600">{dayLabel(date)}</span>
+              <div className="px-4 py-2.5 flex justify-between items-center" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
+                <span className="text-xs font-semibold" style={{color:'#048a6a'}}>{dayLabel(date)}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-gray-400">{grp.length} захиалга</span>
                   <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
@@ -332,7 +381,7 @@ export default function HistoryPage() {
                               {o.phone}
                             </button>
                           </td>
-                          <td className="px-3 py-2.5 text-gray-400 text-xs max-w-[100px] truncate">{o.address}</td>
+                          <td className="px-3 py-2.5 text-gray-400 text-xs max-w-[160px] truncate">{o.address}</td>
                           <td className="px-3 py-2.5 text-xs text-gray-500">
                             {(o.order_items||[]).map((i:any)=>
                               i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity
