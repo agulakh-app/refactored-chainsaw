@@ -60,6 +60,20 @@ export default function HistoryPage() {
     load()
   }
 
+  async function deleteOrder(o: Order) {
+    if (!window.confirm('Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.')) return
+    await supabase.from('order_items').delete().eq('order_id', o.id)
+    await supabase.from('orders').delete().eq('id', o.id)
+    load()
+  }
+
+  async function deleteOrder(o: Order) {
+    if (!confirm(`${o.phone} — ${fmtD(o.date)} захиалгыг бүрмөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.`)) return
+    await supabase.from('order_items').delete().eq('order_id', o.id)
+    await supabase.from('orders').delete().eq('id', o.id)
+    load()
+  }
+
   // Утасны хайлт — тухайн хүний бүх захиалга + хаягийн түүх
   const phoneOrders = selectedPhone
     ? orders.filter(o => o.phone === selectedPhone)
@@ -403,6 +417,18 @@ export default function HistoryPage() {
                                 {o.status==='pending'&&(
                                   <button onClick={()=>setOrderStatus(o.id,'cancelled')}
                                     className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500">✕</button>
+                                )}
+                                {o.status==='cancelled'&&(
+                                  <button onClick={()=>deleteOrder(o)}
+                                    className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium">
+                                    устгах
+                                  </button>
+                                )}
+                                {o.status==='cancelled'&&(
+                                  <button onClick={()=>deleteOrder(o)}
+                                    className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
+                                    🗑 Устгах
+                                  </button>
                                 )}
                               </div>
                             )}
