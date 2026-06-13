@@ -418,35 +418,23 @@ export default function DashPage() {
           <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 sm:hidden">Утас</label>
-            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 sm:hidden">Огноо</label>
-            <div className="flex gap-2">
-              <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-              {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white flex-shrink-0">✕</button>}
-            </div>
+          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+          <div className="flex gap-2">
+            <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+            {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white flex-shrink-0">✕</button>}
           </div>
           {stores.length>0&&(
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-500 sm:hidden">Дэлгүүр</label>
-              <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
-                <option value="all">Бүх дэлгүүр</option>
-                {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500 sm:hidden">Статус</label>
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-              <option value="all">Бүх статус</option>
-              <option value="pending">Хүлээгдэж байна</option>
-              <option value="delivered">Хүргэгдсэн</option>
-              <option value="cancelled">Цуцлагдсан</option>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
+              <option value="all">Бүх дэлгүүр</option>
+              {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
-          </div>
+          )}
+          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+            <option value="all">Бүх статус</option>
+            <option value="pending">Хүлээгдэж байна</option>
+            <option value="delivered">Хүргэгдсэн</option>
+            <option value="cancelled">Цуцлагдсан</option>
+          </select>
         </div>
 
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
