@@ -57,6 +57,7 @@ export default function HistoryPage() {
 
   const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
   const [openDropdown, setOpenDropdown] = useState<string|null>(null)
+  const [dropdownPos, setDropdownPos] = useState<{top:number,right:number}>({top:0,right:0})
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(()=>{
@@ -263,8 +264,23 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
-
-      {/* Утасны хайлт — дэлгэрэнгүй харагдац */}
+      {/* Fixed portal dropdown - overflow-г давтах */}
+      {openDropdown&&(()=>{
+        const o=orders.find(x=>x.id===openDropdown)
+        if(!o) return null
+        const isDelivered=o.status==='delivered'
+        const isCancelled=o.status==='cancelled'
+        return(
+          <div ref={dropdownRef} style={{position:'fixed',top:dropdownPos.top+4,right:dropdownPos.right,zIndex:9999}}
+            className="bg-white border border-gray-200 rounded-xl min-w-[160px] overflow-hidden shadow-xl">
+            {o.status==='pending'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
+            {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
+            {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
+            {o.status==='pending'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>}
+            {o.status==='cancelled'&&<button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>}
+          </div>
+        )
+      })()}
       {selectedPhone && (
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center justify-between mb-3">
@@ -465,8 +481,17 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5 font-medium text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
                           <td className="px-3 py-2.5">
                             {!isViewer?(
-                              <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
-                                <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
+                              <div className="relative">
+                                <button
+                                  onClick={(e)=>{
+                                    e.stopPropagation()
+                                    if(openDropdown===o.id){setOpenDropdown(null)}
+                                    else{
+                                      const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
+                                      setDropdownPos({top:rect.bottom+window.scrollY,right:window.innerWidth-rect.right})
+                                      setOpenDropdown(o.id)
+                                    }
+                                  }}
                                   className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap flex items-center gap-1 ${
                                     isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
                                     isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
@@ -474,30 +499,6 @@ export default function HistoryPage() {
                                   }`}>
                                   {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
                                 </button>
-                                {openDropdown===o.id&&(
-                                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden shadow-lg">
-                                    {o.status==='pending'&&(
-                                      <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
-                                    )}
-                                    {o.status==='delivered'&&(
-                                      <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>
-                                    )}
-                                    {o.status==='cancelled'&&(
-                                      <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>
-                                    )}
-                                    {o.status==='pending'&&(
-                                      <button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>
-                                    )}
-                                    {o.status==='cancelled'&&(
-                                      <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
-                                    )}
-                                  </div>
-                                )}
                               </div>
                             ):(
                               <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
