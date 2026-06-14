@@ -420,7 +420,6 @@ export default function HistoryPage() {
                 <table className="w-full text-sm min-w-[600px]">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      {selectMode && <th className="px-3 py-2 w-8"></th>}
                       {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Статус','Үйлдэл'].map(h=>(
                         <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap bg-white">{h}</th>
                       ))}
