@@ -312,8 +312,10 @@ export default function AnalyticsPage() {
               <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="50000" value={eAmt} onChange={e=>setEAmt(e.target.value)}/></div>
             <div><label className="block text-xs text-gray-400 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={eDate} onChange={e=>setEDate(e.target.value)}/></div>
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
+                  value={eDate} onChange={e=>setEDate(e.target.value)}/>
+              </div></div>
             <div><label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
               <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="Facebook post boost..." value={eNote} onChange={e=>setENote(e.target.value)}/></div>

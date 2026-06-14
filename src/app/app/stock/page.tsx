@@ -396,8 +396,9 @@ if (error) {
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editQty} onChange={e=>setEditQty(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white max-w-full box-border"
-                  value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
+                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)} />
+                </div></div>
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
