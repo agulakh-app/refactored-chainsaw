@@ -216,7 +216,9 @@ export default function DashPage() {
             <h3 className="font-medium text-gray-800 mb-4">Захиалга засварлах</h3>
             <div className="space-y-3">
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDate} onChange={e=>setEditDate(e.target.value)}/></div>
+                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
+                  <input type="date" className="w-full px-3 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)}/>
+                </div></div>
               <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
@@ -262,13 +264,13 @@ export default function DashPage() {
               <div className="flex gap-[10px]">
                 <div className="flex-1 min-w-0">
                   <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                  <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-                    <input type="date" className="w-full px-2 py-2 text-xs bg-white appearance-none" style={{WebkitAppearance:'none'}} value={oDate} onChange={e=>setODate(e.target.value)}/>
+                  <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
+                    <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={oDate} onChange={e=>setODate(e.target.value)}/>
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">({fmt(defaultDelivery)}₮)</span>}</label>
-                  <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
+                  <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm h-[38px]" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
                 </div>
               </div>
               {warehouses.length>0&&(<div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
@@ -412,9 +414,10 @@ export default function DashPage() {
         </div>
         <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center">
             <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-            {!dateFilter&&<span className="absolute inset-0 flex items-center px-3 text-sm text-gray-400 pointer-events-none">Огноо...</span>}
+            {!dateFilter&&<span className="absolute left-0 right-6 flex items-center px-3 text-sm text-gray-400 pointer-events-none bg-white h-full">Огноо...</span>}
+            {dateFilter&&<button onClick={()=>setDateFilter('')} className="absolute right-2 text-gray-400 text-xs px-1">✕</button>}
           </div>
           {stores.length>0?(
             <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
