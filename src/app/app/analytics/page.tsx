@@ -308,14 +308,20 @@ export default function AnalyticsPage() {
                 value={eCat} onChange={e=>setECat(e.target.value)}>
                 {EXPENSE_CATS.map(c=><option key={c.value} value={c.value}>{c.label}</option>)}
               </select></div>
-            <div><label className="block text-xs text-gray-400 mb-1">Дүн (₮)</label>
-              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                placeholder="50000" value={eAmt} onChange={e=>setEAmt(e.target.value)}/></div>
-            <div><label className="block text-xs text-gray-400 mb-1">Огноо</label>
-              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
-                <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
-                  value={eDate} onChange={e=>setEDate(e.target.value)}/>
-              </div></div>
+            <div className="flex gap-[10px]">
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs text-gray-400 mb-1">Дүн (₮)</label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  placeholder="50000" value={eAmt} onChange={e=>setEAmt(e.target.value)}/>
+              </div>
+              <div className="flex-1 min-w-0">
+                <label className="block text-xs text-gray-400 mb-1">Огноо</label>
+                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <input type="date" className="w-full px-2 py-2 text-xs bg-white appearance-none" style={{WebkitAppearance:'none'}}
+                    value={eDate} onChange={e=>setEDate(e.target.value)}/>
+                </div>
+              </div>
+            </div>
             <div><label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
               <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                 placeholder="Facebook post boost..." value={eNote} onChange={e=>setENote(e.target.value)}/></div>

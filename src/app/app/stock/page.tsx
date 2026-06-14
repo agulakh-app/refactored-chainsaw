@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { RestockLog } from '@/lib/types'
 import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
@@ -56,8 +56,16 @@ export default function StockPage() {
   const [editVariantCosts, setEditVariantCosts] = useState<string[]>([])
   const [editUnitPrice, setEditUnitPrice] = useState('')
   const [editUnitCost, setEditUnitCost] = useState('')
+  const [openDropdown, setOpenDropdown] = useState<string|null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
-  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
+  useEffect(()=>{
+    function handleClick(e:MouseEvent){
+      if(dropdownRef.current&&!dropdownRef.current.contains(e.target as Node)) setOpenDropdown(null)
+    }
+    document.addEventListener('mousedown',handleClick)
+    return()=>document.removeEventListener('mousedown',handleClick)
+  },[])
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
@@ -616,11 +624,19 @@ if (error) {
     )}
     <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
                       {!isViewer && (
-                        <div className="flex items-center gap-1">
-                          <button onClick={()=>openEditProd(p)}
-                            className="text-xs text-gray-400 hover:text-blue-600 px-2 py-1 rounded hover:bg-blue-50">засах</button>
-                          <button onClick={()=>deleteProduct(p.id, p.name)}
-                            className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
+                        <div className="relative" ref={openDropdown===p.id?dropdownRef:null}>
+                          <button onClick={()=>setOpenDropdown(openDropdown===p.id?null:p.id)}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">
+                            Үйлдэл ▾
+                          </button>
+                          {openDropdown===p.id&&(
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[120px] overflow-hidden shadow-lg">
+                              <button onClick={()=>{openEditProd(p);setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                              <button onClick={()=>{deleteProduct(p.id,p.name);setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -728,11 +744,19 @@ if (error) {
                         {r.type==='in'?'+':'-'}{r.quantity}ш
                       </span>
                       {!isViewer&&!selectMode&&(
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'')}}
-                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50">засах</button>
-                          <button onClick={()=>deleteLog(r)}
-                            className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-red-500 hover:bg-red-50">устгах</button>
+                        <div className="relative" ref={openDropdown===r.id?dropdownRef:null}>
+                          <button onClick={()=>setOpenDropdown(openDropdown===r.id?null:r.id)}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">
+                            Үйлдэл ▾
+                          </button>
+                          {openDropdown===r.id&&(
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[120px] overflow-hidden shadow-lg">
+                              <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'');setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                              <button onClick={()=>{deleteLog(r);setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

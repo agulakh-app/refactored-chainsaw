@@ -259,14 +259,14 @@ export default function DashPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
                 <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
                   placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="min-w-0">
+              <div className="flex gap-[10px]">
+                <div className="flex-1 min-w-0">
                   <label className="block text-xs text-gray-500 mb-1">Огноо</label>
                   <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
                     <input type="date" className="w-full px-2 py-2 text-xs bg-white appearance-none" style={{WebkitAppearance:'none'}} value={oDate} onChange={e=>setODate(e.target.value)}/>
                   </div>
                 </div>
-                <div className="min-w-0">
+                <div className="flex-1 min-w-0">
                   <label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">({fmt(defaultDelivery)}₮)</span>}</label>
                   <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
                 </div>
