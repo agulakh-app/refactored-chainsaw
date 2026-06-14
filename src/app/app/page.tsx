@@ -410,17 +410,19 @@ export default function DashPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
         </div>
-        <div className="flex gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" style={{minWidth:140}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
-          {stores.length>0&&(
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
+        <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
+          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+          <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+            {!dateFilter&&<span className="absolute inset-0 flex items-center px-3 text-sm text-gray-400 pointer-events-none">Огноо...</span>}
+          </div>
+          {stores.length>0?(
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
               <option value="all">Бүх дэлгүүр</option>
               {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
-          )}
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+          ):<div/>}
+          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
             <option value="all">Бүх статус</option>
             <option value="pending">Хүлээгдэж байна</option>
             <option value="delivered">Хүргэгдсэн</option>
@@ -449,50 +451,58 @@ export default function DashPage() {
                   const isCancelled=o.status==='cancelled'
                   return (
                     <div key={o.id} className="px-4 py-3 bg-white">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600">
-                            {o.phone}
-                          </button>
-                          {!activeStoreId&&storeName&&(
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">{storeName}</span>
-                          )}
-                          <span className="text-xs text-gray-400">{o.address}</span>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Мөр 1: Утас + Үйлдэл dropdown (статус харагдана) */}
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600 flex-shrink-0">
+                          {o.phone}
+                        </button>
+                        {!activeStoreId&&storeName&&(
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200 flex-shrink-0">{storeName}</span>
+                        )}
+                        <div className="flex-1"/>
+                        {!isViewer&&(
+                          <div className="relative flex-shrink-0" ref={openDropdown===o.id?dropdownRef:null}>
+                            <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
+                              className={`text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1 whitespace-nowrap ${
+                                isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
+                                isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                                'bg-amber-50 text-amber-600 border-amber-200'
+                              }`}>
+                              {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
+                            </button>
+                            {openDropdown===o.id&&(
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+                                {o.status!=='delivered'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
+                                )}
+                                {o.status==='delivered'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>
+                                )}
+                                {o.status==='cancelled'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>
+                                )}
+                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
+                                  className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                                {o.status!=='cancelled'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
+                                )}
+                                <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {isViewer&&(
                           <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                              isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                              isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                              'bg-amber-50 text-amber-600 border-amber-100'
-                            }`}>
-                              {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                            </span>
-                          {!isViewer&&(
-                            <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
-                              <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                                className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex items-center gap-1">
-                                Үйлдэл ▾
-                              </button>
-                              {openDropdown===o.id&&(
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[140px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                  {o.status!=='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>
-                                  )}
-                                  {o.status==='delivered'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Хүлээгдэж байна</button>
-                                  )}
-                                  <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
-                                    className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                  {o.status!=='cancelled'&&(
-                                    <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
-                                  )}
-                                  <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                            isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                            'bg-amber-50 text-amber-600 border-amber-100'
+                          }`}>
+                            {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                          </span>
+                        )}
                       </div>
+                      {/* Мөр 2: Хаяг бүтэн өргөн */}
+                      <div className="text-xs text-gray-400 mb-2 w-full">{o.address}</div>
                       <div className="space-y-1 mb-2">
                         {(o.order_items||[]).map((item:any,idx:number)=>(
                           <div key={idx} className="flex justify-between items-baseline">
