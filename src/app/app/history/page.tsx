@@ -264,23 +264,6 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
-      {/* Fixed portal dropdown - overflow-г давтах */}
-      {openDropdown&&(()=>{
-        const o=orders.find(x=>x.id===openDropdown)
-        if(!o) return null
-        const isDelivered=o.status==='delivered'
-        const isCancelled=o.status==='cancelled'
-        return(
-          <div ref={dropdownRef} style={{position:'fixed',top:dropdownPos.top+4,right:dropdownPos.right,zIndex:9999}}
-            className="bg-white border border-gray-200 rounded-xl min-w-[160px] overflow-hidden shadow-xl">
-            {o.status==='pending'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
-            {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
-            {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
-            {o.status==='pending'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>}
-            {o.status==='cancelled'&&<button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>}
-          </div>
-        )
-      })()}
       {selectedPhone && (
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center justify-between mb-3">
@@ -481,25 +464,25 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5 font-medium text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
                           <td className="px-3 py-2.5">
                             {!isViewer?(
-                              <div className="relative">
-                                <button
-                                  onClick={(e)=>{
-                                    e.stopPropagation()
-                                    if(openDropdown===o.id){setOpenDropdown(null)}
-                                    else{
-                                      const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
-                                      setDropdownPos({top:rect.bottom+window.scrollY,right:window.innerWidth-rect.right})
-                                      setOpenDropdown(o.id)
-                                    }
-                                  }}
-                                  className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap flex items-center gap-1 ${
-                                    isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
-                                    isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                                    'bg-amber-50 text-amber-600 border-amber-200'
-                                  }`}>
-                                  {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
-                                </button>
-                              </div>
+                              <select
+                                value={o.status}
+                                onChange={e=>{
+                                  const v=e.target.value
+                                  if(v==='delete'){deleteOrder(o)}
+                                  else if(v==='edit'){setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}
+                                  else{setOrderStatus(o.id,v)}
+                                }}
+                                className={`text-xs px-2 py-1 rounded-lg border appearance-none cursor-pointer ${
+                                  isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
+                                  isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
+                                  'bg-amber-50 text-amber-700 border-amber-200'
+                                }`}>
+                                <option value="pending">Хүлээгдэж байна</option>
+                                <option value="delivered">✓ Хүргэгдсэн</option>
+                                <option value="cancelled">Цуцлагдсан</option>
+                                <option value="edit">— Засах</option>
+                                <option value="delete">🗑 Устгах</option>
+                              </select>
                             ):(
                               <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
                                 isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
