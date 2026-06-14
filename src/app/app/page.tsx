@@ -260,9 +260,9 @@ export default function DashPage() {
                 <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
                   placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
               <div className="grid grid-cols-2 gap-2">
-                <div className="min-w-0"><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                  <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
-                <div className="min-w-0"><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
+                <div className="min-w-0 overflow-hidden"><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                  <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-xs bg-white truncate" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+                <div className="min-w-0 overflow-hidden"><label className="block text-xs text-gray-500 mb-1 truncate">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
                   <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
               </div>
               {warehouses.length>0&&(<div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>

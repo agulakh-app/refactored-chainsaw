@@ -193,7 +193,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
           </div>
 
-          <div className="hidden md:flex items-center justify-between">
+          <div className="hidden md:flex items-center justify-between gap-4">
             <div className="flex">
               {visibleTabs.map(t => (
                 <button key={t.href} onClick={() => router.push(t.href)}
@@ -207,7 +207,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               ))}
             </div>
             {showStoreSwitcher && (
-              <div className="flex gap-1 pb-1">
+              <div className="flex gap-1 pb-1 flex-shrink-0">
                 <button onClick={() => setActiveStoreId(null)}
                   className={`px-3 py-1 rounded-lg text-xs transition-all ${
                     activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/70'

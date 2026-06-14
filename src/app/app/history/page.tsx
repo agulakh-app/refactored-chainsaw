@@ -360,9 +360,16 @@ export default function HistoryPage() {
             value={phone}
             onChange={e=>{ setPhone(e.target.value); if(e.target.value) setSelectedPhone(e.target.value) }}
           />
-          <input type="date"
-            className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-            value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+          <div className="relative">
+            <input type="date"
+              className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+              value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+            {!dateFilter && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none bg-white pr-1">
+                Огноо сонгох
+              </span>
+            )}
+          </div>
           {dateFilter&&<button onClick={()=>setDateFilter('')}
             className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-400 bg-white">✕</button>}
           <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -410,11 +417,12 @@ export default function HistoryPage() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead>
-                    <tr>
-                      {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Статус',''].map(h=>(
-                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap border-b border-gray-100">{h}</th>
+                    <tr className="border-b border-gray-100">
+                      {selectMode && <th className="px-3 py-2 w-8"></th>}
+                      {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Статус','Үйлдэл'].map(h=>(
+                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap bg-white">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -445,28 +453,33 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5"><StatusBadge s={o.status}/></td>
                           <td className="px-3 py-2.5">
                             {!isViewer&&(
-                              <div className="flex gap-1">
-                                {o.status!=='cancelled'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,o.status==='delivered'?'pending':'delivered')}
-                                    className={`px-2 py-1 rounded-lg text-xs font-medium ${o.status==='delivered'?'bg-amber-50 text-amber-600':'bg-emerald-50 text-emerald-600'}`}>
-                                    {o.status==='delivered'?'↩':'✓'}
+                              <div className="flex gap-1 flex-wrap">
+                                {o.status==='pending'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'delivered')}
+                                    className="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 whitespace-nowrap">
+                                    ✓ Хүргэгдсэн
+                                  </button>
+                                )}
+                                {o.status==='delivered'&&(
+                                  <button onClick={()=>setOrderStatus(o.id,'pending')}
+                                    className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-600 hover:bg-amber-100 whitespace-nowrap">
+                                    Буцаах
                                   </button>
                                 )}
                                 {o.status==='pending'&&(
                                   <button onClick={()=>setOrderStatus(o.id,'cancelled')}
-                                    className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500">✕</button>
+                                    className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 whitespace-nowrap">✕ Цуцлах</button>
                                 )}
                                 {o.status==='cancelled'&&(
                                   <button onClick={()=>setOrderStatus(o.id,'pending')}
-                                    title="Хүлээгдэж байна руу буцаах"
-                                    className="px-2 py-1 rounded-lg text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 font-medium">
-                                    ↩
+                                    className="px-2 py-1 rounded-lg text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 font-medium whitespace-nowrap">
+                                    Буцаах
                                   </button>
                                 )}
                                 {o.status==='cancelled'&&(
                                   <button onClick={()=>deleteOrder(o)}
                                     className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
-                                    🗑 Устгах
+                                    Устгах
                                   </button>
                                 )}
                               </div>

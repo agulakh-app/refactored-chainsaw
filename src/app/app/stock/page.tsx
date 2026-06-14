@@ -674,13 +674,20 @@ if (error) {
             </div>
           )}
         </div>
-        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
+        <div className="flex gap-2 px-4 py-3 border-b border-gray-100 bg-gray-50 flex-wrap items-center">
           <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={logFilter} onChange={e=>setLogFilter(e.target.value)}>
             <option value="all">Бүх бараа</option>
             {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-            value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+          <div className="relative">
+            <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white pr-8"
+              value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
+            {!dateFilter && (
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none bg-white pr-1">
+                Огноо сонгох
+              </span>
+            )}
+          </div>
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
         </div>
         {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
