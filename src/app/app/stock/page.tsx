@@ -502,7 +502,7 @@ if (error) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                     min="0" value={nQty} onChange={e=>setNQty(e.target.value)} />
                 </div>
                 <div>
