@@ -429,10 +429,10 @@ export default function HistoryPage() {
                 </div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[600px]">
+                <table className="w-full text-sm min-w-[540px]">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Статус','Үйлдэл'].map(h=>(
+                      {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Үйлдэл'].map(h=>(
                         <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap bg-white">{h}</th>
                       ))}
                     </tr>
@@ -441,6 +441,8 @@ export default function HistoryPage() {
                     {grp.map(o=>{
                       const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
                       const net=gross-(o.delivery_fee||0)
+                      const isDelivered=o.status==='delivered'
+                      const isCancelled=o.status==='cancelled'
                       return (
                         <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50">
                           <td className="px-3 py-2.5 whitespace-nowrap">
@@ -461,13 +463,16 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmt(gross)}₮</td>
                           <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</td>
                           <td className="px-3 py-2.5 font-medium text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
-                          <td className="px-3 py-2.5"><StatusBadge s={o.status}/></td>
                           <td className="px-3 py-2.5">
-                            {!isViewer&&(
+                            {!isViewer?(
                               <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
                                 <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 whitespace-nowrap">
-                                  Үйлдэл ▾
+                                  className={`text-xs px-2.5 py-1 rounded-lg border whitespace-nowrap flex items-center gap-1 ${
+                                    isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
+                                    isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                                    'bg-amber-50 text-amber-600 border-amber-200'
+                                  }`}>
+                                  {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
                                 </button>
                                 {openDropdown===o.id&&(
                                   <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden shadow-lg">
@@ -477,7 +482,7 @@ export default function HistoryPage() {
                                     )}
                                     {o.status==='delivered'&&(
                                       <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
-                                        className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Хүлээгдэж байна</button>
+                                        className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>
                                     )}
                                     {o.status==='cancelled'&&(
                                       <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
@@ -494,6 +499,14 @@ export default function HistoryPage() {
                                   </div>
                                 )}
                               </div>
+                            ):(
+                              <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                                isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                                isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                                'bg-amber-50 text-amber-600 border-amber-100'
+                              }`}>
+                                {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                              </span>
                             )}
                           </td>
                         </tr>
