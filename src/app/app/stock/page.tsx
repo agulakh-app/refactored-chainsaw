@@ -310,7 +310,7 @@ if (error) {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-medium text-gray-800 mb-1">{editProd.name}</h3>
-            <p className="text-xs text-gray-400 mb-4 hidden">
+            <p className="text-xs text-gray-400 mb-4 hidden"></p>
 
             {(editProd.variants||[]).length > 0 ? (
               <div className="space-y-3 mb-5 max-h-80 overflow-y-auto">
