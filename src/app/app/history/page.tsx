@@ -432,10 +432,12 @@ export default function HistoryPage() {
                             </button>
                           </td>
                           <td className="px-3 py-2.5 text-gray-400 text-xs max-w-[160px] truncate">{o.address}</td>
-                          <td className="px-3 py-2.5 text-xs text-gray-500">
-                            {(o.order_items||[]).map((i:any)=>
-                              i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity
-                            ).join(', ')}
+                          <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[120px]">
+                            <div className="overflow-x-auto whitespace-nowrap scrollbar-none">
+                              {(o.order_items||[]).map((i:any)=>
+                                i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity
+                              ).join(', ')}
+                            </div>
                           </td>
                           <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmt(gross)}₮</td>
                           <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</td>
