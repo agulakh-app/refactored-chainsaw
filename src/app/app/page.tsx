@@ -246,7 +246,7 @@ export default function DashPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-800 text-sm">Шинэ захиалга</h2>
             {activeStoreId&&stores.length>0&&(
-              <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
+              <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                 {stores.find(s=>s.id===activeStoreId)?.name}
               </span>
             )}
@@ -259,11 +259,11 @@ export default function DashPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
                 <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
                   placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                  <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
-                <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
-                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="min-w-0"><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                  <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+                <div className="min-w-0"><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
+                  <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
               </div>
               {warehouses.length>0&&(<div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
@@ -285,7 +285,7 @@ export default function DashPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div><label className="block text-xs text-gray-400 mb-1">Тоо</label>
-                          <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/></div>
+                          <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/></div>
                         <div><label className="block text-xs text-gray-400 mb-1">Үнэ (₮)</label>
                           <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/></div>
                       </div>
@@ -406,7 +406,7 @@ export default function DashPage() {
         </div>
         <div className="flex gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" placeholder="MM/DD/YY" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
           {stores.length>0&&(
             <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
