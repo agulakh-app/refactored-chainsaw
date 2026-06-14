@@ -432,7 +432,7 @@ export default function HistoryPage() {
                   <thead>
                     <tr className="border-b border-gray-100">
                       {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Үйлдэл'].map(h=>(
-                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap bg-white">{h}</th>
+                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -465,23 +465,24 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5">
                             {!isViewer?(
                               <select
-                                value={o.status}
+                                defaultValue={o.status}
+                                key={o.id+o.status}
                                 onChange={e=>{
                                   const v=e.target.value
                                   if(v==='delete'){deleteOrder(o)}
                                   else if(v==='edit'){setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}
-                                  else{setOrderStatus(o.id,v)}
+                                  else if(v==='pending'||v==='delivered'||v==='cancelled'){setOrderStatus(o.id,v)}
                                 }}
-                                className={`text-xs px-2 py-1 rounded-lg border appearance-none cursor-pointer ${
+                                className={`text-xs px-2 py-1 rounded-lg border cursor-pointer ${
                                   isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
                                   isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
                                   'bg-amber-50 text-amber-700 border-amber-200'
                                 }`}>
                                 <option value="pending">Хүлээгдэж байна</option>
-                                <option value="delivered">✓ Хүргэгдсэн</option>
+                                <option value="delivered">Хүргэгдсэн</option>
                                 <option value="cancelled">Цуцлагдсан</option>
-                                <option value="edit">— Засах</option>
-                                <option value="delete">🗑 Устгах</option>
+                                <option value="edit">Засах</option>
+                                <option value="delete">Устгах</option>
                               </select>
                             ):(
                               <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
