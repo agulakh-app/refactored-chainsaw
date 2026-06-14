@@ -275,12 +275,12 @@ export default function SettingsPage() {
                 <option value="">Бүх дэлгүүр (сонголтгүй)</option>
                 {stores.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
               </select>
-              <p className="text-xs text-gray-400 mt-1">Зочин зөвхөн сонгосон дэлгүүрийн захиалга, бараа барааг харна</p>
+              <p className="text-xs text-gray-400 mt-1">Зочин зөвхөн сонгосон дэлгүүрийн захиалга, бараа харна</p>
             </div>
           )}
           <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-400 space-y-1 border border-gray-100">
-            <div><span className="text-gray-600">Харагч</span> — бараа, захиалга зөвхөн харах</div>
-            <div><span className="text-gray-600">Засварлагч</span> — захиалга, бараа нэмэх, засах боломжтой</div>
+            <div><span className="text-gray-600">Харагч</span> — Самбар, агуулах, түүх зөвхөн харах эрхтэй</div>
+            <div><span className="text-gray-600">Засварлагч</span> — Самбар, агуулах, түүх харах, засварлах эрхтэй</div>
           </div>
           <button onClick={addViewer}
             className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">
