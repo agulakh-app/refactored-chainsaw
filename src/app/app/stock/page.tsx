@@ -59,6 +59,8 @@ export default function StockPage() {
   const [openDropdown, setOpenDropdown] = useState<string|null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
+
   useEffect(()=>{
     function handleClick(e:MouseEvent){
       if(dropdownRef.current&&!dropdownRef.current.contains(e.target as Node)) setOpenDropdown(null)
