@@ -223,7 +223,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           </div>
 
           {showStoreSwitcher && (
-            <div className="flex gap-1 pb-2 md:hidden">
+            <div className="flex gap-1 py-2 md:hidden border-t border-white/10 mt-0">
               <button onClick={() => setActiveStoreId(null)}
                 className={`px-3 py-1 rounded-lg text-xs transition-all ${
                   activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45'

@@ -56,6 +56,18 @@ export default function HistoryPage() {
   useEffect(()=>{ load() },[load])
 
   const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
+  const [openDropdown, setOpenDropdown] = useState<string|null>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(()=>{
+    function handleClick(e:MouseEvent){
+      if(dropdownRef.current&&!dropdownRef.current.contains(e.target as Node)){
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown',handleClick)
+    return()=>document.removeEventListener('mousedown',handleClick)
+  },[])
 
   async function setOrderStatus(id: string, s: string) {
     await supabase.from('orders').update({status:s}).eq('id',id)
@@ -452,34 +464,34 @@ export default function HistoryPage() {
                           <td className="px-3 py-2.5"><StatusBadge s={o.status}/></td>
                           <td className="px-3 py-2.5">
                             {!isViewer&&(
-                              <div className="flex gap-1 flex-wrap">
-                                {o.status==='pending'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'delivered')}
-                                    className="px-2 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-600 hover:bg-emerald-100 whitespace-nowrap">
-                                    ✓ Хүргэгдсэн
-                                  </button>
-                                )}
-                                {o.status==='delivered'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'pending')}
-                                    className="px-2 py-1 rounded-lg text-xs font-medium bg-amber-50 text-amber-600 hover:bg-amber-100 whitespace-nowrap">
-                                    Буцаах
-                                  </button>
-                                )}
-                                {o.status==='pending'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'cancelled')}
-                                    className="px-2 py-1 rounded-lg text-xs bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500 whitespace-nowrap">✕ Цуцлах</button>
-                                )}
-                                {o.status==='cancelled'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'pending')}
-                                    className="px-2 py-1 rounded-lg text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 font-medium whitespace-nowrap">
-                                    Буцаах
-                                  </button>
-                                )}
-                                {o.status==='cancelled'&&(
-                                  <button onClick={()=>deleteOrder(o)}
-                                    className="px-2 py-1 rounded-lg text-xs bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
-                                    Устгах
-                                  </button>
+                              <div className="relative" ref={openDropdown===o.id?dropdownRef:null}>
+                                <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
+                                  className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 whitespace-nowrap">
+                                  Үйлдэл ▾
+                                </button>
+                                {openDropdown===o.id&&(
+                                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden shadow-lg">
+                                    {o.status==='pending'&&(
+                                      <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
+                                        className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
+                                    )}
+                                    {o.status==='delivered'&&(
+                                      <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
+                                        className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Хүлээгдэж байна</button>
+                                    )}
+                                    {o.status==='cancelled'&&(
+                                      <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
+                                        className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>
+                                    )}
+                                    {o.status==='pending'&&(
+                                      <button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}}
+                                        className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>
+                                    )}
+                                    {o.status==='cancelled'&&(
+                                      <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}}
+                                        className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             )}
