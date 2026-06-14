@@ -259,13 +259,15 @@ export default function DashPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
                 <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
                   placeholder="Дүүрэг, хороо, байр..." value={oAddr} onChange={e=>setOAddr(e.target.value)}/></div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oDate} onChange={e=>setODate(e.target.value)}/>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                  <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" style={{fontSize:'13px'}} value={oDate} onChange={e=>setODate(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1">({fmt(defaultDelivery)}₮)</span>}</label>
+                  <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
+                </div>
               </div>
               {warehouses.length>0&&(<div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
@@ -408,14 +410,7 @@ export default function DashPage() {
         </div>
         <div className="flex gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50 flex-wrap">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm flex-1 bg-white" style={{minWidth:120,maxWidth:160}} placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <div className="relative">
-            <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-            {!dateFilter && (
-              <span className="absolute inset-0 flex items-center px-3 text-sm text-gray-400 pointer-events-none bg-white rounded-lg border border-gray-200">
-                Огноо сонгох
-              </span>
-            )}
-          </div>
+          <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white flex-1" style={{minWidth:140}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
           {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
           {stores.length>0&&(
             <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>

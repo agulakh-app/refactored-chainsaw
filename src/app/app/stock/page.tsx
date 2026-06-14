@@ -310,7 +310,7 @@ if (error) {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-medium text-gray-800 mb-1">{editProd.name}</h3>
-            <p className="text-xs text-gray-400 mb-4">Үлдэгдэл, зарах үнэ, өртөгийг засна</p>
+            <p className="text-xs text-gray-400 mb-4 hidden">
 
             {(editProd.variants||[]).length > 0 ? (
               <div className="space-y-3 mb-5 max-h-80 overflow-y-auto">
@@ -396,7 +396,7 @@ if (error) {
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editQty} onChange={e=>setEditQty(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white max-w-full box-border"
                   value={editDate} onChange={e=>setEditDate(e.target.value)} /></div>
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
