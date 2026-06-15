@@ -408,9 +408,10 @@ export default function HistoryPage() {
           },0)
           return (
             <div key={date}>
-              <div className="px-4 py-2.5 flex justify-between items-center" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
+              {/* Огноогийн мөр + bulk actions */}
+              <div className="px-4 py-2.5 flex flex-wrap justify-between items-center gap-2" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
                 <span className="text-xs font-semibold" style={{color:'#048a6a'}}>{dayLabel(date)}</span>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs text-gray-400">{grp.length} захиалга</span>
                   <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
                   {!isViewer && grp.some(o=>o.status!=='delivered'&&o.status!=='cancelled') && (
@@ -427,79 +428,83 @@ export default function HistoryPage() {
                   )}
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[540px]">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      {['Утас','Хаяг','Бараа','Дүн','Хүргэлт','Цэвэр','Үйлдэл'].map(h=>(
-                        <th key={h} className="px-3 py-2 text-xs font-medium text-gray-400 text-left whitespace-nowrap">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {grp.map(o=>{
-                      const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
-                      const net=gross-(o.delivery_fee||0)
-                      const isDelivered=o.status==='delivered'
-                      const isCancelled=o.status==='cancelled'
-                      return (
-                        <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50">
-                          <td className="px-3 py-2.5 whitespace-nowrap">
-                            <button
-                              onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
-                              className="font-medium text-gray-800 hover:text-emerald-600 transition-colors">
-                              {o.phone}
-                            </button>
-                          </td>
-                          <td className="px-3 py-2.5 text-gray-400 text-xs max-w-[160px] truncate">{o.address}</td>
-                          <td className="px-3 py-2.5 text-xs text-gray-500 max-w-[120px]">
-                            <div className="overflow-x-auto whitespace-nowrap scrollbar-none">
-                              {(o.order_items||[]).map((i:any)=>
-                                i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity
-                              ).join(', ')}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{fmt(gross)}₮</td>
-                          <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</td>
-                          <td className="px-3 py-2.5 font-medium text-emerald-700 whitespace-nowrap">{fmt(net)}₮</td>
-                          <td className="px-3 py-2.5">
-                            {!isViewer?(
-                              <select
-                                defaultValue={o.status}
-                                key={o.id+o.status}
-                                onChange={e=>{
-                                  const v=e.target.value
-                                  if(v==='delete'){deleteOrder(o)}
-                                  else if(v==='edit'){setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}
-                                  else if(v==='pending'||v==='delivered'||v==='cancelled'){setOrderStatus(o.id,v)}
-                                }}
-                                className={`text-xs px-2 py-1 rounded-lg border cursor-pointer ${
-                                  isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
-                                  isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
-                                  'bg-amber-50 text-amber-700 border-amber-200'
-                                }`}>
-                                <option value="pending">Хүлээгдэж байна</option>
-                                <option value="delivered">Хүргэгдсэн</option>
-                                <option value="cancelled">Цуцлагдсан</option>
-                                <option value="edit">Засах</option>
-                                <option value="delete">Устгах</option>
-                              </select>
-                            ):(
-                              <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                                isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                                isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                                'bg-amber-50 text-amber-600 border-amber-100'
-                              }`}>
-                                {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+
+              {/* Нэг удаагийн header */}
+              <div className="grid text-xs font-medium text-gray-400 border-b border-gray-100 bg-white px-3 py-2"
+                style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 130px'}}>
+                <span>Утас</span>
+                <span>Хаяг</span>
+                <span>Бараа</span>
+                <span>Дүн</span>
+                <span>Хүргэлт</span>
+                <span>Цэвэр</span>
+                <span>Үйлдэл</span>
               </div>
+
+              {/* Захиалгын мөрүүд */}
+              {grp.map(o=>{
+                const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
+                const net=gross-(o.delivery_fee||0)
+                const isDelivered=o.status==='delivered'
+                const isCancelled=o.status==='cancelled'
+                return (
+                  <div key={o.id} className="grid items-center border-b border-gray-100 hover:bg-gray-50 px-3 py-2.5 text-sm"
+                    style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 130px'}}>
+                    <button onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
+                      className="font-medium text-gray-800 hover:text-emerald-600 text-left text-xs whitespace-nowrap">
+                      {o.phone}
+                    </button>
+                    <span className="text-gray-400 text-xs truncate pr-2">{o.address}</span>
+                    <span className="text-gray-500 text-xs truncate pr-2">
+                      {(o.order_items||[]).map((i:any)=>i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity).join(', ')}
+                    </span>
+                    <span className="text-gray-600 text-xs whitespace-nowrap">{fmt(gross)}₮</span>
+                    <span className="text-gray-400 text-xs whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</span>
+                    <span className="font-medium text-emerald-700 text-xs whitespace-nowrap">{fmt(net)}₮</span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {!isViewer?(
+                        <>
+                          {/* Төлөв dropdown */}
+                          <select
+                            value={o.status}
+                            onChange={e=>{
+                              const v=e.target.value
+                              if(v==='pending'||v==='delivered'||v==='cancelled') setOrderStatus(o.id,v)
+                            }}
+                            className={`text-xs px-2 py-1 rounded-lg border cursor-pointer flex-shrink-0 ${
+                              isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
+                              isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
+                              'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                            <option value="pending">Хүлээгдэж байна</option>
+                            <option value="delivered">✓ Хүргэгдсэн</option>
+                            <option value="cancelled">✕ Цуцлагдсан</option>
+                          </select>
+                          {/* Засах + Устгах товч */}
+                          <button
+                            onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
+                            className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex-shrink-0">
+                            ✏️
+                          </button>
+                          <button
+                            onClick={()=>setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)})}
+                            className="text-xs px-2 py-1 rounded-lg border border-red-100 bg-red-50 text-red-400 hover:bg-red-100 flex-shrink-0">
+                            🗑
+                          </button>
+                        </>
+                      ):(
+                        <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                          isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                          isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                          'bg-amber-50 text-amber-600 border-amber-100'
+                        }`}>
+                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )
         })}
