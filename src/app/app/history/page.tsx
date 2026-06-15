@@ -259,8 +259,26 @@ export default function HistoryPage() {
           const prod = (products||[]).find((p:any)=>p.name.trim().toLowerCase()===it.product_name.trim().toLowerCase())
           if (!prod) { stockMissCount++; continue }
 
-          if (Array.isArray(prod.variants) && prod.variants.length>0 && it.variant_label) {
-            const vIdx = prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===it.variant_label)
+          if (Array.isArray(prod.variants) && prod.variants.length>0) {
+            // Variant тааруулалт: хэд хэдэн аргаар хайна
+            const cleanLabel = (it.variant_label||'').toString().trim().replace(/\s*\/\s*$/,'').trim()
+            let vIdx = -1
+            if (cleanLabel) {
+              // 1. Яг тааруулна: "L3 / Red" эсвэл "L3"
+              vIdx = prod.variants.findIndex((v:any)=>{
+                const vLabel = [v.size,v.color].filter(Boolean).join(' / ').trim()
+                return vLabel.toLowerCase()===cleanLabel.toLowerCase()
+              })
+              // 2. Size-аар л тааруулна (color хоосон байж болно)
+              if (vIdx<0) {
+                vIdx = prod.variants.findIndex((v:any)=>
+                  (v.size||'').toString().trim().toLowerCase()===cleanLabel.toLowerCase()
+                )
+              }
+            }
+            // 3. Variant нэг л байвал тэрийг ашиглана
+            if (vIdx<0 && prod.variants.length===1) vIdx=0
+
             if (vIdx>=0) {
               const newVariants = [...prod.variants]
               newVariants[vIdx] = { ...newVariants[vIdx], stock: Math.max(0,(newVariants[vIdx].stock||0)-it.quantity) }
