@@ -56,6 +56,22 @@ export default function HistoryPage() {
   useEffect(()=>{ load() },[load])
 
   const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
+  const [editModal, setEditModal] = useState<Order|null>(null)
+  const [editPhone, setEditPhone] = useState('')
+  const [editAddr, setEditAddr] = useState('')
+  const [editDate, setEditDate] = useState('')
+  const [editStatus, setEditStatus] = useState('')
+  const [editDelv, setEditDelv] = useState('')
+
+  async function saveEdit() {
+    if(!editModal) return
+    await supabase.from('orders').update({
+      phone: editPhone, address: editAddr, date: editDate,
+      status: editStatus, delivery_fee: Number(editDelv)||0
+    }).eq('id', editModal.id)
+    setEditModal(null)
+    load()
+  }
   const [openDropdown, setOpenDropdown] = useState<string|null>(null)
   const [dropdownPos, setDropdownPos] = useState<{top:number,right:number}>({top:0,right:0})
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -482,7 +498,7 @@ export default function HistoryPage() {
                           </select>
                           {/* Засах + Устгах товч */}
                           <button
-                            onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
+                            onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
                             className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex-shrink-0">
                             ✏️
                           </button>
@@ -510,6 +526,35 @@ export default function HistoryPage() {
         })}
         {filtered.length===0&&<p className="text-center text-gray-400 text-sm py-10">Захиалга олдсонгүй</p>}
       </div>
+
+      {/* Edit modal */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm space-y-3">
+            <h3 className="font-medium text-gray-800 mb-2">Захиалга засварлах</h3>
+            <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
+                <input type="date" className="w-full px-3 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)}/>
+              </div></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
+              <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
+            <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
+              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
+                <option value="pending">Хүлээгдэж байна</option>
+                <option value="delivered">Хүргэгдсэн</option>
+                <option value="cancelled">Цуцлагдсан</option>
+              </select></div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={()=>setEditModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
+              <button onClick={saveEdit} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm modal */}
       {confirmModal && (
