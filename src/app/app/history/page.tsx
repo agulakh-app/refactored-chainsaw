@@ -481,16 +481,7 @@ export default function HistoryPage() {
           )}
         </div>
 
-        {/* Нэг удаагийн header */}
-        {filtered.length>0&&(
-          <div className="grid text-xs font-medium text-gray-400 border-b border-gray-100 bg-white px-3 py-2 sticky top-0 z-10"
-            style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 160px'}}>
-            <span>Утас</span><span>Хаяг</span><span>Бараа</span>
-            <span>Дүн</span><span>Хүргэлт</span><span>Цэвэр</span><span>Үйлдэл</span>
-          </div>
-        )}
-
-        {/* Grouped orders */}
+        {/* Grouped orders - card style */}
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp=groups[date]
           const totNet=grp.reduce((a,o)=>{
@@ -500,7 +491,7 @@ export default function HistoryPage() {
           return (
             <div key={date}>
               {/* Огноогийн мөр */}
-              <div className="px-3 py-2 flex items-center gap-2 flex-wrap" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
+              <div className="px-4 py-2 flex items-center gap-2 flex-wrap" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
                 {!isViewer&&(
                   <input type="checkbox"
                     checked={grp.every(o=>selectedIds.has(o.id))}
@@ -509,63 +500,73 @@ export default function HistoryPage() {
                 )}
                 <span className="text-xs font-semibold" style={{color:'#048a6a'}}>{dayLabel(date)}</span>
                 <span className="text-xs text-gray-400">{grp.length} захиалга</span>
-                <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
+                <span className="text-xs font-medium text-emerald-700 ml-1">{fmt(totNet)}₮</span>
                 {!isViewer && grp.some(o=>o.status!=='delivered'&&o.status!=='cancelled') && (
                   <button onClick={()=>markAllDelivered(date, grp)}
-                    className="text-xs px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium ml-auto">
+                    className="text-xs px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium ml-auto whitespace-nowrap">
                     Бүгдийг хүргэсэн болгох
                   </button>
                 )}
               </div>
 
-              {/* Захиалгын мөрүүд */}
+              {/* Захиалгын card мөрүүд */}
               {grp.map(o=>{
                 const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
                 const net=gross-(o.delivery_fee||0)
                 const isDelivered=o.status==='delivered'
                 const isCancelled=o.status==='cancelled'
                 return (
-                  <div key={o.id} className={`grid items-center border-b border-gray-100 px-3 py-2 text-sm ${selectedIds.has(o.id)?'bg-emerald-50/40':'hover:bg-gray-50'}`}
-                    style={{gridTemplateColumns:`${!isViewer?'20px ':' '}110px 1fr 1fr 68px 68px 68px 110px`}}>
-                    {!isViewer&&(
-                      <input type="checkbox" checked={selectedIds.has(o.id)} onChange={()=>toggleSelect(o.id)}
-                        className="w-3.5 h-3.5 accent-emerald-500"/>
-                    )}
-                    <button onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
-                      className="font-medium text-gray-800 hover:text-emerald-600 text-left text-xs whitespace-nowrap">
-                      {o.phone}
-                    </button>
-                    <span className="text-gray-400 text-xs truncate pr-2">{o.address}</span>
-                    <span className="text-gray-500 text-xs truncate pr-2">
-                      {(o.order_items||[]).map((i:any)=>i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity).join(', ')}
-                    </span>
-                    <span className="text-gray-600 text-xs">{fmt(gross)}₮</span>
-                    <span className="text-gray-400 text-xs">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</span>
-                    <span className={`text-xs font-medium ${net<0?'text-red-500':'text-emerald-700'}`}>{fmt(net)}₮</span>
-                    {!isViewer?(
-                      <button
-                        onClick={(e)=>{
-                          const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
-                          setDropdownPos({top:rect.bottom+6, left:Math.min(rect.left, window.innerWidth-170)})
-                          setOpenDropdown(openDropdown===o.id?null:o.id)
-                        }}
-                        className={`text-xs px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1 whitespace-nowrap ${
-                          isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
-                          isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
-                          'bg-amber-50 text-amber-700 border-amber-200'
+                  <div key={o.id} className={`px-4 py-3 border-b border-gray-100 ${selectedIds.has(o.id)?'bg-emerald-50/50':'hover:bg-gray-50/60'}`}>
+                    {/* Мөр 1: checkbox + утас + dropdown */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {!isViewer&&(
+                          <input type="checkbox" checked={selectedIds.has(o.id)} onChange={()=>toggleSelect(o.id)}
+                            className="w-3.5 h-3.5 accent-emerald-500 flex-shrink-0"/>
+                        )}
+                        <button onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
+                          className="font-semibold text-sm text-gray-800 hover:text-emerald-600">
+                          {o.phone}
+                        </button>
+                        {o.address&&<span className="text-xs text-gray-400 truncate hidden sm:block">{o.address}</span>}
+                      </div>
+                      {!isViewer?(
+                        <button
+                          onClick={(e)=>{
+                            const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
+                            setDropdownPos({top:rect.bottom+6, left:Math.min(rect.left, window.innerWidth-170)})
+                            setOpenDropdown(openDropdown===o.id?null:o.id)
+                          }}
+                          className={`text-xs px-3 py-1 rounded-full border font-medium flex items-center gap-1 whitespace-nowrap flex-shrink-0 ${
+                            isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
+                            isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                          <span className="text-[10px] opacity-50">▾</span>
+                        </button>
+                      ):(
+                        <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${
+                          isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                          isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                          'bg-amber-50 text-amber-600 border-amber-100'
                         }`}>
-                        {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                        <span className="text-[10px] opacity-60">▾</span>
-                      </button>
-                    ):(
-                      <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                        isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                        isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                        'bg-amber-50 text-amber-600 border-amber-100'
-                      }`}>
-                        {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                        </span>
+                      )}
+                    </div>
+                    {/* Мөр 2: хаяг (mobile) */}
+                    {o.address&&<div className="text-xs text-gray-400 mt-1 sm:hidden pl-5">{o.address}</div>}
+                    {/* Мөр 3: бараа + дүн */}
+                    <div className="flex items-center justify-between mt-1.5 pl-5">
+                      <span className="text-xs text-gray-500 truncate flex-1 pr-4">
+                        {(o.order_items||[]).map((i:any)=>i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity).join(', ')}
                       </span>
-                    )}
+                      <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+                        {o.delivery_fee>0&&<span className="text-gray-400">-{fmt(o.delivery_fee)}₮</span>}
+                        <span className={`font-semibold ${net<0?'text-red-500':'text-emerald-700'}`}>{fmt(net)}₮</span>
+                      </div>
+                    </div>
                   </div>
                 )
               })}
