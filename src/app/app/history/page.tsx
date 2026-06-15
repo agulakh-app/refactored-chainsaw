@@ -338,14 +338,16 @@ export default function HistoryPage() {
         )
       })()}
 
-      {/* Bulk action bar */}
+      {/* Bulk action bar - самбарын стайлтай ижил */}
       {selectedIds.size>0&&(
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-gray-900 text-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl">
-          <span className="text-sm font-medium">{selectedIds.size} сонгогдсон</span>
-          <button onClick={bulkDeliver} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 font-medium">✓ Бүгдийг хүргэсэн</button>
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-xl overflow-hidden flex items-center" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+          <span className="text-xs text-gray-500 px-4 py-2.5 border-r border-gray-100">{selectedIds.size} сонгогдсон</span>
+          <button onClick={bulkDeliver}
+            className="text-xs px-4 py-2.5 text-emerald-700 hover:bg-emerald-50">✓ Бүгдийг хүргэсэн</button>
           <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалгыг устгах уу?`,onOk:bulkDelete})}
-            className="text-xs px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 font-medium">🗑 Устгах</button>
-          <button onClick={()=>setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-white ml-1">✕</button>
+            className="text-xs px-4 py-2.5 text-red-500 hover:bg-red-50 border-l border-gray-100">Устгах</button>
+          <button onClick={()=>setSelectedIds(new Set())}
+            className="text-xs px-3 py-2.5 text-gray-400 hover:bg-gray-50 border-l border-gray-100">✕</button>
         </div>
       )}
 
