@@ -72,9 +72,34 @@ export default function HistoryPage() {
     setEditModal(null)
     load()
   }
+
   const [openDropdown, setOpenDropdown] = useState<string|null>(null)
-  const [dropdownPos, setDropdownPos] = useState<{top:number,right:number}>({top:0,right:0})
+  const [dropdownPos, setDropdownPos] = useState<{top:number,left:number}>({top:0,left:0})
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  function toggleSelect(id:string){
+    setSelectedIds(prev=>{const s=new Set(prev); s.has(id)?s.delete(id):s.add(id); return s})
+  }
+  function toggleSelectGroup(grp:Order[]){
+    const ids=grp.map(o=>o.id)
+    const allSelected=ids.every(id=>selectedIds.has(id))
+    setSelectedIds(prev=>{
+      const s=new Set(prev)
+      allSelected?ids.forEach(id=>s.delete(id)):ids.forEach(id=>s.add(id))
+      return s
+    })
+  }
+  async function bulkDeliver(){
+    const ids=Array.from(selectedIds)
+    await Promise.all(ids.map(id=>supabase.from('orders').update({status:'delivered'}).eq('id',id)))
+    setSelectedIds(new Set()); load()
+  }
+  async function bulkDelete(){
+    const ids=Array.from(selectedIds)
+    await Promise.all(ids.map(id=>supabase.from('orders').delete().eq('id',id)))
+    setSelectedIds(new Set()); load()
+  }
 
   useEffect(()=>{
     function handleClick(e:MouseEvent){
@@ -280,6 +305,47 @@ export default function HistoryPage() {
 
   return (
     <div className="space-y-4">
+
+      {/* Portal dropdown */}
+      {openDropdown && (()=>{
+        const o = orders.find(x=>x.id===openDropdown)
+        if(!o) return null
+        return (
+          <div ref={dropdownRef}
+            style={{position:'fixed', top:dropdownPos.top, left:dropdownPos.left, zIndex:9999, minWidth:160}}
+            className="bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden">
+            <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
+              className="w-full text-left px-4 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50 flex items-center gap-2">
+              <span className="text-emerald-500">✓</span> Хүргэгдсэн
+            </button>
+            <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
+              className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 flex items-center gap-2">
+              <span>↩</span> Хүлээгдэж байна
+            </button>
+            <button onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
+              className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">
+              <span>✏️</span> Засах
+            </button>
+            <div className="border-t border-gray-100"/>
+            <button onClick={()=>{setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)});setOpenDropdown(null)}}
+              className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
+              <span>🗑</span> Устгах
+            </button>
+          </div>
+        )
+      })()}
+
+      {/* Bulk action bar */}
+      {selectedIds.size>0&&(
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 bg-gray-900 text-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl">
+          <span className="text-sm font-medium">{selectedIds.size} сонгогдсон</span>
+          <button onClick={bulkDeliver} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 font-medium">✓ Бүгдийг хүргэсэн</button>
+          <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалгыг устгах уу?`,onOk:bulkDelete})}
+            className="text-xs px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 font-medium">🗑 Устгах</button>
+          <button onClick={()=>setSelectedIds(new Set())} className="text-xs text-gray-400 hover:text-white ml-1">✕</button>
+        </div>
+      )}
+
       {selectedPhone && (
         <div className="bg-white rounded-xl border border-emerald-100 p-4">
           <div className="flex items-center justify-between mb-3">
@@ -433,25 +499,23 @@ export default function HistoryPage() {
           },0)
           return (
             <div key={date}>
-              {/* Огноогийн мөр + bulk actions */}
-              <div className="px-4 py-2.5 flex flex-wrap justify-between items-center gap-2" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
+              {/* Огноогийн мөр */}
+              <div className="px-3 py-2 flex items-center gap-2 flex-wrap" style={{background:'#e6fbf6',borderTop:'1px solid #c2f5e8',borderBottom:'1px solid #c2f5e8'}}>
+                {!isViewer&&(
+                  <input type="checkbox"
+                    checked={grp.every(o=>selectedIds.has(o.id))}
+                    onChange={()=>toggleSelectGroup(grp)}
+                    className="w-3.5 h-3.5 accent-emerald-500 flex-shrink-0"/>
+                )}
                 <span className="text-xs font-semibold" style={{color:'#048a6a'}}>{dayLabel(date)}</span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-gray-400">{grp.length} захиалга</span>
-                  <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
-                  {!isViewer && grp.some(o=>o.status!=='delivered'&&o.status!=='cancelled') && (
-                    <button onClick={()=>markAllDelivered(date, grp)}
-                      className="text-xs px-2 py-1 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium whitespace-nowrap">
-                      Бүгдийг хүргэсэн болгох
-                    </button>
-                  )}
-                  {!isViewer && grp.some(o=>o.status==='cancelled') && (
-                    <button onClick={()=>deleteAllCancelled(date, grp)}
-                      className="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium whitespace-nowrap">
-                      Цуцлагдсаныг устгах ({grp.filter(o=>o.status==='cancelled').length})
-                    </button>
-                  )}
-                </div>
+                <span className="text-xs text-gray-400">{grp.length} захиалга</span>
+                <span className="text-xs font-medium text-emerald-700">{fmt(totNet)}₮</span>
+                {!isViewer && grp.some(o=>o.status!=='delivered'&&o.status!=='cancelled') && (
+                  <button onClick={()=>markAllDelivered(date, grp)}
+                    className="text-xs px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-700 font-medium ml-auto">
+                    Бүгдийг хүргэсэн болгох
+                  </button>
+                )}
               </div>
 
               {/* Захиалгын мөрүүд */}
@@ -461,8 +525,12 @@ export default function HistoryPage() {
                 const isDelivered=o.status==='delivered'
                 const isCancelled=o.status==='cancelled'
                 return (
-                  <div key={o.id} className="grid items-center border-b border-gray-100 hover:bg-gray-50 px-3 py-2 text-sm"
-                    style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 160px'}}>
+                  <div key={o.id} className={`grid items-center border-b border-gray-100 px-3 py-2 text-sm ${selectedIds.has(o.id)?'bg-emerald-50/40':'hover:bg-gray-50'}`}
+                    style={{gridTemplateColumns:`${!isViewer?'20px ':' '}110px 1fr 1fr 68px 68px 68px 110px`}}>
+                    {!isViewer&&(
+                      <input type="checkbox" checked={selectedIds.has(o.id)} onChange={()=>toggleSelect(o.id)}
+                        className="w-3.5 h-3.5 accent-emerald-500"/>
+                    )}
                     <button onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
                       className="font-medium text-gray-800 hover:text-emerald-600 text-left text-xs whitespace-nowrap">
                       {o.phone}
@@ -471,42 +539,33 @@ export default function HistoryPage() {
                     <span className="text-gray-500 text-xs truncate pr-2">
                       {(o.order_items||[]).map((i:any)=>i.product_name+(i.variant_label?' · '+i.variant_label:'')+'×'+i.quantity).join(', ')}
                     </span>
-                    <span className="text-gray-600 text-xs whitespace-nowrap">{fmt(gross)}₮</span>
-                    <span className="text-gray-400 text-xs whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</span>
-                    <span className="font-medium text-emerald-700 text-xs whitespace-nowrap">{fmt(net)}₮</span>
-                    <div className="flex items-center gap-1">
-                      {!isViewer?(
-                        <>
-                          <select
-                            value={o.status}
-                            onChange={e=>{
-                              const v=e.target.value
-                              if(v==='pending'||v==='delivered'||v==='cancelled') setOrderStatus(o.id,v)
-                            }}
-                            className={`text-xs px-1.5 py-0.5 rounded border cursor-pointer ${
-                              isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
-                              isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
-                              'bg-amber-50 text-amber-700 border-amber-200'
-                            }`}>
-                            <option value="pending">Хүлээгдэж байна</option>
-                            <option value="delivered">✓ Хүргэгдсэн</option>
-                            <option value="cancelled">✕ Цуцлагдсан</option>
-                          </select>
-                          <button onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
-                            className="text-gray-400 hover:text-blue-500 px-1">✏️</button>
-                          <button onClick={()=>setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)})}
-                            className="text-gray-300 hover:text-red-400 px-1">🗑</button>
-                        </>
-                      ):(
-                        <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                          isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
-                          isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                          'bg-amber-50 text-amber-600 border-amber-100'
+                    <span className="text-gray-600 text-xs">{fmt(gross)}₮</span>
+                    <span className="text-gray-400 text-xs">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</span>
+                    <span className={`text-xs font-medium ${net<0?'text-red-500':'text-emerald-700'}`}>{fmt(net)}₮</span>
+                    {!isViewer?(
+                      <button
+                        onClick={(e)=>{
+                          const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
+                          setDropdownPos({top:rect.bottom+6, left:Math.min(rect.left, window.innerWidth-170)})
+                          setOpenDropdown(openDropdown===o.id?null:o.id)
+                        }}
+                        className={`text-xs px-2.5 py-1 rounded-lg border font-medium flex items-center gap-1 whitespace-nowrap ${
+                          isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
+                          isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
+                          'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
-                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                        </span>
-                      )}
-                    </div>
+                        {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                        <span className="text-[10px] opacity-60">▾</span>
+                      </button>
+                    ):(
+                      <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                        isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                        isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                        'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                        {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
+                      </span>
+                    )}
                   </div>
                 )
               })}
