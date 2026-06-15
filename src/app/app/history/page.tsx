@@ -306,31 +306,34 @@ export default function HistoryPage() {
   return (
     <div className="space-y-4">
 
-      {/* Portal dropdown */}
+      {/* Portal dropdown - самбарын стайлтай ижил */}
       {openDropdown && (()=>{
         const o = orders.find(x=>x.id===openDropdown)
         if(!o) return null
         return (
           <div ref={dropdownRef}
             style={{position:'fixed', top:dropdownPos.top, left:dropdownPos.left, zIndex:9999, minWidth:160}}
-            className="bg-white border border-gray-100 rounded-xl shadow-xl overflow-hidden">
-            <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
-              className="w-full text-left px-4 py-2.5 text-sm text-emerald-700 hover:bg-emerald-50 flex items-center gap-2">
-              <span className="text-emerald-500">✓</span> Хүргэгдсэн
-            </button>
-            <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
-              className="w-full text-left px-4 py-2.5 text-sm text-amber-700 hover:bg-amber-50 flex items-center gap-2">
-              <span>↩</span> Хүлээгдэж байна
-            </button>
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+            {o.status!=='delivered'&&(
+              <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
+                className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
+            )}
+            {o.status==='delivered'&&(
+              <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
+                className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>
+            )}
+            {o.status==='cancelled'&&(
+              <button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}}
+                className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>
+            )}
             <button onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
-              className="w-full text-left px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2">
-              <span>✏️</span> Засах
-            </button>
-            <div className="border-t border-gray-100"/>
+              className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            {o.status!=='cancelled'&&(
+              <button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}}
+                className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
+            )}
             <button onClick={()=>{setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)});setOpenDropdown(null)}}
-              className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 flex items-center gap-2">
-              <span>🗑</span> Устгах
-            </button>
+              className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
       })()}
@@ -534,16 +537,15 @@ export default function HistoryPage() {
                         <button
                           onClick={(e)=>{
                             const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
-                            setDropdownPos({top:rect.bottom+6, left:Math.min(rect.left, window.innerWidth-170)})
+                            setDropdownPos({top:rect.bottom+4, left:Math.min(rect.left, window.innerWidth-170)})
                             setOpenDropdown(openDropdown===o.id?null:o.id)
                           }}
-                          className={`text-xs px-3 py-1 rounded-full border font-medium flex items-center gap-1 whitespace-nowrap flex-shrink-0 ${
-                            isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
-                            isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
-                            'bg-amber-50 text-amber-700 border-amber-200'
+                          className={`text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1 whitespace-nowrap flex-shrink-0 ${
+                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
+                            isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                            'bg-amber-50 text-amber-600 border-amber-200'
                           }`}>
-                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                          <span className="text-[10px] opacity-50">▾</span>
+                          {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
                         </button>
                       ):(
                         <span className={`text-xs px-3 py-1 rounded-full border whitespace-nowrap ${
