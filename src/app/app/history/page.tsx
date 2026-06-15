@@ -312,8 +312,8 @@ export default function HistoryPage() {
         if(!o) return null
         return (
           <div ref={dropdownRef}
-            style={{position:'fixed', top:dropdownPos.top, left:dropdownPos.left, zIndex:9999, minWidth:160}}
-            className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+            style={{position:'fixed', top:dropdownPos.top, left:dropdownPos.left, zIndex:9999, minWidth:160, boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden">
             {o.status!=='delivered'&&(
               <button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}}
                 className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
