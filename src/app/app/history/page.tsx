@@ -415,6 +415,15 @@ export default function HistoryPage() {
           )}
         </div>
 
+        {/* Нэг удаагийн header */}
+        {filtered.length>0&&(
+          <div className="grid text-xs font-medium text-gray-400 border-b border-gray-100 bg-white px-3 py-2 sticky top-0 z-10"
+            style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 160px'}}>
+            <span>Утас</span><span>Хаяг</span><span>Бараа</span>
+            <span>Дүн</span><span>Хүргэлт</span><span>Цэвэр</span><span>Үйлдэл</span>
+          </div>
+        )}
+
         {/* Grouped orders */}
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp=groups[date]
@@ -445,18 +454,6 @@ export default function HistoryPage() {
                 </div>
               </div>
 
-              {/* Нэг удаагийн header */}
-              <div className="grid text-xs font-medium text-gray-400 border-b border-gray-100 bg-white px-3 py-2"
-                style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 130px'}}>
-                <span>Утас</span>
-                <span>Хаяг</span>
-                <span>Бараа</span>
-                <span>Дүн</span>
-                <span>Хүргэлт</span>
-                <span>Цэвэр</span>
-                <span>Үйлдэл</span>
-              </div>
-
               {/* Захиалгын мөрүүд */}
               {grp.map(o=>{
                 const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
@@ -464,8 +461,8 @@ export default function HistoryPage() {
                 const isDelivered=o.status==='delivered'
                 const isCancelled=o.status==='cancelled'
                 return (
-                  <div key={o.id} className="grid items-center border-b border-gray-100 hover:bg-gray-50 px-3 py-2.5 text-sm"
-                    style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 130px'}}>
+                  <div key={o.id} className="grid items-center border-b border-gray-100 hover:bg-gray-50 px-3 py-2 text-sm"
+                    style={{gridTemplateColumns:'110px 1fr 1fr 70px 70px 70px 160px'}}>
                     <button onClick={()=>setSelectedPhone(selectedPhone===o.phone?null:o.phone)}
                       className="font-medium text-gray-800 hover:text-emerald-600 text-left text-xs whitespace-nowrap">
                       {o.phone}
@@ -477,17 +474,16 @@ export default function HistoryPage() {
                     <span className="text-gray-600 text-xs whitespace-nowrap">{fmt(gross)}₮</span>
                     <span className="text-gray-400 text-xs whitespace-nowrap">{o.delivery_fee>0?fmt(o.delivery_fee)+'₮':'—'}</span>
                     <span className="font-medium text-emerald-700 text-xs whitespace-nowrap">{fmt(net)}₮</span>
-                    <div className="flex items-center gap-1 flex-wrap">
+                    <div className="flex items-center gap-1">
                       {!isViewer?(
                         <>
-                          {/* Төлөв dropdown */}
                           <select
                             value={o.status}
                             onChange={e=>{
                               const v=e.target.value
                               if(v==='pending'||v==='delivered'||v==='cancelled') setOrderStatus(o.id,v)
                             }}
-                            className={`text-xs px-2 py-1 rounded-lg border cursor-pointer flex-shrink-0 ${
+                            className={`text-xs px-1.5 py-0.5 rounded border cursor-pointer ${
                               isDelivered?'bg-emerald-50 text-emerald-700 border-emerald-200':
                               isCancelled?'bg-gray-100 text-gray-500 border-gray-200':
                               'bg-amber-50 text-amber-700 border-amber-200'
@@ -496,17 +492,10 @@ export default function HistoryPage() {
                             <option value="delivered">✓ Хүргэгдсэн</option>
                             <option value="cancelled">✕ Цуцлагдсан</option>
                           </select>
-                          {/* Засах + Устгах товч */}
-                          <button
-                            onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
-                            className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 flex-shrink-0">
-                            ✏️
-                          </button>
-                          <button
-                            onClick={()=>setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)})}
-                            className="text-xs px-2 py-1 rounded-lg border border-red-100 bg-red-50 text-red-400 hover:bg-red-100 flex-shrink-0">
-                            🗑
-                          </button>
+                          <button onClick={()=>{setEditModal(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||'');setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''))}}
+                            className="text-gray-400 hover:text-blue-500 px-1">✏️</button>
+                          <button onClick={()=>setConfirmModal({msg:`${o.phone} захиалгыг устгах уу?`,onOk:()=>deleteOrder(o)})}
+                            className="text-gray-300 hover:text-red-400 px-1">🗑</button>
                         </>
                       ):(
                         <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
