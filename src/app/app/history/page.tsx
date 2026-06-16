@@ -189,18 +189,33 @@ export default function HistoryPage() {
     a.click()
   }
 
-  // Template татах - шинэ формат
+  // Template татах - xlsx формат, огноо текстээр
   function downloadTemplate() {
-    const rows=[
-      ['Огноо (YYYY/MM/DD)','Утасны дугаар','Хаяг','Бараа','Барааны үнэ (₮)','Хүргэлт (₮)','Статус'],
-      ['2026/06/16','89639100','Дундговь аймаг','Экс ЭМ','59000','7000','Төлсөн'],
-      ['2026/06/16','99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2','59000','7000','Төлсөн'],
-      ['2026/06/17','88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ','','',''],
-    ]
-    const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n')
-    const a=document.createElement('a')
-    a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}))
-    a.download='olula_template.csv'; a.click()
+    const loadXLSX=():Promise<any>=>new Promise(resolve=>{
+      if((window as any).XLSX){ resolve((window as any).XLSX); return }
+      const s=document.createElement('script')
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      s.onload=()=>resolve((window as any).XLSX)
+      document.head.appendChild(s)
+    })
+    loadXLSX().then(XLSX=>{
+      const data=[
+        ['Огноо (YYYY/MM/DD)','Утасны дугаар','Хаяг','Бараа','Барааны үнэ (₮)','Хүргэлт (₮)','Статус'],
+        ['2026/06/16','89639100','Дундговь аймаг','Экс ЭМ',59000,7000,'Төлсөн'],
+        ['2026/06/16','99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2',59000,7000,'Төлсөн'],
+        ['2026/06/17','88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ','','',''],
+      ]
+      const ws=XLSX.utils.aoa_to_sheet(data)
+      // Огноо баганыг текст болгох (########-аас сэргийлэх)
+      ws['!cols']=[{wch:18},{wch:14},{wch:30},{wch:40},{wch:16},{wch:12},{wch:12}]
+      // A баганын нүднүүдийг текст форматтай болгох
+      ;['A2','A3','A4'].forEach(cell=>{
+        if(ws[cell]) ws[cell].t='s'
+      })
+      const wb=XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb,ws,'Захиалга')
+      XLSX.writeFile(wb,'olula_template.xlsx')
+    })
   }
 
   // Бараа текст задлах: "ЭР багц, Суга ЭМ 4, Хөл багц 2" → [{name,qty}]
