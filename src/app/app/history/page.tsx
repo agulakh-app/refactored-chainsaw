@@ -208,7 +208,7 @@ export default function HistoryPage() {
     if(!text.trim()) return []
     return text.split(',').map(part=>{
       part=part.trim()
-      const m=part.match(/^(.*?)\s+(\d+)\s*ш?$/u)
+      const m=part.match(/^(.*?)\s+(\d+)\s*ш?$/)
       if(m&&m[1].trim()) return {name:m[1].trim(),qty:parseInt(m[2])}
       return {name:part.replace(/\d+\s*ш?\s*$/,'').trim()||part,qty:1}
     }).filter(x=>x.name.length>0)
@@ -242,6 +242,11 @@ export default function HistoryPage() {
       const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}):[]
       const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
       const prodList=products||[]
+
+      // Давхар import шалгалт: DB-д байгаа захиалгуудыг татна
+      const { data: existingOrders } = await supabase.from('orders').select('phone,date').eq('user_id',targetId)
+      const existingSet=new Set((existingOrders||[]).map((o:any)=>`${o.date}__${o.phone}`))
+
       const preview:any[]=[]
       for(const r of rows){
         const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r[Object.keys(r)[0]]||'').toString().trim()
@@ -255,16 +260,36 @@ export default function HistoryPage() {
         const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
         const rawStatus=(r['Статус']||'').toString().trim()
         const status=rawStatus.includes('Төлсөн')||rawStatus.toLowerCase().includes('delivered')?'delivered':'pending'
+
+        // Давхар import шалгах
+        const isDuplicate=dateValid&&phone&&existingSet.has(`${date}__${phone}`)
+
         const matchedItems=parsedItems.map(it=>{
           const prod=matchProduct(it.name,prodList)
-          return {...it,product:prod,error:!prod?`"${it.name}" агуулахад олдсонгүй`:null}
+          // Variant шалгалт: олон variant байвал сонгуулах шаардлагатай
+          let variantError:string|null=null
+          let selectedVariantIdx:number=-1
+          if(prod&&Array.isArray(prod.variants)&&prod.variants.length>1){
+            variantError=`"${prod.name}" нь ${prod.variants.length} variant-тай — сонгоно уу`
+          } else if(prod&&Array.isArray(prod.variants)&&prod.variants.length===1){
+            selectedVariantIdx=0
+          }
+          return {
+            ...it,
+            product: prod,
+            selectedVariantIdx,
+            error: !prod ? `"${it.name}" агуулахад олдсонгүй` : variantError
+          }
         })
+
         const errors:string[]=[]
         if(!dateValid) errors.push(`Огноо буруу формат: "${rawDate}"`)
         if(!phone) errors.push('Утасны дугаар хоосон')
         if(parsedItems.length===0) errors.push('Бараа байхгүй')
+        if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
-        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,prodList})
+
+        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,isDuplicate})
       }
       setImportPreview(preview)
       setImporting(false); setImportMsg('')
@@ -301,15 +326,19 @@ export default function HistoryPage() {
         const prod=it.product?prodList.find((p:any)=>p.id===it.product.id):null
         if(!prod) continue
         if(Array.isArray(prod.variants)&&prod.variants.length>0){
-          const vIdx=prod.variants.length===1?0:-1
+          const vIdx=it.selectedVariantIdx>=0?it.selectedVariantIdx:-1
           if(vIdx>=0){
             const nv=[...prod.variants]
             nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-it.qty)}
             const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
             await supabase.from('products').update({variants:nv,stock:nt}).eq('id',prod.id)
+            prod.variants=nv; prod.stock=nt
           }
+          // vIdx<0 бол хасахгүй — variant сонгоогүй
         } else {
-          await supabase.from('products').update({stock:Math.max(0,(prod.stock||0)-it.qty)}).eq('id',prod.id)
+          const ns=Math.max(0,(prod.stock||0)-it.qty)
+          await supabase.from('products').update({stock:ns}).eq('id',prod.id)
+          prod.stock=ns
         }
         await supabase.from('restock_log').insert({
           user_id:targetId,product_id:prod.id,product_name:prod.name,
@@ -675,23 +704,55 @@ export default function HistoryPage() {
                         </div>
                       </div>
                       {/* Барааны жагсаалт */}
-                      <div className="mt-1.5 space-y-1">
+                      <div className="mt-1.5 space-y-1.5">
                         {row.items.map((it:any,j:number)=>(
-                          <div key={j} className="flex items-center gap-2 text-xs">
-                            {it.error?(
-                              <span className="text-red-500">🔴 {it.name} × {it.qty} — {it.error}</span>
+                          <div key={j} className="text-xs">
+                            {!it.product?(
+                              <span className="text-red-500">🔴 {it.name} × {it.qty} — агуулахад олдсонгүй</span>
+                            ):it.product.variants&&it.product.variants.length>1?(
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-amber-600">⚠️ {it.product.name} × {it.qty}</span>
+                                <select
+                                  className="text-xs px-2 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-700"
+                                  value={it.selectedVariantIdx}
+                                  onChange={e=>{
+                                    const idx=parseInt(e.target.value)
+                                    setImportPreview(prev=>{
+                                      if(!prev) return prev
+                                      const next=[...prev]
+                                      const newItems=[...next[importPreview!.indexOf(row)].items]
+                                      newItems[j]={...newItems[j],selectedVariantIdx:idx,error:idx>=0?null:it.error}
+                                      next[importPreview!.indexOf(row)]={...next[importPreview!.indexOf(row)],items:newItems}
+                                      // errors шинэчлэх
+                                      const errs=next[importPreview!.indexOf(row)].errors.filter((e:string)=>!e.includes(`"${it.product.name}"`))
+                                      if(idx<0) errs.push(`"${it.product.name}" variant сонгоогүй`)
+                                      next[importPreview!.indexOf(row)].errors=errs
+                                      return next
+                                    })
+                                  }}>
+                                  <option value={-1}>— Variant сонгох —</option>
+                                  {it.product.variants.map((v:any,vi:number)=>(
+                                    <option key={vi} value={vi}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock||0}ш)</option>
+                                  ))}
+                                </select>
+                              </div>
                             ):(
-                              <span className="text-gray-500">✅ {it.product?.name||it.name} × {it.qty}</span>
+                              <span className="text-gray-500">
+                                ✅ {it.product.name}{it.product.variants?.length===1?` · ${[it.product.variants[0].size,it.product.variants[0].color].filter(Boolean).join('/')}`:''} × {it.qty}
+                                <span className="text-gray-400 ml-1">(үлдэгдэл: {it.product.variants?.length===1?(it.product.variants[0].stock||0):it.product.stock||0}ш)</span>
+                              </span>
                             )}
                           </div>
                         ))}
                       </div>
                       {/* Алдааны мэдэгдэл */}
-                      {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string,j:number)=>(
-                        <div key={j} className="mt-1 text-xs text-red-500">🔴 {e}</div>
+                      {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')&&!e.includes('variant')).map((e:string,j:number)=>(
+                        <div key={j} className={`mt-1 text-xs font-medium ${e.includes('Давхар')?'text-amber-600':'text-red-500'}`}>🔴 {e}</div>
                       ))}
                       {row.errors.length>0&&(
-                        <div className="mt-1.5 text-xs font-medium text-red-500">⚠️ Энэ захиалга бүртгэгдэхгүй — дээрх алдааг засна уу</div>
+                        <div className="mt-1.5 text-xs font-medium text-red-500 bg-red-50 px-2 py-1 rounded-lg">
+                          ⛔ Энэ захиалга бүртгэгдэхгүй — дээрх алдааг засна уу
+                        </div>
                       )}
                     </div>
                   ))}
