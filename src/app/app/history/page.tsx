@@ -36,6 +36,7 @@ export default function HistoryPage() {
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
   const [importExpanded, setImportExpanded] = useState(false)
+  const [importPreview, setImportPreview] = useState<any[]|null>(null) // баталгаажуулах дэлгэц
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Утасны хайлтын дэлгэрэнгүй
@@ -188,127 +189,141 @@ export default function HistoryPage() {
     a.click()
   }
 
-  // Excel template татах
+  // Template татах - шинэ формат
   function downloadTemplate() {
     const rows=[
-      ['Огноо (YYYY-MM-DD)','Утасны дугаар','Хаяг','Барааны нэр','Variant (өнгө/хэмжээ)','Тоо ширхэг','Нэгж үнэ (₮)','Хүргэлтийн үнэ (₮)','Статус'],
-      ['2026-06-05','88118270','Гачуурт','Углаа','180x200 / Цагаан','1','89000','7000','delivered'],
-      ['2026-06-05','99184322','ХУД 2-р хороо','Хөнжил','240x220','2','205000','7000','pending'],
+      ['Огноо (YYYY/MM/DD)','Утасны дугаар','Хаяг','Бараа','Барааны үнэ (₮)','Хүргэлт (₮)','Статус'],
+      ['2026/06/16','89639100','Дундговь аймаг','Экс ЭМ','59000','7000','Төлсөн'],
+      ['2026/06/16','99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2','59000','7000','Төлсөн'],
+      ['2026/06/17','88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ','','',''],
     ]
-    const csv=rows.map(r=>r.map(v=>'"'+String(v)+'"').join(',')).join('\n')
+    const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n')
     const a=document.createElement('a')
     a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}))
     a.download='olula_template.csv'; a.click()
   }
 
-  // Excel import
+  // Бараа текст задлах: "ЭР багц, Суга ЭМ 4, Хөл багц 2" → [{name,qty}]
+  function parseItems(text: string): {name:string,qty:number}[] {
+    if(!text.trim()) return []
+    return text.split(',').map(part=>{
+      part=part.trim()
+      const m=part.match(/^(.*?)\s+(\d+)\s*ш?$/u)
+      if(m&&m[1].trim()) return {name:m[1].trim(),qty:parseInt(m[2])}
+      return {name:part.replace(/\d+\s*ш?\s*$/,'').trim()||part,qty:1}
+    }).filter(x=>x.name.length>0)
+  }
+
+  // Fuzzy match: том/жижиг үсэг, хоосон зай үл харгалзана
+  function matchProduct(name:string, products:any[]): any|null {
+    const norm=(s:string)=>s.toLowerCase().replace(/\s+/g,' ').trim()
+    const n=norm(name)
+    return products.find(p=>norm(p.name)===n)||null
+  }
+
+  // CSV → preview (баталгаажуулах дэлгэц)
   async function handleExcelImport(file: File) {
     setImporting(true); setImportMsg('Файл уншиж байна...')
     const { data:{ user } } = await supabase.auth.getUser()
-    if (!user) { setImporting(false); return }
-    const targetId = ownerId || user.id
-    const loadXLSX = (): Promise<any> => new Promise(resolve => {
-      if ((window as any).XLSX) { resolve((window as any).XLSX); return }
-      const s = document.createElement('script')
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-      s.onload = () => resolve((window as any).XLSX)
+    if(!user){ setImporting(false); return }
+    const targetId=ownerId||user.id
+    const loadXLSX=():Promise<any>=>new Promise(resolve=>{
+      if((window as any).XLSX){ resolve((window as any).XLSX); return }
+      const s=document.createElement('script')
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      s.onload=()=>resolve((window as any).XLSX)
       document.head.appendChild(s)
     })
     try {
-      const buf = await file.arrayBuffer()
-      const XLSX = await loadXLSX()
-      const wb = XLSX.read(new Uint8Array(buf), {type:'array', cellDates:true, raw:false})
-      const oSheet = wb.Sheets['Захиалга'] || wb.Sheets[wb.SheetNames[0]]
-      const rows: any[] = oSheet ? XLSX.utils.sheet_to_json(oSheet,{defval:'',raw:false}) : []
-      const grouped: Record<string,any> = {}
-      for (const r of rows) {
-        const date=(r['Огноо (YYYY-MM-DD)']||r['Огноо']||r[Object.keys(r)[0]]||'').toString().replace(/\./g,'-').trim().slice(0,10)
-        const ph=(r['Утасны дугаар']||r['Утас']||'').toString().trim()
-        const addr=(r['Хаяг']||'').toString().trim()
-        const prod=(r['Барааны нэр']||r['Бараа']||'').toString().trim()
-        const variant=(r['Variant (өнгө/хэмжээ)']||r['Variant']||'').toString().trim()
-        const qty=parseInt(String(r['Тоо ширхэг']||'1').replace(/[^\d]/g,''))||1
-        const price=parseInt(String(r['Нэгж үнэ (₮)']||'0').replace(/[^\d]/g,''))||0
-        const delv=parseInt(String(r['Хүргэлтийн үнэ (₮)']||'0').replace(/[^\d]/g,''))||0
-        const rawSt=(r['Статус']||'').toString()
-        const st=rawSt.includes('delivered')||rawSt.includes('Хүргэгдсэн')?'delivered':'pending'
-        if (!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!ph||!prod) continue
-        const key=`${date}__${ph}__${addr}`
-        if (!grouped[key]) grouped[key]={date,phone:ph,addr,items:[],delv,status:st}
-        grouped[key].items.push({product_name:prod,variant_label:variant||null,quantity:qty,unit_price:price})
-        if (delv) grouped[key].delv=delv
+      const buf=await file.arrayBuffer()
+      const XLSX=await loadXLSX()
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,raw:false})
+      const sheet=wb.Sheets[wb.SheetNames[0]]
+      const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}):[]
+      const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
+      const prodList=products||[]
+      const preview:any[]=[]
+      for(const r of rows){
+        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r[Object.keys(r)[0]]||'').toString().trim()
+        const date=rawDate.replace(/[./]/g,'-').slice(0,10)
+        const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
+        const phone=(r['Утасны дугаар']||r['Утас']||'').toString().trim()
+        const address=(r['Хаяг']||'').toString().trim()
+        const baraaText=(r['Бараа']||r['Барааны нэр']||'').toString().trim()
+        const parsedItems=parseItems(baraaText)
+        const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
+        const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
+        const rawStatus=(r['Статус']||'').toString().trim()
+        const status=rawStatus.includes('Төлсөн')||rawStatus.toLowerCase().includes('delivered')?'delivered':'pending'
+        const matchedItems=parsedItems.map(it=>{
+          const prod=matchProduct(it.name,prodList)
+          return {...it,product:prod,error:!prod?`"${it.name}" агуулахад олдсонгүй`:null}
+        })
+        const errors:string[]=[]
+        if(!dateValid) errors.push(`Огноо буруу формат: "${rawDate}"`)
+        if(!phone) errors.push('Утасны дугаар хоосон')
+        if(parsedItems.length===0) errors.push('Бараа байхгүй')
+        matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
+        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,prodList})
       }
-
-      // Агуулахаас хасахын тулд бараануудыг урьдчилан ачаална
-      const { data: products } = await supabase.from('products').select('*').eq('user_id', targetId)
-
-      let cnt=0
-      let stockMissCount=0
-      for (const g of Object.values(grouped) as any[]) {
-        const { data: ord } = await supabase.from('orders').insert({
-          user_id:targetId, date:g.date, day_seq:1,
-          phone:g.phone, address:g.addr||'-',
-          delivery_fee:g.delv, status:g.status,
-          store_id:activeStoreId||null
-        }).select().single()
-        if (ord&&g.items.length>0)
-          await supabase.from('order_items').insert(g.items.map((it:any)=>({order_id:ord.id,...it})))
-
-        // ── Агуулахаас хасах (барааны нэрээр тааруулна) ──
-        for (const it of g.items as any[]) {
-          const prod = (products||[]).find((p:any)=>p.name.trim().toLowerCase()===it.product_name.trim().toLowerCase())
-          if (!prod) { stockMissCount++; continue }
-
-          if (Array.isArray(prod.variants) && prod.variants.length>0) {
-            // Variant тааруулалт: хэд хэдэн аргаар хайна
-            const cleanLabel = (it.variant_label||'').toString().trim().replace(/\s*\/\s*$/,'').trim()
-            let vIdx = -1
-            if (cleanLabel) {
-              // 1. Яг тааруулна: "L3 / Red" эсвэл "L3"
-              vIdx = prod.variants.findIndex((v:any)=>{
-                const vLabel = [v.size,v.color].filter(Boolean).join(' / ').trim()
-                return vLabel.toLowerCase()===cleanLabel.toLowerCase()
-              })
-              // 2. Size-аар л тааруулна (color хоосон байж болно)
-              if (vIdx<0) {
-                vIdx = prod.variants.findIndex((v:any)=>
-                  (v.size||'').toString().trim().toLowerCase()===cleanLabel.toLowerCase()
-                )
-              }
-            }
-            // 3. Variant нэг л байвал тэрийг ашиглана
-            if (vIdx<0 && prod.variants.length===1) vIdx=0
-
-            if (vIdx>=0) {
-              const newVariants = [...prod.variants]
-              newVariants[vIdx] = { ...newVariants[vIdx], stock: Math.max(0,(newVariants[vIdx].stock||0)-it.quantity) }
-              const newTotal = newVariants.reduce((a:number,v:any)=>a+(v.stock||0),0)
-              await supabase.from('products').update({ variants:newVariants, stock:newTotal }).eq('id',prod.id)
-              prod.variants = newVariants
-              prod.stock = newTotal
-            } else { stockMissCount++; continue }
-          } else if (!Array.isArray(prod.variants) || prod.variants.length===0) {
-            const newStock = Math.max(0,(prod.stock||0)-it.quantity)
-            await supabase.from('products').update({ stock:newStock }).eq('id',prod.id)
-            prod.stock = newStock
-          } else { stockMissCount++; continue }
-
-          await supabase.from('restock_log').insert({
-            user_id:targetId, product_id:prod.id, product_name:prod.name,
-            quantity: it.quantity, type:'out', note:`Импорт — ${g.phone}`,
-            date: g.date, store_id: activeStoreId||null
-          })
-        }
-        cnt++
-      }
-      setImportMsg(
-        `${cnt} захиалга импортлогдлоо` +
-        (stockMissCount>0 ? `, ${stockMissCount} бараа агуулахад олдсонгүй (тооноос хасагдсангүй)` : ', агуулахаас тоо ширхэг хасагдлаа')
-      )
-      load()
-    } catch(err:any) { setImportMsg('Алдаа: '+err.message) }
-    setImporting(false)
+      setImportPreview(preview)
+      setImporting(false); setImportMsg('')
+    } catch(e:any){ setImportMsg('Файл уншихад алдаа: '+e.message); setImporting(false) }
   }
+
+  // Баталгаажуулсны дараа бүртгэх
+  async function confirmImport() {
+    if(!importPreview) return
+    const { data:{ user } } = await supabase.auth.getUser()
+    if(!user) return
+    const targetId=ownerId||user.id
+    const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
+    const prodList=products||[]
+    setImporting(true)
+    let cnt=0
+    for(const row of importPreview){
+      if(row.errors.length>0) continue
+      const { data: ord } = await supabase.from('orders').insert({
+        user_id:targetId,date:row.date,day_seq:1,
+        phone:row.phone,address:row.address||'-',
+        delivery_fee:row.delv,status:row.status,
+        store_id:activeStoreId||null
+      }).select().single()
+      if(!ord) continue
+      const totalQty=row.items.reduce((a:number,x:any)=>a+x.qty,0)||1
+      const unitPrice=Math.round(row.price/totalQty)
+      const orderItems=row.items.map((it:any)=>({
+        order_id:ord.id,product_name:it.product?.name||it.name,
+        variant_label:null,quantity:it.qty,unit_price:unitPrice
+      }))
+      if(orderItems.length>0) await supabase.from('order_items').insert(orderItems)
+      for(const it of row.items){
+        const prod=it.product?prodList.find((p:any)=>p.id===it.product.id):null
+        if(!prod) continue
+        if(Array.isArray(prod.variants)&&prod.variants.length>0){
+          const vIdx=prod.variants.length===1?0:-1
+          if(vIdx>=0){
+            const nv=[...prod.variants]
+            nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-it.qty)}
+            const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+            await supabase.from('products').update({variants:nv,stock:nt}).eq('id',prod.id)
+          }
+        } else {
+          await supabase.from('products').update({stock:Math.max(0,(prod.stock||0)-it.qty)}).eq('id',prod.id)
+        }
+        await supabase.from('restock_log').insert({
+          user_id:targetId,product_id:prod.id,product_name:prod.name,
+          quantity:it.qty,type:'out',note:`Импорт — ${row.phone}`,
+          date:row.date,store_id:activeStoreId||null
+        })
+      }
+      cnt++
+    }
+    setImportPreview(null)
+    setImportMsg(`${cnt} захиалга бүртгэгдлээ`)
+    setImporting(false); load()
+  }
+
 
   const filtered = orders.filter(o=>{
     if(phone&&!o.phone.includes(phone)) return false
@@ -622,6 +637,85 @@ export default function HistoryPage() {
             <div className="flex gap-2 pt-2">
               <button onClick={()=>setEditModal(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
               <button onClick={saveEdit} className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import баталгаажуулах modal */}
+      {importPreview && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl my-4">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="font-semibold text-gray-800">Импортын баталгаажуулалт</h3>
+              <p className="text-xs text-gray-400 mt-0.5">{importPreview.length} захиалга — шалгаад баталгаажуулна уу</p>
+            </div>
+            <div className="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+              {Object.entries(
+                importPreview.reduce((acc:any,row:any)=>{
+                  if(!acc[row.date]) acc[row.date]=[]
+                  acc[row.date].push(row); return acc
+                },{})
+              ).sort(([a],[b])=>a.localeCompare(b)).map(([date,rows]:any)=>(
+                <div key={date}>
+                  <div className="px-5 py-2 bg-emerald-50/60 text-xs font-semibold text-emerald-700">{date}</div>
+                  {rows.map((row:any,i:number)=>(
+                    <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="font-medium text-sm text-gray-800">{row.phone}</span>
+                          {row.address&&<span className="text-xs text-gray-400 ml-2">{row.address}</span>}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 text-xs">
+                          {row.price>0&&<span className="text-gray-600">{row.price.toLocaleString()}₮</span>}
+                          {row.delv>0&&<span className="text-gray-400">+{row.delv.toLocaleString()}₮</span>}
+                          <span className={`px-2 py-0.5 rounded-full border text-xs ${row.status==='delivered'?'bg-emerald-50 text-emerald-700 border-emerald-200':'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                            {row.status==='delivered'?'Хүргэгдсэн':'Хүлээгдэж байна'}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Барааны жагсаалт */}
+                      <div className="mt-1.5 space-y-1">
+                        {row.items.map((it:any,j:number)=>(
+                          <div key={j} className="flex items-center gap-2 text-xs">
+                            {it.error?(
+                              <span className="text-red-500">🔴 {it.name} × {it.qty} — {it.error}</span>
+                            ):(
+                              <span className="text-gray-500">✅ {it.product?.name||it.name} × {it.qty}</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Алдааны мэдэгдэл */}
+                      {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string,j:number)=>(
+                        <div key={j} className="mt-1 text-xs text-red-500">🔴 {e}</div>
+                      ))}
+                      {row.errors.length>0&&(
+                        <div className="mt-1.5 text-xs font-medium text-red-500">⚠️ Энэ захиалга бүртгэгдэхгүй — дээрх алдааг засна уу</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            {/* Summary */}
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-gray-500">
+                  ✅ {importPreview.filter(r=>r.errors.length===0).length} бүртгэгдэнэ
+                  {importPreview.filter(r=>r.errors.length>0).length>0&&(
+                    <span className="text-red-500 ml-2">🔴 {importPreview.filter(r=>r.errors.length>0).length} алдаатай (бүртгэгдэхгүй)</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={()=>setImportPreview(null)}
+                    className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Цуцлах</button>
+                  <button onClick={confirmImport} disabled={importing||importPreview.filter(r=>r.errors.length===0).length===0}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-50">
+                    {importing?'Бүртгэж байна...':'✓ Бүртгэх'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
