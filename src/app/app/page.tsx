@@ -448,10 +448,10 @@ export default function DashPage() {
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
                   <colgroup>
                     <col style={{width:'12%'}}/><!-- утас -->
-                    <col style={{width:'32%'}}/><!-- хаяг - багасгав -->
-                    <col style={{width:'22%'}}/><!-- бараа - нэмэв -->
+                    <col style={{width:'30%'}}/><!-- хаяг -->
+                    <col style={{width:'24%'}}/><!-- бараа -->
                     <col style={{width:'4%'}}/><!-- тоо -->
-                    <col style={{width:'16%'}}/><!-- дүн - нэмэв -->
+                    <col style={{width:'16%'}}/><!-- дүн -->
                     <col style={{width:'14%'}}/><!-- төлөв -->
                   </colgroup>
                   <tbody>
@@ -469,12 +469,11 @@ export default function DashPage() {
                         <button onClick={()=>copyOrderInfo(o)} className="text-sm font-semibold text-gray-800 hover:text-emerald-600">
                           {o.phone}
                         </button>
-                        {showStore&&<div className="text-[10px] text-gray-400 mt-0.5">{storeName}</div>}
                       </td>
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
                       {/* Бараа */}
-                      <td className="py-2.5 pl-2 pr-0.5 align-middle text-right">
+                      <td className="py-2.5 pl-8 pr-0.5 align-middle text-right">
                         {(o.order_items||[]).map((item:any,i:number)=>(
                           <div key={i} className="text-xs text-gray-700 leading-snug">
                             {item.product_name}{item.variant_label&&<span className="text-gray-400"> {item.variant_label}</span>}
@@ -494,11 +493,11 @@ export default function DashPage() {
                         <div className={`text-xs font-semibold tabular-nums ${net<0?'text-red-500':'text-emerald-600'}`}>{fmt(net)}₮</div>
                       </td>
                       {/* Төлөв + dropdown */}
-                      <td className="py-2.5 pl-2 pr-4 align-middle text-right whitespace-nowrap">
+                      <td className="py-2.5 pl-1 pr-3 align-middle text-right">
                         {!isViewer?(
                           <div className="relative inline-block" ref={openDropdown===o.id?dropdownRef:null}>
                             <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                              className={`text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1 whitespace-nowrap ${
+                              className={`text-[11px] px-2 py-1 rounded-lg border flex items-center gap-0.5 whitespace-nowrap ${
                                 isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
                                 isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
                                 'bg-amber-50 text-amber-600 border-amber-200'
