@@ -473,22 +473,27 @@ export default function DashPage() {
                       </td>
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
-                      {/* Бараа + Тоо */}
-                      <td className="py-2.5 px-2 align-middle" colSpan={2}>
+                      {/* Бараа */}
+                      <td className="py-2.5 px-2 align-middle">
                         {(o.order_items||[]).map((item:any,i:number)=>(
-                          <div key={i} className="flex items-baseline gap-1.5">
-                            <span className="text-xs text-gray-700">{item.product_name}{item.variant_label&&<span className="text-gray-400"> · {item.variant_label}</span>}</span>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">{item.quantity}ш</span>
+                          <div key={i} className="text-xs text-gray-700 leading-snug">
+                            {item.product_name}{item.variant_label&&<span className="text-gray-400"> {item.variant_label}</span>}
                           </div>
                         ))}
                       </td>
-                      {/* Үнэ / Хүргэлт / Цэвэр */}
+                      {/* Тоо — баруун тийш тулгасан */}
+                      <td className="py-2.5 px-1 align-middle text-right">
+                        {(o.order_items||[]).map((item:any,i:number)=>(
+                          <div key={i} className="text-xs text-gray-400 leading-snug tabular-nums">{item.quantity}ш</div>
+                        ))}
+                      </td>
+                      {/* Дүн */}
                       <td className="py-2.5 px-2 align-middle text-right whitespace-nowrap">
                         <div className="text-xs text-gray-500 tabular-nums">{fmt(gross)}₮</div>
                         {o.delivery_fee>0&&<div className="text-[11px] text-gray-300 tabular-nums">−{fmt(o.delivery_fee)}₮</div>}
                         <div className={`text-xs font-semibold tabular-nums ${net<0?'text-red-500':'text-emerald-600'}`}>{fmt(net)}₮</div>
                       </td>
-                      {/* Төлөв */}
+                      {/* Төлөв + dropdown */}
                       <td className="py-2.5 pl-2 pr-4 align-middle text-right whitespace-nowrap">
                         {!isViewer?(
                           <div className="relative inline-block" ref={openDropdown===o.id?dropdownRef:null}>
@@ -501,13 +506,14 @@ export default function DashPage() {
                               {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
                             </button>
                             {openDropdown===o.id&&(
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                {o.status!=='delivered'&&<button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
-                                {o.status==='delivered'&&<button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
-                                {o.status==='cancelled'&&<button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
-                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                {o.status!=='cancelled'&&<button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
-                                <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[160px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
+                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">↩ Хүлээгдэж байна</button>}
+                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">↩ Буцаах</button>}
+                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>}
+                                <div className="border-t border-gray-100"/>
+                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">✏️ Засах</button>
+                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50">🗑 Устгах</button>
                               </div>
                             )}
                           </div>
