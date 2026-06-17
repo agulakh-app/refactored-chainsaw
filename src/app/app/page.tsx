@@ -447,12 +447,12 @@ export default function DashPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
                   <colgroup>
-                    <col style={{width:'12%'}}/><!-- утас -->
-                    <col style={{width:'30%'}}/><!-- хаяг -->
-                    <col style={{width:'24%'}}/><!-- бараа -->
-                    <col style={{width:'4%'}}/><!-- тоо -->
-                    <col style={{width:'16%'}}/><!-- дүн -->
-                    <col style={{width:'14%'}}/><!-- төлөв -->
+                    <col style={{width:'12%'}}/>
+                    <col style={{width:'30%'}}/>
+                    <col style={{width:'24%'}}/>
+                    <col style={{width:'4%'}}/>
+                    <col style={{width:'16%'}}/>
+                    <col style={{width:'14%'}}/>
                   </colgroup>
                   <tbody>
                 {grp.map((o,idx)=>{
