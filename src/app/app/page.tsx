@@ -444,8 +444,18 @@ export default function DashPage() {
                 <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
                 <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="font-semibold text-emerald-700">{fmt(dayNet)}₮</span></span>
               </div>
-              <div className="divide-y divide-gray-100">
-                {grp.map(o=>{
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
+                  <colgroup>
+                    <col style={{width:'12%'}}/>
+                    <col style={{width:'38%'}}/>
+                    <col style={{width:'18%'}}/>
+                    <col style={{width:'4%'}}/>
+                    <col style={{width:'14%'}}/>
+                    <col style={{width:'14%'}}/>
+                  </colgroup>
+                  <tbody>
+                {grp.map((o,idx)=>{
                   const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
                   const net=gross-(o.delivery_fee||0)
                   const storeName=stores.find(s=>s.id===(o as any).store_id)?.name
@@ -453,18 +463,35 @@ export default function DashPage() {
                   const isDelivered=o.status==='delivered'
                   const isCancelled=o.status==='cancelled'
                   return (
-                    <div key={o.id} className="px-4 py-3 bg-white">
-                      {/* Мөр 1: Утас + Үйлдэл dropdown (статус харагдана) */}
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <button onClick={()=>copyOrderInfo(o)} className="text-sm font-medium text-gray-800 hover:text-emerald-600 flex-shrink-0">
+                    <tr key={o.id} className={`border-b border-gray-100 ${idx%2===1?'bg-gray-50/40':''}`}>
+                      {/* Утас */}
+                      <td className="py-2.5 pl-4 pr-2 align-middle whitespace-nowrap">
+                        <button onClick={()=>copyOrderInfo(o)} className="text-sm font-semibold text-gray-800 hover:text-emerald-600">
                           {o.phone}
                         </button>
-                        {!activeStoreId&&storeName&&(
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200 flex-shrink-0">{storeName}</span>
-                        )}
-                        <div className="flex-1"/>
-                        {!isViewer&&(
-                          <div className="relative flex-shrink-0" ref={openDropdown===o.id?dropdownRef:null}>
+                        {showStore&&<div className="text-[10px] text-gray-400 mt-0.5">{storeName}</div>}
+                      </td>
+                      {/* Хаяг */}
+                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
+                      {/* Бараа + Тоо */}
+                      <td className="py-2.5 px-2 align-middle" colSpan={2}>
+                        {(o.order_items||[]).map((item:any,i:number)=>(
+                          <div key={i} className="flex items-baseline gap-1.5">
+                            <span className="text-xs text-gray-700">{item.product_name}{item.variant_label&&<span className="text-gray-400"> · {item.variant_label}</span>}</span>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">{item.quantity}ш</span>
+                          </div>
+                        ))}
+                      </td>
+                      {/* Үнэ / Хүргэлт / Цэвэр */}
+                      <td className="py-2.5 px-2 align-middle text-right whitespace-nowrap">
+                        <div className="text-xs text-gray-500 tabular-nums">{fmt(gross)}₮</div>
+                        {o.delivery_fee>0&&<div className="text-[11px] text-gray-300 tabular-nums">−{fmt(o.delivery_fee)}₮</div>}
+                        <div className={`text-xs font-semibold tabular-nums ${net<0?'text-red-500':'text-emerald-600'}`}>{fmt(net)}₮</div>
+                      </td>
+                      {/* Төлөв */}
+                      <td className="py-2.5 pl-2 pr-4 align-middle text-right whitespace-nowrap">
+                        {!isViewer?(
+                          <div className="relative inline-block" ref={openDropdown===o.id?dropdownRef:null}>
                             <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
                               className={`text-xs px-2.5 py-1 rounded-lg border flex items-center gap-1 whitespace-nowrap ${
                                 isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
@@ -475,56 +502,28 @@ export default function DashPage() {
                             </button>
                             {openDropdown===o.id&&(
                               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[150px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                {o.status!=='delivered'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>
-                                )}
-                                {o.status==='delivered'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>
-                                )}
-                                {o.status==='cancelled'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>
-                                )}
-                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                {o.status!=='cancelled'&&(
-                                  <button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>
-                                )}
+                                {o.status!=='delivered'&&<button onClick={()=>setOrderStatus(o.id,'delivered')} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
+                                {o.status==='delivered'&&<button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
+                                {o.status==='cancelled'&&<button onClick={()=>setOrderStatus(o.id,'pending')} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
+                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                                {o.status!=='cancelled'&&<button onClick={()=>setOrderStatus(o.id,'cancelled')} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
                                 <button onClick={()=>deleteOrder(o)} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
                               </div>
                             )}
                           </div>
-                        )}
-                        {isViewer&&(
-                          <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
-                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-100':
+                        ):(
+                          <span className={`text-xs px-2.5 py-1 rounded-lg border ${
+                            isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
                             isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                            'bg-amber-50 text-amber-600 border-amber-100'
-                          }`}>
-                            {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}
-                          </span>
+                            'bg-amber-50 text-amber-600 border-amber-200'
+                          }`}>{isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'}</span>
                         )}
-                      </div>
-                      {/* Мөр 2: Хаяг бүтэн өргөн */}
-                      <div className="text-xs text-gray-400 mb-2 w-full">{o.address}</div>
-                      <div className="space-y-1 mb-2">
-                        {(o.order_items||[]).map((item:any,idx:number)=>(
-                          <div key={idx} className="flex justify-between items-baseline">
-                            <span className="text-xs text-gray-500">{item.product_name}{item.variant_label&&<span className="text-gray-400 ml-1">· {item.variant_label}</span>}</span>
-                            <div className="flex items-baseline gap-4">
-                              <span className="text-xs text-gray-400">{item.quantity} ш</span>
-                              <span className="text-xs text-gray-500 w-20 text-right">{fmt(item.quantity*item.unit_price)}₮</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {o.delivery_fee>0&&(
-                        <div className="flex justify-end border-t border-gray-50 pt-1.5">
-                          <span className="text-xs text-gray-300 tabular-nums">{fmt(gross)}₮ − {fmt(o.delivery_fee)}₮ = {fmt(net)}₮</span>
-                        </div>
-                      )}
-                    </div>
+                      </td>
+                    </tr>
                   )
                 })}
+                  </tbody>
+                </table>
               </div>
             </div>
           )
