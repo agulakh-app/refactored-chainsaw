@@ -474,7 +474,7 @@ export default function DashPage() {
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
                       {/* Бараа */}
-                      <td className="py-2.5 pl-2 pr-0.5 align-middle">
+                      <td className="py-2.5 pl-2 pr-0.5 align-middle text-right">
                         {(o.order_items||[]).map((item:any,i:number)=>(
                           <div key={i} className="text-xs text-gray-700 leading-snug">
                             {item.product_name}{item.variant_label&&<span className="text-gray-400"> {item.variant_label}</span>}
