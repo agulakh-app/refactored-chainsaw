@@ -447,12 +447,12 @@ export default function DashPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
                   <colgroup>
-                    <col style={{width:'12%'}}/>
-                    <col style={{width:'38%'}}/>
-                    <col style={{width:'18%'}}/>
-                    <col style={{width:'4%'}}/>
-                    <col style={{width:'14%'}}/>
-                    <col style={{width:'14%'}}/>
+                    <col style={{width:'12%'}}/><!-- утас -->
+                    <col style={{width:'32%'}}/><!-- хаяг - багасгав -->
+                    <col style={{width:'22%'}}/><!-- бараа - нэмэв -->
+                    <col style={{width:'4%'}}/><!-- тоо -->
+                    <col style={{width:'16%'}}/><!-- дүн - нэмэв -->
+                    <col style={{width:'14%'}}/><!-- төлөв -->
                   </colgroup>
                   <tbody>
                 {grp.map((o,idx)=>{
@@ -474,7 +474,7 @@ export default function DashPage() {
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
                       {/* Бараа */}
-                      <td className="py-2.5 px-2 align-middle">
+                      <td className="py-2.5 pl-2 pr-0.5 align-middle">
                         {(o.order_items||[]).map((item:any,i:number)=>(
                           <div key={i} className="text-xs text-gray-700 leading-snug">
                             {item.product_name}{item.variant_label&&<span className="text-gray-400"> {item.variant_label}</span>}
@@ -482,7 +482,7 @@ export default function DashPage() {
                         ))}
                       </td>
                       {/* Тоо — баруун тийш тулгасан */}
-                      <td className="py-2.5 px-1 align-middle text-right">
+                      <td className="py-2.5 pl-0.5 pr-1 align-middle text-right">
                         {(o.order_items||[]).map((item:any,i:number)=>(
                           <div key={i} className="text-xs text-gray-400 leading-snug tabular-nums">{item.quantity}ш</div>
                         ))}
