@@ -606,7 +606,7 @@ if (error) {
           </div>
         </div>
 
-        </div> {/* end grid cols-2 */}
+        </div>
       )}
 
       {/* Бараа жагсаалт */}
