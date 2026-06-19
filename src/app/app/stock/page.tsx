@@ -424,52 +424,54 @@ if (error) {
       {/* Агуулахад бараа нэмэх */}
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <h2 className="font-medium text-gray-800 mb-4 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="flex flex-wrap gap-2 mb-2">
-            <div className="flex-1 min-w-[140px]">
+          <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
+          <div className="grid gap-2" style={{gridTemplateColumns:'2fr 70px 140px 1.5fr auto'}}>
+            <div>
               <label className="block text-xs text-gray-500 mb-1">Бараа</label>
               <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                 value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
                 {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
               </select>
             </div>
-            {variantEnabled && rVariants.length > 0 && (
-              <div className="flex-1 min-w-[140px]">
-                <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
-                  <option value={-1}>— Сонгох —</option>
-                  {rVariants.map((v, i) => (
-                    <option key={i} value={i}>
-                      {[v.size, v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="w-20">
+            <div>
               <label className="block text-xs text-gray-500 mb-1">Тоо</label>
               <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border text-sm ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
+                className={`w-full px-2 py-2 rounded-lg border text-sm text-center ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
             </div>
-            <div className="w-36">
+            <div>
               <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={rDate} onChange={e=>setRDate(e.target.value)} />
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
+                <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
+                  value={rDate} onChange={e=>setRDate(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
+            </div>
+            <div className="flex items-end">
+              <button onClick={addRestock}
+                className={`px-4 py-2 rounded-lg text-sm font-medium text-white whitespace-nowrap ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
+                {Number(rQty)<0?'Хасах':'Нэмэх'}
+              </button>
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Нийлүүлэгч, нэхэмжлэл дугаар..." value={rNote} onChange={e=>setRNote(e.target.value)} />
-          </div>
+          {variantEnabled && rVariants.length > 0 && (
+            <div className="mt-2">
+              <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
+              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
+                <option value={-1}>— Сонгох —</option>
+                {rVariants.map((v, i) => (
+                  <option key={i} value={i}>
+                    {[v.size, v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
-          <div className="flex justify-end mt-3">
-            <button onClick={addRestock}
-              className={`px-5 py-2 rounded-lg text-sm font-medium text-white ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
-              {Number(rQty)<0?'Хасах':'Агуулахад бараа нэмэх'}
-            </button>
-          </div>
         </div>
       )}
 

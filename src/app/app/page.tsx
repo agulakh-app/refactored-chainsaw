@@ -126,7 +126,14 @@ export default function DashPage() {
       store_id:activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
-      await supabase.from('order_items').insert(oItems.map(it=>({order_id:order.id,product_id:it.product_id,product_name:it.product_name,quantity:Number(it.qty),unit_price:Number(it.price),variant_label:it.variant_label||null})))
+      await supabase.from('order_items').insert(oItems.map(it=>({
+        order_id:order.id,
+        product_id:it.product_id,
+        product_name:it.product_name,
+        quantity:Number(it.qty),
+        unit_price:(it as any).paid?0:Number(it.price),
+        variant_label:it.variant_label||null
+      })))
       for(const it of oItems){
         const p=products.find(x=>x.id===it.product_id)!
         const pvs:any[]=(p as any).variants||[]
