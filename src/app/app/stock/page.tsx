@@ -425,7 +425,14 @@ if (error) {
       {!isViewer && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="grid gap-2" style={{gridTemplateColumns:'2fr 70px 140px 1.5fr auto'}}>
+          <div className="grid gap-2" style={{gridTemplateColumns:'140px 2fr 70px 2fr auto'}}>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
+                <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
+                  value={rDate} onChange={e=>setRDate(e.target.value)} />
+              </div>
+            </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Бараа</label>
               <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -437,13 +444,6 @@ if (error) {
               <label className="block text-xs text-gray-500 mb-1">Тоо</label>
               <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
                 className={`w-full px-2 py-2 rounded-lg border text-sm text-center ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-              <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
-                <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
-                  value={rDate} onChange={e=>setRDate(e.target.value)} />
-              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
