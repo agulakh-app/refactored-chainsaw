@@ -193,8 +193,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             </div>
           </div>
 
-          <div className="hidden md:flex items-center justify-between gap-4">
-            <div className="flex">
+          <div className="hidden md:flex items-center justify-start gap-4">
+            <div className="flex flex-1">
               {visibleTabs.map(t => (
                 <button key={t.href} onClick={() => router.push(t.href)}
                   className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
