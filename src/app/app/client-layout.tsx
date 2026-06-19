@@ -154,7 +154,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
       <header className="bg-[#0a2e24] sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4">
+        <div className="px-4">
           <div className="flex items-center justify-between py-3 border-b border-white/10">
             <div className="flex items-center gap-2.5">
               <span className="relative inline-flex items-center">
