@@ -147,17 +147,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Admin */}
-      {isAdmin && (
-        <a href="/admin" className="flex items-center justify-between bg-gray-900 text-white rounded-xl px-4 py-3 hover:bg-gray-800">
-          <div>
-            <div className="text-sm font-medium">Admin самбар</div>
-            <div className="text-xs text-gray-400 mt-0.5">Хэрэглэгч, төлбөр, статистик</div>
-          </div>
-          <span className="text-gray-400 text-sm">→</span>
-        </a>
-      )}
-
       {/* Дэлгүүрүүд */}
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <h2 className="font-medium text-gray-800 mb-1 text-sm">Дэлгүүрүүд</h2>

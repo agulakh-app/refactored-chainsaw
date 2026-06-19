@@ -160,43 +160,47 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-gray-50 flex">
 
       {/* ── DESKTOP SIDEBAR ── */}
-      <aside className="hidden md:flex flex-col w-[200px] min-h-screen bg-[#0a2e24] flex-shrink-0 sticky top-0 overflow-y-auto" style={{height:'100vh'}}>
+      <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0 sticky top-0 self-start" style={{height:'100vh',overflowY:'auto'}}>
 
-        {/* Logo */}
-        <div className="px-5 py-4 border-b border-white/10">
+        {/* Logo + хугацаа */}
+        <div className="px-5 pt-4 pb-3 border-b border-white/10">
           <span className="relative inline-flex items-center">
-            <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">OLULA</span>
+            <span className="font-extrabold text-lg tracking-tight text-[#07e6ae]">OLULA</span>
             <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
           </span>
+          {!isGuest&&subStatus==='active'&&(
+            <div className="text-[11px] text-[#07e6ae]/60 mt-1">Идэвхтэй · {timeLeft(subEndsAt)}</div>
+          )}
+          {!isGuest&&subStatus==='trial'&&(
+            <div className="text-[11px] text-amber-300/60 mt-1">Туршилт · {timeLeft(trialEndsAt)}</div>
+          )}
           {isGuest&&(
-            <div className="mt-1 px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20 inline-block">
-              {guestRole==='editor'?'Засварлагч':'Харах'}
-            </div>
+            <div className="text-[11px] text-blue-300/60 mt-1">{guestRole==='editor'?'Засварлагч':'Харах'}</div>
           )}
         </div>
 
-        {/* Дэлгүүр dropdown */}
+        {/* Дэлгүүр сонголт */}
         {showStoreSwitcher&&(
-          <div className="px-3 py-3 border-b border-white/10">
-            <button onClick={()=>setStoreOpen(!storeOpen)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/8 text-white/80 text-sm hover:bg-white/12 transition-all">
-              <span className="truncate">{activeStoreId?stores.find(s=>s.id===activeStoreId)?.name||'Дэлгүүр':'Бүгд'}</span>
-              <span className="text-white/40 text-xs ml-1">{storeOpen?'▲':'▾'}</span>
-            </button>
-            {storeOpen&&(
-              <div className="mt-1 rounded-lg overflow-hidden border border-white/10">
-                <button onClick={()=>{setActiveStoreId(null);setStoreOpen(false)}}
-                  className={`w-full text-left px-3 py-2 text-xs transition-all ${activeStoreId===null?'bg-[#07e6ae] text-[#0a2e24] font-medium':'text-white/60 hover:bg-white/8'}`}>
-                  Бүгд
+          <div className="px-3 pt-3 pb-2 border-b border-white/10">
+            <div className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-1.5">Дэлгүүр</div>
+            <div className="space-y-0.5">
+              <button onClick={()=>setActiveStoreId(null)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left ${
+                  activeStoreId===null?'bg-white/12 text-white font-medium':'text-white/50 hover:bg-white/6 hover:text-white/80'
+                }`}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===null?'bg-[#07e6ae]':'bg-white/20'}`}/>
+                Бүгд
+              </button>
+              {stores.map(s=>(
+                <button key={s.id} onClick={()=>setActiveStoreId(s.id)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left ${
+                    activeStoreId===s.id?'bg-white/12 text-white font-medium':'text-white/50 hover:bg-white/6 hover:text-white/80'
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===s.id?'bg-[#07e6ae]':'bg-white/20'}`}/>
+                  {s.name}
                 </button>
-                {stores.map(s=>(
-                  <button key={s.id} onClick={()=>{setActiveStoreId(s.id);setStoreOpen(false)}}
-                    className={`w-full text-left px-3 py-2 text-xs transition-all ${activeStoreId===s.id?'bg-[#07e6ae] text-[#0a2e24] font-medium':'text-white/60 hover:bg-white/8'}`}>
-                    {s.name}
-                  </button>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
           </div>
         )}
 
