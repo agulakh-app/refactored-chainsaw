@@ -26,6 +26,7 @@ export default function DashPage() {
 
   function confirm2(msg:string, onOk:()=>void){ setConfirmModal({msg,onOk}) }
   const [phoneFilter,setPhoneFilter]=useState('')
+  const [productFilter,setProductFilter]=useState('')
   const [storeFilter,setStoreFilter]=useState('all')
   const [statusFilter,setStatusFilter]=useState('all')
   const [dateFilter,setDateFilter]=useState('')
@@ -170,8 +171,26 @@ export default function DashPage() {
     setOpenDropdown(null)
     if(o.status==='pending'){
       for(const it of(o.order_items||[])){
-        const p=products.find(x=>x.id===(it as any).product_id)
-        if(p) await supabase.from('products').update({stock:p.stock+(it as any).quantity}).eq('id',p.id)
+        const pid=(it as any).product_id
+        const qty=(it as any).quantity
+        const variantLabel=(it as any).variant_label
+        if(!pid) continue
+        // DB-с шинэ өгөгдөл татах
+        const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
+        if(!prod) continue
+        if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
+          // Variant-тай бараа
+          const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
+          if(vIdx>=0){
+            const nv=[...prod.variants]
+            nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
+            const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+            await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+          }
+        } else {
+          // Variant-гүй бараа
+          await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
+        }
       }
     }
     await supabase.from('order_items').delete().eq('order_id',o.id)
@@ -189,6 +208,12 @@ export default function DashPage() {
     if(phoneFilter&&!o.phone.includes(phoneFilter)) return false
     if(statusFilter!=='all'&&o.status!==statusFilter) return false
     if(dateFilter&&o.date!==dateFilter) return false
+    if(productFilter){
+      const hasProduct=(o.order_items||[]).some((it:any)=>
+        (it.product_name||'').toLowerCase().includes(productFilter.toLowerCase())
+      )
+      if(!hasProduct) return false
+    }
     if(storeFilter!=='all'){
       const store=stores.find(s=>s.id===(o as any).store_id)
       if(!store||store.name!==storeFilter) return false
@@ -425,6 +450,7 @@ export default function DashPage() {
         </div>
         <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэрээр хайх..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
           <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center">
             <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
             {!dateFilter&&<span className="absolute left-0 right-6 flex items-center px-3 text-sm text-gray-400 pointer-events-none bg-white h-full">Огноо...</span>}
@@ -436,12 +462,6 @@ export default function DashPage() {
               {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
             </select>
           ):<div/>}
-          <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
-            <option value="all">Бүх статус</option>
-            <option value="pending">Хүлээгдэж байна</option>
-            <option value="delivered">Хүргэгдсэн</option>
-            <option value="cancelled">Цуцлагдсан</option>
-          </select>
         </div>
 
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{

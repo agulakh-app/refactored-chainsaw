@@ -121,6 +121,27 @@ export default function HistoryPage() {
     setConfirmModal({
       msg: 'Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.',
       onOk: async () => {
+        if(o.status==='pending'){
+          for(const it of(o.order_items||[])){
+            const pid=(it as any).product_id
+            const qty=(it as any).quantity
+            const variantLabel=(it as any).variant_label
+            if(!pid) continue
+            const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
+            if(!prod) continue
+            if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
+              const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
+              if(vIdx>=0){
+                const nv=[...prod.variants]
+                nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
+                const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+                await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+              }
+            } else {
+              await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
+            }
+          }
+        }
         await supabase.from('order_items').delete().eq('order_id', o.id)
         await supabase.from('orders').delete().eq('id', o.id)
         load()
