@@ -60,6 +60,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [adminUser, setAdminUser] = useState(false)
   const [storeOpen, setStoreOpen] = useState(false)
 
+  useEffect(()=>{
+    supabase.auth.getUser().then(({data:{user}})=>{
+      if(user) setAdminUser(user.email==='88118270@agulakh.app'||user.email==='hardworkingfmly@gmail.com')
+    })
+  },[])
+
   useEffect(() => {
     // PWA install prompt
     const handler = (e: any) => {
@@ -149,12 +155,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return true
   })
   const showStoreSwitcher = !isGuest && stores.length > 1
-
-  useEffect(()=>{
-    supabase.auth.getUser().then(({data:{user}})=>{
-      if(user) setAdminUser(user.email==='88118270@agulakh.app'||user.email==='hardworkingfmly@gmail.com')
-    })
-  },[])
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
