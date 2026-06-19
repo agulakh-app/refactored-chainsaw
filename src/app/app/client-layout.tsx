@@ -57,6 +57,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [isInstalled, setIsInstalled] = useState(false)
+  const [adminUser, setAdminUser] = useState(false)
+  const [storeOpen, setStoreOpen] = useState(false)
 
   useEffect(() => {
     // PWA install prompt
@@ -147,14 +149,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return true
   })
   const showStoreSwitcher = !isGuest && stores.length > 1
-  const isAdmin = typeof window !== 'undefined' ? false : false // client-side only
-  const [adminUser, setAdminUser] = useState(false)
+
   useEffect(()=>{
     supabase.auth.getUser().then(({data:{user}})=>{
       if(user) setAdminUser(user.email==='88118270@agulakh.app'||user.email==='hardworkingfmly@gmail.com')
     })
   },[])
-  const [storeOpen, setStoreOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
