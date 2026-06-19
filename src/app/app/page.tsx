@@ -409,7 +409,6 @@ export default function DashPage() {
                     <span className="text-xs text-emerald-600">Хүргэлт хасагдахгүй · Хүргэгдсэн статустай бүртгэгдэнэ</span>
                   </div>
                 )}
-                </div>
                 <div className="flex justify-end mt-2">
                   <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
                 </div>
