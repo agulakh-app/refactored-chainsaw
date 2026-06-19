@@ -92,10 +92,10 @@ export default function DashPage() {
 
   function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])}
   function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx))}
-  function setItem(idx:number,key:string,val:string){
+  function setItem(idx:number,key:string,val:string|boolean){
     setOItems(items=>items.map((it,i)=>{
       if(i!==idx) return it
-      if(key==='product_id'){const p=products.find(x=>x.id===val);return{...it,product_id:val,product_name:p?.name||'',price:String(p?.unit_price||''),variant_label:''}}
+      if(key==='product_id'){const p=products.find(x=>x.id===val);return{...it,product_id:val as string,product_name:p?.name||'',price:String(p?.unit_price||''),variant_label:''}}
       return{...it,[key]:val}
     }))
   }
@@ -122,7 +122,7 @@ export default function DashPage() {
     const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
-      phone:oPhone,address:oAddr,delivery_fee:oPaid?0:Number(oDelv)||0,status:oPaid?'delivered':'pending',
+      phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
       store_id:activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
@@ -355,10 +355,11 @@ export default function DashPage() {
               <div className="flex flex-col">
                 <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
                 <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-2 flex-1">
-                  <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 mb-1 px-1">
+                  <div className="grid grid-cols-[1fr_46px_72px_22px_20px] gap-1.5 mb-1 px-1">
                     <div className="text-xs text-gray-400">Бараа</div>
                     <div className="text-xs text-gray-400 text-center">Тоо</div>
                     <div className="text-xs text-gray-400">Үнэ (₮)</div>
+                    <div className="text-xs text-gray-400 text-center" title="Төлөгдсөн">✓</div>
                     <div></div>
                   </div>
                   {oItems.map((it,idx)=>{
@@ -366,13 +367,17 @@ export default function DashPage() {
                     const variants:any[]=(selProd as any)?.variants||[]
                     return(
                     <div key={idx} className="space-y-1.5">
-                      <div className="grid grid-cols-[1fr_50px_80px_28px] gap-2 items-center">
-                        <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
+                      <div className="grid grid-cols-[1fr_46px_72px_22px_20px] gap-1.5 items-center">
+                        <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white truncate" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
                           {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                         </select>
-                        <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)} style={{minWidth:52}}/>
+                        <input type="number" className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
                         <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
-                        {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
+                        <div onClick={()=>setItem(idx,'paid',!(it as any).paid)}
+                          className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all cursor-pointer flex-shrink-0 ${(it as any).paid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
+                          {(it as any).paid&&<span className="text-white text-[10px] font-bold">✓</span>}
+                        </div>
+                        {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-5 h-5 flex items-center justify-center text-red-400 rounded text-xs">✕</button>}
                       </div>
                       {variantEnabled&&variants.length>0&&(
                         <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white text-gray-600"
@@ -393,21 +398,9 @@ export default function DashPage() {
                     </div>
                   )})}
                 </div>
-                <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center justify-between mt-2">
                   <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <div onClick={()=>setOPaid(!oPaid)}
-                      className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
-                      {oPaid&&<span className="text-white text-xs font-bold">✓</span>}
-                    </div>
-                    <span className="text-xs text-gray-500">Төлбөр төлөгдсөн</span>
-                  </label>
                 </div>
-                {oPaid&&(
-                  <div className="mt-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <span className="text-xs text-emerald-600">Хүргэлт хасагдахгүй · Хүргэгдсэн статустай бүртгэгдэнэ</span>
-                  </div>
-                )}
                 <div className="flex justify-end mt-2">
                   <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
                 </div>
