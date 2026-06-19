@@ -506,13 +506,13 @@ export default function DashPage() {
                             </button>
                             {openDropdown===o.id&&(
                               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[160px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>}
-                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
-                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
-                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
+                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>}
+                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
+                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
+                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
                                 <div className="border-t border-gray-100"/>
-                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50">Устгах</button>
+                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50">Устгах</button>
                               </div>
                             )}
                           </div>

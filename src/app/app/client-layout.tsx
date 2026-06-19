@@ -252,7 +252,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </main>
 
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
-        <div className="flex items-center justify-around px-2 py-1">
+        <div className="flex items-center justify-start px-2 py-1 gap-0">
           {visibleTabs.map(t => {
             const active = path === t.href
             return (
