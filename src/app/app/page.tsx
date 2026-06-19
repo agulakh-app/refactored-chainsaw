@@ -40,6 +40,7 @@ export default function DashPage() {
   const [oPhone,setOPhone]=useState('')
   const [oAddr,setOAddr]=useState('')
   const [oDelv,setODelv]=useState('')
+  const [oPaid,setOPaid]=useState(false)
   const [oStore,setOStore]=useState('')
   const [oWarehouse,setOWarehouse]=useState('')
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
@@ -121,7 +122,7 @@ export default function DashPage() {
     const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
-      phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
+      phone:oPhone,address:oAddr,delivery_fee:oPaid?0:Number(oDelv)||0,status:oPaid?'delivered':'pending',
       store_id:activeStoreId||null,warehouse_id:oWarehouse||null
     }).select().single()
     if(order){
@@ -312,7 +313,14 @@ export default function DashPage() {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
-                  {gross>0&&<span className="text-xs text-gray-400">{fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = `+fmt(net)+'₮':''}</span>}
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <div onClick={()=>setOPaid(!oPaid)}
+                      className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
+                      {oPaid&&<span className="text-white text-xs font-bold">✓</span>}
+                    </div>
+                    <span className="text-xs text-gray-500">Төлбөр төлөгдсөн</span>
+                  </label>
+                </div>
                 </div>
               </div>
               <div className="flex justify-end">
@@ -330,7 +338,7 @@ export default function DashPage() {
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
             {/* Мөр 2: Хаяг | Бараа — ижил өндөр */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch mt-1">
               <div className="flex flex-col">
                 <label className="block text-xs text-gray-500 mb-1">Хаяг</label>
                 <textarea
@@ -386,11 +394,21 @@ export default function DashPage() {
                     </div>
                   )})}
                 </div>
-                <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center justify-between mt-3">
                   <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
-                  {gross>0&&<span className="text-xs text-gray-400">
-                    {fmt(gross)}₮{Number(oDelv)>0?` − ${fmt(Number(oDelv))}₮ = `+fmt(net)+'₮':''}
-                  </span>}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <div onClick={()=>setOPaid(!oPaid)}
+                      className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
+                      {oPaid&&<span className="text-white text-xs font-bold">✓</span>}
+                    </div>
+                    <span className="text-xs text-gray-500">Төлбөр төлөгдсөн</span>
+                  </label>
+                </div>
+                {oPaid&&(
+                  <div className="mt-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-100">
+                    <span className="text-xs text-emerald-600">Хүргэлт хасагдахгүй · Хүргэгдсэн статустай бүртгэгдэнэ</span>
+                  </div>
+                )}
                 </div>
                 <div className="flex justify-end mt-2">
                   <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
@@ -442,11 +460,12 @@ export default function DashPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
                   <colgroup>
-                    <col style={{width:'12%'}}/>
-                    <col style={{width:'28%'}}/>
-                    <col style={{width:'22%'}}/>
+                    <col style={{width:'11%'}}/>
+                    <col style={{width:'27%'}}/>
+                    <col style={{width:'21%'}}/>
                     <col style={{width:'4%'}}/>
-                    <col style={{width:'14%'}}/>
+                    <col style={{width:'13%'}}/>
+                    <col style={{width:'4%'}}/>
                     <col style={{width:'20%'}}/>
                   </colgroup>
                   <tbody>
@@ -487,6 +506,8 @@ export default function DashPage() {
                         {o.delivery_fee>0&&<div className="text-[11px] text-gray-300 tabular-nums">−{fmt(o.delivery_fee)}₮</div>}
                         <div className={`text-xs font-semibold tabular-nums ${net<0?'text-red-500':'text-emerald-600'}`}>{fmt(net)}₮</div>
                       </td>
+                      {/* Зай */}
+                      <td/>
                       {/* Төлөв + dropdown */}
                       <td className="py-2.5 pl-1 pr-3 align-middle text-right">
                         {!isViewer?(

@@ -162,12 +162,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* ── DESKTOP SIDEBAR ── */}
       <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0" style={{position:'sticky',top:0,height:'100vh',overflowY:'auto'}}>
 
-        {/* Logo */}
+        {/* Logo + хугацаа */}
         <div className="px-5 pt-4 pb-3 border-b border-white/10">
           <span className="relative inline-flex items-center">
             <span className="font-extrabold text-lg tracking-tight text-[#07e6ae]">OLULA</span>
             <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
           </span>
+          {!isGuest&&subStatus==='active'&&(
+            <div className="text-[11px] text-[#07e6ae]/60 mt-1">Идэвхтэй · {timeLeft(subEndsAt)}</div>
+          )}
+          {!isGuest&&subStatus==='trial'&&(
+            <div className="text-[11px] text-amber-300/60 mt-1">Туршилт · {timeLeft(trialEndsAt)}</div>
+          )}
           {isGuest&&(
             <div className="text-[11px] text-blue-300/60 mt-1">{guestRole==='editor'?'Засварлагч':'Харах'}</div>
           )}
