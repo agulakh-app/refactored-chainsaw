@@ -246,7 +246,7 @@ export default function DashPage() {
       {!isViewer&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-medium text-gray-800 text-sm">Шинэ захиалга</h2>
+            <h2 className="font-medium text-gray-800 text-sm text-left">Шинэ захиалга</h2>
             {activeStoreId&&stores.length>0&&(
               <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
                 {stores.find(s=>s.id===activeStoreId)?.name}
@@ -410,7 +410,7 @@ export default function DashPage() {
       {/* Orders list */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-medium text-gray-800 text-sm">Захиалгын бүртгэл</h2>
+          <h2 className="font-medium text-gray-800 text-sm text-left">Захиалгын бүртгэл</h2>
         </div>
         <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
@@ -463,7 +463,7 @@ export default function DashPage() {
                   const isDelivered=o.status==='delivered'
                   const isCancelled=o.status==='cancelled'
                   return (
-                    <tr key={o.id} className={`border-b border-gray-100 ${idx%2===1?'bg-gray-50/40':''}`}>
+                    <tr key={o.id} className="border-b border-gray-100">
                       {/* Утас */}
                       <td className="py-2.5 pl-4 pr-2 align-middle whitespace-nowrap">
                         <button onClick={()=>copyOrderInfo(o)} className="text-sm font-semibold text-gray-800 hover:text-emerald-600">
@@ -473,7 +473,7 @@ export default function DashPage() {
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
                       {/* Бараа */}
-                      <td className="py-2.5 pl-8 pr-0.5 align-middle text-right">
+                      <td className="py-2.5 pl-8 pr-0.5 align-middle text-left">
                         {(o.order_items||[]).map((item:any,i:number)=>(
                           <div key={i} className="text-xs text-gray-700 leading-snug">
                             {item.product_name}{item.variant_label&&<span className="text-gray-400"> {item.variant_label}</span>}
@@ -506,13 +506,13 @@ export default function DashPage() {
                             </button>
                             {openDropdown===o.id&&(
                               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[160px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">✓ Хүргэгдсэн</button>}
-                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">↩ Хүлээгдэж байна</button>}
-                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">↩ Буцаах</button>}
-                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">✕ Цуцлах</button>}
+                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>}
+                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
+                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
+                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
                                 <div className="border-t border-gray-100"/>
-                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">✏️ Засах</button>
-                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50">🗑 Устгах</button>
+                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50">Устгах</button>
                               </div>
                             )}
                           </div>
