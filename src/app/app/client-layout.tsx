@@ -142,134 +142,177 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   )
 
   const isGuest = !!guestRole
-  // Зочны эрхийг урьдын адил хязгаарлана (Тохиргоо, Тайлан зочинд харагдахгүй)
   const visibleTabs = TABS.filter(t => {
     if (isGuest && (t.href === '/app/settings' || t.href === '/app/analytics')) return false
     return true
   })
-
-  // Олон дэлгүүрийн сэлгэгч — бүх идэвхтэй хэрэглэгчид (зэрэглэлгүй)
   const showStoreSwitcher = !isGuest && stores.length > 1
+  const isAdmin = typeof window !== 'undefined' ? false : false // client-side only
+  const [adminUser, setAdminUser] = useState(false)
+  useEffect(()=>{
+    supabase.auth.getUser().then(({data:{user}})=>{
+      if(user) setAdminUser(user.email==='88118270@agulakh.app'||user.email==='hardworkingfmly@gmail.com')
+    })
+  },[])
+  const [storeOpen, setStoreOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
-      <header className="bg-[#0a2e24] sticky top-0 z-20">
-        <div className="px-4">
-          <div className="flex items-center justify-between py-3 border-b border-white/10">
-            <div className="flex items-center gap-2.5">
-              <span className="relative inline-flex items-center">
-                <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">
-                  OLULA
-                </span>
-                <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
-              </span>
-              {isGuest && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20">
-                  {guestRole === 'editor' ? 'Засварлагч' : 'Харах'}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {!isGuest && subStatus === 'trial' && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-amber-400/15 text-amber-300 border border-amber-400/20">
-                  Туршилт · {timeLeft(trialEndsAt)}
-                </span>
-              )}
-              {!isGuest && subStatus === 'active' && (
-                <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/15 text-[#07e6ae] border border-[#07e6ae]/25">
-                  Идэвхтэй · {timeLeft(subEndsAt)}
-                </span>
-              )}
-              {/* Install button — зөвхөн суулгаагүй үед */}
-              {installPrompt && !isInstalled && (
-                <button onClick={installApp}
-                  className="text-xs px-2.5 py-1 bg-[#07e6ae] text-[#0a2e24] font-medium rounded-lg hover:bg-[#06d29e]">
-                  Апп суулгах
-                </button>
-              )}
-              <button onClick={logout} className="text-xs text-white/40 hover:text-white/70 px-2 py-1">
-                Гарах
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gray-50 flex">
 
-          <div className="hidden md:flex items-center justify-start gap-4">
-            <div className="flex flex-1">
-              {visibleTabs.map(t => (
-                <button key={t.href} onClick={() => router.push(t.href)}
-                  className={`px-4 py-2.5 text-sm border-b-2 transition-all whitespace-nowrap ${
-                    path === t.href
-                      ? 'border-[#07e6ae] text-[#07e6ae] font-medium'
-                      : 'border-transparent text-white/45 hover:text-white/70'
-                  }`}>
-                  {t.label}
-                </button>
-              ))}
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="hidden md:flex flex-col w-[200px] min-h-screen bg-[#0a2e24] flex-shrink-0 sticky top-0 overflow-y-auto" style={{height:'100vh'}}>
+
+        {/* Logo */}
+        <div className="px-5 py-4 border-b border-white/10">
+          <span className="relative inline-flex items-center">
+            <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">OLULA</span>
+            <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
+          </span>
+          {isGuest&&(
+            <div className="mt-1 px-2 py-0.5 rounded-full text-xs bg-blue-400/15 text-blue-300 border border-blue-400/20 inline-block">
+              {guestRole==='editor'?'Засварлагч':'Харах'}
             </div>
-            {showStoreSwitcher && (
-              <div className="flex gap-1 pb-1 flex-shrink-0">
-                <button onClick={() => setActiveStoreId(null)}
-                  className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                    activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white/70'
-                  }`}>Бүгд</button>
-                {stores.map(s => (
-                  <button key={s.id} onClick={() => setActiveStoreId(s.id)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                      activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60 hover:bg-white/15'
-                    }`}>{s.name}</button>
+          )}
+        </div>
+
+        {/* Дэлгүүр dropdown */}
+        {showStoreSwitcher&&(
+          <div className="px-3 py-3 border-b border-white/10">
+            <button onClick={()=>setStoreOpen(!storeOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-white/8 text-white/80 text-sm hover:bg-white/12 transition-all">
+              <span className="truncate">{activeStoreId?stores.find(s=>s.id===activeStoreId)?.name||'Дэлгүүр':'Бүгд'}</span>
+              <span className="text-white/40 text-xs ml-1">{storeOpen?'▲':'▾'}</span>
+            </button>
+            {storeOpen&&(
+              <div className="mt-1 rounded-lg overflow-hidden border border-white/10">
+                <button onClick={()=>{setActiveStoreId(null);setStoreOpen(false)}}
+                  className={`w-full text-left px-3 py-2 text-xs transition-all ${activeStoreId===null?'bg-[#07e6ae] text-[#0a2e24] font-medium':'text-white/60 hover:bg-white/8'}`}>
+                  Бүгд
+                </button>
+                {stores.map(s=>(
+                  <button key={s.id} onClick={()=>{setActiveStoreId(s.id);setStoreOpen(false)}}
+                    className={`w-full text-left px-3 py-2 text-xs transition-all ${activeStoreId===s.id?'bg-[#07e6ae] text-[#0a2e24] font-medium':'text-white/60 hover:bg-white/8'}`}>
+                    {s.name}
+                  </button>
                 ))}
               </div>
             )}
           </div>
+        )}
 
-          {showStoreSwitcher && (
-            <div className="flex gap-1 py-2 md:hidden border-t border-white/10 mt-0">
-              <button onClick={() => setActiveStoreId(null)}
-                className={`px-3 py-1 rounded-lg text-xs transition-all ${
-                  activeStoreId === null ? 'bg-white/15 text-white' : 'text-white/45'
-                }`}>Бүгд</button>
-              {stores.map(s => (
-                <button key={s.id} onClick={() => setActiveStoreId(s.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                    activeStoreId === s.id ? 'bg-[#07e6ae] text-[#0a2e24]' : 'bg-white/8 text-white/60'
-                  }`}>{s.name}</button>
-              ))}
-            </div>
-          )}
-        </div>
-      </header>
-
-      {isGuest && guestRole === 'viewer' && (
-        <div className="bg-[#0a2e24] border-t border-white/10 px-4 py-2 text-center text-xs text-white/40">
-          Зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
-        </div>
-      )}
-
-      <main className="max-w-5xl mx-auto px-4 py-4">
-        <GuestContext.Provider value={{ guestRole, ownerId, activeStoreId, setActiveStoreId, plan }}>
-          {children}
-        </GuestContext.Provider>
-      </main>
-
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
-        <div className="flex items-center justify-start px-2 py-1 gap-0">
-          {visibleTabs.map(t => {
-            const active = path === t.href
-            return (
-              <button key={t.href} onClick={() => router.push(t.href)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${
-                  active ? 'text-[#07e6ae]' : 'text-gray-400'
+        {/* Nav items */}
+        <nav className="flex-1 px-3 py-3 space-y-0.5">
+          {visibleTabs.map(t=>{
+            const active=path===t.href
+            return(
+              <button key={t.href} onClick={()=>router.push(t.href)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-left ${
+                  active?'bg-[#07e6ae] text-[#0a2e24] font-medium':'text-white/60 hover:bg-white/8 hover:text-white/90'
                 }`}>
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active ? 2 : 1.5} viewBox="0 0 24 24">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active?2:1.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d={t.icon}/>
                 </svg>
-                <span className={`text-xs truncate ${active ? 'font-medium' : ''}`}>{t.label}</span>
-                {active && <div className="w-1 h-1 bg-[#07e6ae] rounded-full"/>}
+                {t.label}
               </button>
             )
           })}
+        </nav>
+
+        {/* Доод хэсэг: Subscription + Admin + Гарах */}
+        <div className="px-3 py-3 border-t border-white/10 space-y-1">
+          {!isGuest&&subStatus==='trial'&&(
+            <div className="px-3 py-1.5 text-xs text-amber-300/80">Туршилт · {timeLeft(trialEndsAt)}</div>
+          )}
+          {!isGuest&&subStatus==='active'&&(
+            <div className="px-3 py-1.5 text-xs text-[#07e6ae]/70">Идэвхтэй · {timeLeft(subEndsAt)}</div>
+          )}
+          {adminUser&&(
+            <a href="/admin"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/8 hover:text-white/90 transition-all">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+              </svg>
+              Админ
+            </a>
+          )}
+          {installPrompt&&!isInstalled&&(
+            <button onClick={installApp}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/8 transition-all">
+              Апп суулгах
+            </button>
+          )}
+          <button onClick={logout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/40 hover:bg-white/8 hover:text-white/70 transition-all text-left">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+            </svg>
+            Гарах
+          </button>
         </div>
-      </nav>
+      </aside>
+
+      {/* ── MOBILE HEADER (хэвийн байдлаар хэвээр) ── */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="md:hidden bg-[#0a2e24] sticky top-0 z-20">
+          <div className="px-4">
+            <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <span className="relative inline-flex items-center">
+                <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">OLULA</span>
+                <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
+              </span>
+              <div className="flex items-center gap-2">
+                {!isGuest&&subStatus==='active'&&(
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-[#07e6ae]/15 text-[#07e6ae] border border-[#07e6ae]/25">
+                    Идэвхтэй · {timeLeft(subEndsAt)}
+                  </span>
+                )}
+                <button onClick={logout} className="text-xs text-white/40 hover:text-white/70 px-2 py-1">Гарах</button>
+              </div>
+            </div>
+            {showStoreSwitcher&&(
+              <div className="flex gap-1 py-2 border-t border-white/10">
+                <button onClick={()=>setActiveStoreId(null)}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all ${activeStoreId===null?'bg-white/15 text-white':'text-white/45'}`}>Бүгд</button>
+                {stores.map(s=>(
+                  <button key={s.id} onClick={()=>setActiveStoreId(s.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${activeStoreId===s.id?'bg-[#07e6ae] text-[#0a2e24]':'bg-white/8 text-white/60'}`}>{s.name}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </header>
+
+        {isGuest&&guestRole==='viewer'&&(
+          <div className="bg-[#0a2e24] border-t border-white/10 px-4 py-2 text-center text-xs text-white/40">
+            Зөвхөн харах эрхтэй зочноор нэвтэрсэн байна
+          </div>
+        )}
+
+        <main className="flex-1 px-4 py-4">
+          <GuestContext.Provider value={{guestRole,ownerId,activeStoreId,setActiveStoreId,plan}}>
+            {children}
+          </GuestContext.Provider>
+        </main>
+
+        {/* Mobile bottom nav */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-30">
+          <div className="flex items-center justify-start px-2 py-1 gap-0">
+            {visibleTabs.map(t=>{
+              const active=path===t.href
+              return(
+                <button key={t.href} onClick={()=>router.push(t.href)}
+                  className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${active?'text-[#07e6ae]':'text-gray-400'}`}>
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={active?2:1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d={t.icon}/>
+                  </svg>
+                  <span className={`text-xs truncate ${active?'font-medium':''}`}>{t.label}</span>
+                  {active&&<div className="w-1 h-1 bg-[#07e6ae] rounded-full"/>}
+                </button>
+              )
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   )
 }
