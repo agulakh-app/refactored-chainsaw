@@ -160,47 +160,52 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-gray-50 flex">
 
       {/* ── DESKTOP SIDEBAR ── */}
-      <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0 sticky top-0 self-start" style={{height:'100vh',overflowY:'auto'}}>
+      <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0" style={{position:'sticky',top:0,height:'100vh',overflowY:'auto'}}>
 
-        {/* Logo + хугацаа */}
+        {/* Logo */}
         <div className="px-5 pt-4 pb-3 border-b border-white/10">
           <span className="relative inline-flex items-center">
             <span className="font-extrabold text-lg tracking-tight text-[#07e6ae]">OLULA</span>
             <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
           </span>
-          {!isGuest&&subStatus==='active'&&(
-            <div className="text-[11px] text-[#07e6ae]/60 mt-1">Идэвхтэй · {timeLeft(subEndsAt)}</div>
-          )}
-          {!isGuest&&subStatus==='trial'&&(
-            <div className="text-[11px] text-amber-300/60 mt-1">Туршилт · {timeLeft(trialEndsAt)}</div>
-          )}
           {isGuest&&(
             <div className="text-[11px] text-blue-300/60 mt-1">{guestRole==='editor'?'Засварлагч':'Харах'}</div>
           )}
         </div>
 
-        {/* Дэлгүүр сонголт */}
+        {/* Дэлгүүр dropdown */}
         {showStoreSwitcher&&(
           <div className="px-3 pt-3 pb-2 border-b border-white/10">
-            <div className="text-[10px] text-white/30 uppercase tracking-wider px-1 mb-1.5">Дэлгүүр</div>
-            <div className="space-y-0.5">
-              <button onClick={()=>setActiveStoreId(null)}
-                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left ${
-                  activeStoreId===null?'bg-white/12 text-white font-medium':'text-white/50 hover:bg-white/6 hover:text-white/80'
-                }`}>
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===null?'bg-[#07e6ae]':'bg-white/20'}`}/>
-                Бүгд
-              </button>
-              {stores.map(s=>(
-                <button key={s.id} onClick={()=>setActiveStoreId(s.id)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all text-left ${
-                    activeStoreId===s.id?'bg-white/12 text-white font-medium':'text-white/50 hover:bg-white/6 hover:text-white/80'
+            <button onClick={()=>setStoreOpen(!storeOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all text-left bg-white/6 hover:bg-white/10">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#07e6ae] flex-shrink-0"/>
+                <span className="text-white font-medium truncate">
+                  {activeStoreId?stores.find(s=>s.id===activeStoreId)?.name||'Дэлгүүр':'Бүгд'}
+                </span>
+              </div>
+              <span className="text-white/30 text-[10px] ml-1 flex-shrink-0">{storeOpen?'▲':'▾'}</span>
+            </button>
+            {storeOpen&&(
+              <div className="mt-1 rounded-lg overflow-hidden border border-white/10">
+                <button onClick={()=>{setActiveStoreId(null);setStoreOpen(false)}}
+                  className={`w-full text-left px-3 py-2 text-xs transition-all flex items-center gap-2 ${
+                    activeStoreId===null?'bg-[#07e6ae]/15 text-[#07e6ae] font-medium':'text-white/50 hover:bg-white/6'
                   }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===s.id?'bg-[#07e6ae]':'bg-white/20'}`}/>
-                  {s.name}
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===null?'bg-[#07e6ae]':'bg-white/20'}`}/>
+                  Бүгд
                 </button>
-              ))}
-            </div>
+                {stores.map(s=>(
+                  <button key={s.id} onClick={()=>{setActiveStoreId(s.id);setStoreOpen(false)}}
+                    className={`w-full text-left px-3 py-2 text-xs transition-all flex items-center gap-2 ${
+                      activeStoreId===s.id?'bg-[#07e6ae]/15 text-[#07e6ae] font-medium':'text-white/50 hover:bg-white/6'
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${activeStoreId===s.id?'bg-[#07e6ae]':'bg-white/20'}`}/>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -222,14 +227,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           })}
         </nav>
 
-        {/* Доод хэсэг: Subscription + Admin + Гарах */}
+        {/* Доод хэсэг: Admin + Гарах */}
         <div className="px-3 py-3 border-t border-white/10 space-y-1">
-          {!isGuest&&subStatus==='trial'&&(
-            <div className="px-3 py-1.5 text-xs text-amber-300/80">Туршилт · {timeLeft(trialEndsAt)}</div>
-          )}
-          {!isGuest&&subStatus==='active'&&(
-            <div className="px-3 py-1.5 text-xs text-[#07e6ae]/70">Идэвхтэй · {timeLeft(subEndsAt)}</div>
-          )}
           {adminUser&&(
             <a href="/admin"
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:bg-white/8 hover:text-white/90 transition-all">

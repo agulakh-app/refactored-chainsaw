@@ -247,11 +247,6 @@ export default function DashPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-medium text-gray-800 text-sm text-left">Шинэ захиалга</h2>
-            {activeStoreId&&stores.length>0&&(
-              <span className="hidden sm:inline text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                {stores.find(s=>s.id===activeStoreId)?.name}
-              </span>
-            )}
           </div>
           <div className="space-y-3">
             {/* ── MOBILE ONLY ── */}
@@ -442,17 +437,17 @@ export default function DashPage() {
             <div key={date}>
               <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
                 <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
-                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="font-semibold text-emerald-700">{fmt(dayNet)}₮</span></span>
+                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="text-base font-bold text-emerald-700">{fmt(dayNet)}₮</span></span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
                   <colgroup>
                     <col style={{width:'12%'}}/>
-                    <col style={{width:'30%'}}/>
-                    <col style={{width:'24%'}}/>
+                    <col style={{width:'28%'}}/>
+                    <col style={{width:'22%'}}/>
                     <col style={{width:'4%'}}/>
-                    <col style={{width:'16%'}}/>
                     <col style={{width:'14%'}}/>
+                    <col style={{width:'20%'}}/>
                   </colgroup>
                   <tbody>
                 {grp.map((o,idx)=>{
