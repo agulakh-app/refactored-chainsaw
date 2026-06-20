@@ -230,18 +230,13 @@ export default function HistoryPage() {
     })
     loadXLSX().then(XLSX=>{
       const data=[
-        ['Огноо (YYYY/MM/DD)','Утасны дугаар','Хаяг','Бараа','Барааны үнэ (₮)','Хүргэлт (₮)','Статус'],
-        ['2026/06/16','89639100','Дундговь аймаг','Экс ЭМ',59000,7000,'Төлсөн'],
-        ['2026/06/16','99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2',59000,7000,'Төлсөн'],
-        ['2026/06/17','88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ','','',''],
+        ['Утасны дугаар','Хаяг','Бараа'],
+        ['89639100','Дундговь аймаг','Экс ЭМ'],
+        ['99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2'],
+        ['88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ'],
       ]
       const ws=XLSX.utils.aoa_to_sheet(data)
-      // Огноо баганыг текст болгох (########-аас сэргийлэх)
-      ws['!cols']=[{wch:18},{wch:14},{wch:30},{wch:40},{wch:16},{wch:12},{wch:12}]
-      // A баганын нүднүүдийг текст форматтай болгох
-      ;['A2','A3','A4'].forEach(cell=>{
-        if(ws[cell]) ws[cell].t='s'
-      })
+      ws['!cols']=[{wch:14},{wch:32},{wch:40}]
       const wb=XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb,ws,'Захиалга')
       XLSX.writeFile(wb,'olula_template.xlsx')
@@ -305,17 +300,21 @@ export default function HistoryPage() {
       const preview:any[]=[]
       for(const r of rows){
         const keys=Object.keys(r)
-        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r['Date']||r['date']||r[keys[0]]||'').toString().trim()
-        const date=rawDate.replace(/[./]/g,'-').slice(0,10)
+        // 1-р багана: Утас
+        const phone=(r['Утасны дугаар']||r['Утас']||r['Phone']||r[keys[0]]||'').toString().trim().replace(/\s/g,'')
+        // 2-р багана: Хаяг
+        const address=(r['Хаяг']||r['Address']||r[keys[1]]||'').toString().trim()
+        // 3-р багана: Бараа
+        const baraaText=(r['Бараа']||r['Барааны нэр']||r['Product']||r[keys[2]]||'').toString().trim()
+        // Огноо - заавал биш, байхгүй бол өнөөдөр
+        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r['Date']||'').toString().trim()
+        const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : new Date().toISOString().slice(0,10)
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
-        const phone=(r['Утасны дугаар']||r['Утас']||r['Phone']||r['phone']||r[keys[1]]||'').toString().trim()
-        const address=(r['Хаяг']||r['Address']||r['address']||r[keys[2]]||'').toString().trim()
-        const baraaText=(r['Бараа']||r['Барааны нэр']||r['Product']||r['product']||r[keys[3]]||'').toString().trim()
-        const parsedItems=parseItems(baraaText)
         const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
         const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
         const rawStatus=(r['Статус']||'').toString().trim()
         const status=rawStatus.includes('Төлсөн')||rawStatus.toLowerCase().includes('delivered')?'delivered':'pending'
+        const parsedItems=parseItems(baraaText)
 
         // Давхар import шалгах
         const isDuplicate=dateValid&&phone&&existingSet.has(`${date}__${phone}`)
