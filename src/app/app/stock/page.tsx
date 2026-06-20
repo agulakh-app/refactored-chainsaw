@@ -48,6 +48,7 @@ export default function StockPage() {
   const [editQty, setEditQty] = useState('')
   const [editDate, setEditDate] = useState('')
   const [editNote, setEditNote] = useState('')
+  const [editCost, setEditCost] = useState('')
 
   // Edit product (stock + price + cost), variant эсвэл variant-гүй аль аль нь
   const [editProd, setEditProd] = useState<Product|null>(null)
@@ -283,8 +284,14 @@ if (error) {
     }
 
     await supabase.from('restock_log').update({
-      quantity: newQty, date: editDate, note: editNote
+      quantity: newQty, date: editDate, note: editNote,
+      ...(editCost?{unit_cost:Number(editCost)}:{})
     }).eq('id', editLog.id)
+    // Өртөг өөрчлөгдсөн бол бараанд шинэчлэнэ
+    if(editCost){
+      const prod=products.find(p=>p.name===editLog.product_name.split(' · ')[0])
+      if(prod) await supabase.from('products').update({unit_cost:Number(editCost)}).eq('id',prod.id)
+    }
     setEditLog(null); showFlash('Засварлагдлаа ✓'); load()
   }
 
@@ -412,6 +419,9 @@ if (error) {
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
+              <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">— тухайн өдрийн үнэ</span></label>
+                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  placeholder="Хоосон бол өөрчлөгдөхгүй" value={editCost} onChange={e=>setEditCost(e.target.value)} /></div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditLog(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
@@ -423,10 +433,10 @@ if (error) {
 
       {/* Агуулахад бараа нэмэх | Шинэ бараа — зэрэгцээ */}
       {!isViewer && (
-        <div className="grid grid-cols-2 gap-4 items-start">
+        <div className="grid grid-cols-2 gap-4 items-stretch">
 
         {/* Агуулахад бараа нэмэх */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
           <div className="space-y-2">
             <div className="grid gap-2" style={{gridTemplateColumns:'1fr 60px auto'}}>
@@ -479,9 +489,12 @@ if (error) {
             </div>
           )}
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
+          <div className="mt-auto pt-3 flex justify-end">
+            <span className="text-xs text-gray-400">{rDate}</span>
+          </div>
         </div>
         {/* Шинэ бараа оруулах */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
           {/* Variant байхгүй — PC: 4 багана (Огноогүй), Mobile: нуугдана */}
           {!variantEnabled && (
@@ -601,7 +614,7 @@ if (error) {
               )}
             </div>
           )}
-          <div className="flex justify-end mt-3">
+          <div className="flex justify-end mt-auto pt-3">
             <button onClick={addNewProduct} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Нэмэх</button>
           </div>
         </div>
@@ -706,11 +719,11 @@ if (error) {
             <option value="all">Бүх бараа</option>
             {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
-          <div className="relative">
-            <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white pr-8"
+          <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <input type="date" className="px-3 py-2 text-sm bg-white w-full appearance-none" style={{WebkitAppearance:'none'}}
               value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
             {!dateFilter && (
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none bg-white pr-1">
+              <span className="absolute inset-0 flex items-center px-3 text-gray-400 text-sm pointer-events-none bg-white">
                 Огноо сонгох
               </span>
             )}
@@ -761,7 +774,11 @@ if (error) {
                           </button>
                           {openDropdown===r.id&&(
                             <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[120px] overflow-hidden shadow-lg">
-                              <button onClick={()=>{setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'');setOpenDropdown(null)}}
+                              <button onClick={()=>{
+                                setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'');
+                                const prod=products.find(p=>p.name===r.product_name.split(' · ')[0])
+                                setEditCost(prod?.unit_cost?String(prod.unit_cost):'')
+                                setOpenDropdown(null)}}
                                 className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
                               <button onClick={()=>{deleteLog(r);setOpenDropdown(null)}}
                                 className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
