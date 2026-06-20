@@ -20,7 +20,6 @@ export default function DashPage() {
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
   const [stores,setStores]=useState<any[]>([])
-  const [warehouses,setWarehouses]=useState<any[]>([])
   const [flash,setFlash]=useState('')
   const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void}|null>(null)
 
@@ -43,7 +42,6 @@ export default function DashPage() {
   const [oDelv,setODelv]=useState('')
   const [oPaid,setOPaid]=useState(false)
   const [oStore,setOStore]=useState('')
-  const [oWarehouse,setOWarehouse]=useState('')
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
   const [variantEnabled,setVariantEnabled]=useState(false)
   const [openDropdown,setOpenDropdown]=useState<string|null>(null)
@@ -96,12 +94,10 @@ export default function DashPage() {
       (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
       (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
-      supabase.from('warehouses').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
     setOrders(ords||[])
     setStores(sts||[])
-    setWarehouses(whs||[])
     if(prods&&prods.length>0){
       setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
     }
@@ -146,7 +142,7 @@ export default function DashPage() {
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
       phone:oPhone,address:oAddr,delivery_fee:Number(oDelv)||0,status:'pending',
-      store_id:activeStoreId||null,warehouse_id:oWarehouse||null
+      store_id:activeStoreId||null
     }).select().single()
     if(order){
       await supabase.from('order_items').insert(oItems.map(it=>({
@@ -271,13 +267,13 @@ export default function DashPage() {
       })()}
 
       {/* Bulk action bar - дунд гарна */}
-      {bulkMode&&selectedIds.size>0&&(
+      {selectedIds.size>0&&(
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
           <div className="pointer-events-auto bg-white border border-gray-200 rounded-2xl px-6 py-4 flex items-center gap-4" style={{boxShadow:'0 20px 60px rgba(0,0,0,0.15)'}}>
             <span className="text-sm font-medium text-gray-700">{selectedIds.size} захиалга сонгогдсон</span>
             <button onClick={bulkDeliver} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">✓ Бүгдийг хүргэсэн</button>
             <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу? Агуулахад буцаж нэмэгдэнэ.`,onOk:bulkDelete})} className="px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100">Устгах</button>
-            <button onClick={()=>{setBulkMode(false);setSelectedIds(new Set())}} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+            <button onClick={()=>setSelectedIds(new Set())} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
           </div>
         </div>
       )}
@@ -355,11 +351,6 @@ export default function DashPage() {
                   <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm h-[38px]" value={oDelv} onChange={e=>setODelv(e.target.value)}/>
                 </div>
               </div>
-              {warehouses.length>0&&(<div><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                  <option value="">— Сонгох —</option>
-                  {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                </select></div>)}
               <div><label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
                 <div className="border border-gray-100 rounded-lg p-3 bg-gray-50 space-y-3">
                   {oItems.map((it,idx)=>{
@@ -430,13 +421,6 @@ export default function DashPage() {
                   className="flex-1 w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none min-h-[80px]"
                   placeholder="Дүүрэг, хороо, байр..."
                   value={oAddr} onChange={e=>setOAddr(e.target.value)}/>
-                {warehouses.length>0&&(
-                  <div className="mt-2"><label className="block text-xs text-gray-500 mb-1">Агуулах</label>
-                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={oWarehouse} onChange={e=>setOWarehouse(e.target.value)}>
-                      <option value="">— Сонгох —</option>
-                      {warehouses.map(w=><option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select></div>
-                )}
               </div>
               <div className="flex flex-col">
                 <label className="block text-xs text-gray-500 mb-1">Захиалсан бараанууд</label>
