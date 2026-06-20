@@ -6,7 +6,7 @@ import type { RestockLog } from '@/lib/types'
 import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
-function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return y+'/'+m+'/'+day }
+function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
 function fmt(n: number) { return n.toLocaleString() }
 
 type Variant = { size: string; color: string; price: number; stock: number; cost?: number }
@@ -25,14 +25,23 @@ export default function StockPage() {
   const [logFilter, setLogFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('')
   const [variantEnabled, setVariantEnabled] = useState(false)
+
+  // Цэнэглэлт
   const [rProd, setRProd] = useState('')
   const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
   const [rNote, setRNote] = useState('')
+
+  // Шинэ бараа
   const [nName, setNName] = useState('')
   const [nPrice, setNPrice] = useState('')
+  const [nQty, setNQty] = useState('0')
+  const [nDate, setNDate] = useState(TODAY)
   const [nVariants, setNVariants] = useState<{size:string,color:string,price:string,stock:string,cost:string}[]>([])
+  const [nCost, setNCost] = useState('')
+
+  // Edit log
   const [editLog, setEditLog] = useState<RestockLog|null>(null)
   const [selectedLogs, setSelectedLogs] = useState<Set<string>>(new Set())
   const [selectMode, setSelectMode] = useState(false)
@@ -40,6 +49,8 @@ export default function StockPage() {
   const [editDate, setEditDate] = useState('')
   const [editNote, setEditNote] = useState('')
   const [editCost, setEditCost] = useState('')
+
+  // Edit product (stock + price + cost), variant эсвэл variant-гүй аль аль нь
   const [editProd, setEditProd] = useState<Product|null>(null)
   const [editVariantStocks, setEditVariantStocks] = useState<number[]>([])
   const [editVariantPrices, setEditVariantPrices] = useState<string[]>([])
@@ -77,12 +88,12 @@ export default function StockPage() {
     setProducts(prods||[])
     setLogs(ls||[])
     setVariantEnabled(storeData?.variant_enabled || false)
-    if (prods&&prods.length>0) setRProd(p=>(!p||!prods.find((x:any)=>x.id===p))?prods[0].id:p)
-    setRVariantIdx(-1)
-  },[ownerId, activeStoreId])
+    if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
+  },[rProd, ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
+  // Агуулахад бараа нэмэх — variant stock шинэчлэх
   async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
@@ -93,9 +104,11 @@ export default function StockPage() {
     if (!targetId) return
     const isNeg = qty < 0
     const absQty = Math.abs(qty)
+
     const pvs: Variant[] = p.variants || []
     let variantLabel = ''
-    if (pvs.length > 0) {
+
+    if (variantEnabled && pvs.length > 0) {
       if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
       const v = pvs[rVariantIdx]
       if (!v) return
@@ -108,39 +121,73 @@ export default function StockPage() {
       const newStock = isNeg ? Math.max(0, p.stock - absQty) : p.stock + absQty
       await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
     }
+
     await supabase.from('restock_log').insert({
       user_id: targetId, product_id: rProd,
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
       quantity: absQty, type: isNeg ? 'out' : 'in',
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
     })
+
     setRQty('1'); setRNote(''); setRVariantIdx(-1)
-    showFlash(p.name + (variantLabel?' · '+variantLabel:'') + (isNeg?' -'+absQty+'ш хасагдлаа':' +'+absQty+'ш нэмэгдлээ') + ' ✓')
+    showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
 
+  // Шинэ бараа нэмэх
   async function addNewProduct() {
     if (!nName.trim()) { showFlash('Нэр оруулна уу'); return }
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
+
     const validVariants: Variant[] = nVariants
       .filter(v => v.size.trim() || v.color.trim())
       .map(v => ({
-        size: v.size.trim(), color: v.color.trim(),
-        price: Number(v.price) || 0, stock: 0, cost: 0
+        size: v.size.trim(),
+        color: v.color.trim(),
+        price: Number(v.price) || 0,
+        stock: Number(v.stock) || 0,
+        cost: Number(v.cost) || 0
       }))
+
+    const totalStock = validVariants.length > 0
+      ? validVariants.reduce((a, v) => a + v.stock, 0)
+      : Number(nQty) || 0
+
+    // variant-гүй бараанд cost хадгалах
+    const noVariantCost = validVariants.length === 0 && nCost ? Number(nCost) : null
+
     const { data: prod, error } = await supabase
-      .from('products')
-      .insert({
-        user_id: targetId, name: nName.trim(),
-        unit_price: Number(nPrice) || 0, stock: 0,
-        store_id: activeStoreId || null,
-        variants: validVariants.length > 0 ? validVariants : null,
+  .from('products')
+  .insert({
+    user_id: targetId,
+    name: nName.trim(),
+    unit_price: Number(nPrice) || 0,
+    stock: totalStock,
+    added_date: nDate,
+    store_id: activeStoreId || null,
+    variants: validVariants.length > 0 ? validVariants : null,
+    cost: noVariantCost
+  })
+  .select()
+  .single()
+
+if (error) {
+  console.error(error)
+  alert(error.message)
+  return
+}
+
+    if (prod && totalStock > 0) {
+      await supabase.from('restock_log').insert({
+        user_id: targetId, product_id: prod.id,
+        product_name: nName.trim(), quantity: totalStock,
+        type: 'in', note: 'Шинэ бараа', date: nDate, store_id: activeStoreId||null
       })
-      .select().single()
-    if (error) { showFlash('Алдаа: ' + error.message); return }
-    setNName(''); setNPrice(''); setNVariants([])
+    }
+
+    setNName(''); setNPrice(''); setNQty('0'); setNDate(TODAY); setNVariants([]); setNCost('')
     showFlash(nName + ' нэмэгдлээ ✓'); load()
   }
 
@@ -171,8 +218,8 @@ export default function StockPage() {
       const newVariants = pvs.map((v, i) => ({
         ...v,
         stock: editVariantStocks[i] ?? v.stock,
-        price: editVariantPrices[i] !== '' ? Number(editVariantPrices[i]) : v.price,
-        cost: editVariantCosts[i] !== '' ? Number(editVariantCosts[i]) : (v as any).cost,
+        price: editVariantPrices[i] !== undefined && editVariantPrices[i] !== '' ? Number(editVariantPrices[i]) : v.price,
+        cost: editVariantCosts[i] !== undefined && editVariantCosts[i] !== '' ? Number(editVariantCosts[i]) : (v as any).cost,
       }))
       const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
       await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
@@ -189,11 +236,13 @@ export default function StockPage() {
 
   async function bulkDeleteLogs() {
     if (selectedLogs.size === 0) return
-    setConfirmModal({msg: selectedLogs.size+'ш бүртгэл устгах уу?', onOk: async()=>{
-      for (const id of Array.from(selectedLogs)) {
-        await supabase.from('restock_log').delete().eq('id', id)
-      }
-      setSelectedLogs(new Set()); setSelectMode(false); load()
+    setConfirmModal({msg:`${selectedLogs.size} бүртгэл устгах уу?`, onOk: async()=>{
+    for (const id of Array.from(selectedLogs)) {
+      await supabase.from('restock_log').delete().eq('id', id)
+    }
+      setSelectedLogs(new Set())
+      setSelectMode(false)
+      load()
     }})
   }
 
@@ -212,16 +261,17 @@ export default function StockPage() {
     const oldQty = editLog.quantity
     const newQty = Number(editQty)
     const diff = newQty - oldQty
+
+    // product stock-ийг засах
     if (diff !== 0) {
       const prod = products.find(p => p.name === editLog.product_name.split(' · ')[0])
       if (prod) {
         const variantLabel = editLog.product_name.includes(' · ') ? editLog.product_name.split(' · ')[1] : null
         const pvs: Variant[] = prod.variants || []
         if (variantLabel && pvs.length > 0) {
-          const newVariants = pvs.map(v =>
-            [v.size, v.color].filter(Boolean).join(' / ') === variantLabel
-              ? { ...v, stock: Math.max(0, v.stock + (editLog.type === 'in' ? diff : -diff)) }
-              : v
+          const newVariants = pvs.map(v => [v.size, v.color].filter(Boolean).join(' / ') === variantLabel
+            ? { ...v, stock: Math.max(0, v.stock + (editLog.type === 'in' ? diff : -diff)) }
+            : v
           )
           const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
           await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', prod.id)
@@ -232,12 +282,14 @@ export default function StockPage() {
         }
       }
     }
+
     const updateData: any = { quantity: newQty, date: editDate, note: editNote }
     if (editCost) updateData.unit_cost = Number(editCost)
     await supabase.from('restock_log').update(updateData).eq('id', editLog.id)
-    if (editCost) {
-      const prod = products.find(p => p.name === editLog.product_name.split(' · ')[0])
-      if (prod) await supabase.from('products').update({unit_cost: Number(editCost)}).eq('id', prod.id)
+    // Өртөг өөрчлөгдсөн бол бараанд шинэчлэнэ
+    if(editCost){
+      const prod=products.find(p=>p.name===editLog.product_name.split(' · ')[0])
+      if(prod) await supabase.from('products').update({unit_cost:Number(editCost)}).eq('id',prod.id)
     }
     setEditLog(null); showFlash('Засварлагдлаа ✓'); load()
   }
@@ -246,7 +298,7 @@ export default function StockPage() {
   if (logFilter !== 'all') filteredLogs = filteredLogs.filter(l => l.product_name.startsWith(logFilter))
   if (dateFilter) filteredLogs = filteredLogs.filter(l => l.date === dateFilter)
 
-  const logGroups: {[key:string]: RestockLog[]} = {}
+  const logGroups: Record<string, RestockLog[]> = {}
   filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
 
   const rProdData = products.find(p => p.id === rProd)
@@ -366,9 +418,10 @@ export default function StockPage() {
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">(хоосон бол өөрчлөгдөхгүй)</span></label>
+              <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">— тухайн өдрийн үнэ</span></label>
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="Хоосон бол өөрчлөгдөхгүй" value={editCost} onChange={e=>setEditCost(e.target.value)} /></div>
+            </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditLog(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
               <button onClick={saveEditLog} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
@@ -385,8 +438,8 @@ export default function StockPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
           <div className="space-y-2 flex-1">
-            {/* Мөр 1: Бараа | (Variant) | Тоо | Нэмэх */}
-            <div className="grid gap-2" style={{gridTemplateColumns:rVariants.length>0?'1.8fr 1.2fr 60px auto':'1fr 60px auto'}}>
+            {/* Мөр 1: Бараа | Variant | Тоо | Нэмэх */}
+            <div className="grid gap-2" style={{gridTemplateColumns:'1.8fr 1.2fr 60px auto'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Бараа</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -394,9 +447,9 @@ export default function StockPage() {
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                 </select>
               </div>
-              {rVariants.length > 0 && (
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Variant</label>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Variant</label>
+                {variantEnabled && rVariants.length > 0 ? (
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
@@ -404,8 +457,9 @@ export default function StockPage() {
                       <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
                     ))}
                   </select>
-                </div>
-              )}
+                ):(
+                  <div className="w-full px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тоо</label>
