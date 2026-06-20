@@ -290,6 +290,11 @@ export default function HistoryPage() {
       const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,raw:false})
       const sheet=wb.Sheets[wb.SheetNames[0]]
       const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}):[]
+      if(rows.length===0){
+        setImportMsg('Файлд өгөгдөл олдсонгүй. Template-ийн форматтай таарч байгааг шалгана уу.')
+        setImporting(false); return
+      }
+      setImportMsg(`${rows.length} мөр унших боломжтой...`)
       const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
       const prodList=products||[]
 
@@ -299,12 +304,13 @@ export default function HistoryPage() {
 
       const preview:any[]=[]
       for(const r of rows){
-        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r[Object.keys(r)[0]]||'').toString().trim()
+        const keys=Object.keys(r)
+        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r['Date']||r['date']||r[keys[0]]||'').toString().trim()
         const date=rawDate.replace(/[./]/g,'-').slice(0,10)
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
-        const phone=(r['Утасны дугаар']||r['Утас']||'').toString().trim()
-        const address=(r['Хаяг']||'').toString().trim()
-        const baraaText=(r['Бараа']||r['Барааны нэр']||'').toString().trim()
+        const phone=(r['Утасны дугаар']||r['Утас']||r['Phone']||r['phone']||r[keys[1]]||'').toString().trim()
+        const address=(r['Хаяг']||r['Address']||r['address']||r[keys[2]]||'').toString().trim()
+        const baraaText=(r['Бараа']||r['Барааны нэр']||r['Product']||r['product']||r[keys[3]]||'').toString().trim()
         const parsedItems=parseItems(baraaText)
         const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
         const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
@@ -340,6 +346,10 @@ export default function HistoryPage() {
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
         preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,isDuplicate})
+      }
+      if(preview.length===0){
+        setImportMsg('Баталгаажуулах мөр олдсонгүй. Файлын форматыг шалгана уу.')
+        setImporting(false); return
       }
       setImportPreview(preview)
       setImporting(false); setImportMsg('')
