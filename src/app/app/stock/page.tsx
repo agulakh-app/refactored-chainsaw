@@ -88,8 +88,9 @@ export default function StockPage() {
     setProducts(prods||[])
     setLogs(ls||[])
     setVariantEnabled(storeData?.variant_enabled || false)
-    if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
-  },[rProd, ownerId, activeStoreId])
+    if (prods&&prods.length>0) setRProd(p=>(!p||!prods.find(x=>x.id===p))?prods[0].id:p)
+    setRVariantIdx(-1)
+  },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
