@@ -40,6 +40,7 @@ export default function HistoryPage() {
   const [importPreview, setImportPreview] = useState<any[]|null>(null)
   const [importProdList, setImportProdList] = useState<any[]>([])
   const [importGlobalDate, setImportGlobalDate] = useState(new Date().toISOString().slice(0,10))
+  const [defaultDelivery, setDefaultDelivery] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Утасны хайлтын дэлгэрэнгүй
@@ -55,6 +56,8 @@ export default function HistoryPage() {
     setOrders(data||[])
     const { data: sts } = await supabase.from('stores').select('*').eq('user_id', targetId)
     setStores(sts||[])
+    const { data: prof } = await supabase.from('profiles').select('default_delivery_fee').eq('id', targetId).single()
+    if(prof?.default_delivery_fee) setDefaultDelivery(prof.default_delivery_fee)
   },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
@@ -325,7 +328,11 @@ export default function HistoryPage() {
         if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
-        preview.push({date,phone,address,items:matchedItems,delv,status,errors,rawDate,isDuplicate,hasOwnDate})
+        // Нийт дүн = бараа бүрийн unit_price × qty
+        const autoTotal=matchedItems.reduce((sum:number,it:any)=>sum+(it.product?.unit_price||0)*it.qty,0)
+        preview.push({date,phone,address,items:matchedItems,delv:delv||defaultDelivery,
+          status,errors,rawDate,isDuplicate,hasOwnDate,
+          total:autoTotal,paid:isTolson})
       }
       if(preview.length===0){
         setImportMsg('Баталгаажуулах мөр олдсонгүй. Файлын форматыг шалгана уу.')
@@ -358,7 +365,7 @@ export default function HistoryPage() {
       if(!ord) continue
       // Нийт үнэ: барааны unit_price × qty-аас тооцоолох (эсвэл Excel-ийн price)
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=it.product?.unit_price||0
+        const unitPrice=it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
@@ -658,6 +665,36 @@ export default function HistoryPage() {
                   {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string, j:number)=>(
                     <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
                   ))}
+                  {row.errors.length===0&&(
+                    <div className="mt-2 flex items-center gap-3 flex-wrap">
+                      <label className="text-xs text-gray-400">Нийт дүн:</label>
+                      <input type="number"
+                        className="w-24 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
+                        value={row.total}
+                        onChange={e=>{
+                          const v=parseInt(e.target.value)||0
+                          setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,total:v}:r)||null)
+                        }}/>
+                      <span className="text-xs text-gray-400">₮</span>
+                      <label className="text-xs text-gray-400 ml-2">Хүргэлт:</label>
+                      <input type="number"
+                        className="w-20 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
+                        value={row.delv}
+                        onChange={e=>{
+                          const v=parseInt(e.target.value)||0
+                          setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
+                        }}/>
+                      <span className="text-xs text-gray-400">₮</span>
+                      <label className="flex items-center gap-1 text-xs text-gray-500 ml-2 cursor-pointer">
+                        <input type="checkbox" checked={row.paid}
+                          onChange={e=>{
+                            const v=e.target.checked
+                            setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:v,status:v?'delivered':'pending'}:r)||null)
+                          }}/>
+                        Төлсөн
+                      </label>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
