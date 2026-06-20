@@ -160,7 +160,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-gray-50 flex">
 
       {/* ── DESKTOP SIDEBAR ── */}
-      <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0" style={{position:'sticky',top:0,height:'100vh',overflowY:'auto'}}>
+      <aside className="hidden md:flex flex-col w-[200px] bg-[#0a2e24] flex-shrink-0 fixed top-0 left-0 bottom-0 z-20" style={{overflowY:'auto'}}>
 
         {/* Logo + хугацаа */}
         <div className="px-5 pt-4 pb-3 border-b border-white/10">
@@ -261,7 +261,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       </aside>
 
       {/* ── MOBILE HEADER (хэвийн байдлаар хэвээр) ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 md:ml-[200px]">
         <header className="md:hidden bg-[#0a2e24] sticky top-0 z-20">
           <div className="px-4">
             <div className="flex items-center justify-between py-3 border-b border-white/10">
