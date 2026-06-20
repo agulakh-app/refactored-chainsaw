@@ -535,6 +535,66 @@ export default function HistoryPage() {
         </div>
       )}
 
+      {/* Import баталгаажуулах modal */}
+      {importPreview && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-2xl my-4">
+            <div className="p-5 border-b border-gray-100 flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold text-gray-800">Импортын баталгаажуулалт</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{importPreview.length} захиалга — шалгаад бүртгэнэ үү</p>
+              </div>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
+              {importPreview.map((row:any, i:number)=>(
+                <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="font-medium text-sm text-gray-800">{row.phone}</span>
+                      {row.address&&<span className="text-xs text-gray-400 ml-2">{row.address}</span>}
+                      <span className="text-xs text-gray-400 ml-2">{row.date}</span>
+                    </div>
+                  </div>
+                  <div className="mt-1.5 space-y-1">
+                    {row.items.map((it:any, j:number)=>(
+                      <div key={j} className="text-xs">
+                        {!it.product?(
+                          <span className="text-red-500">🔴 {it.name} × {it.qty} — агуулахад олдсонгүй</span>
+                        ):(
+                          <span className="text-gray-500">✅ {it.product.name} × {it.qty}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string, j:number)=>(
+                    <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
+                  ))}
+                  {row.errors.length>0&&(
+                    <div className="mt-1 text-xs font-medium text-red-500">⛔ Энэ захиалга бүртгэгдэхгүй</div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                ✅ {importPreview.filter((r:any)=>r.errors.length===0).length} бүртгэгдэнэ
+                {importPreview.filter((r:any)=>r.errors.length>0).length>0&&(
+                  <span className="text-red-500 ml-2">🔴 {importPreview.filter((r:any)=>r.errors.length>0).length} алдаатай</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={()=>setImportPreview(null)}
+                  className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
+                <button onClick={confirmImport} disabled={importing||importPreview.filter((r:any)=>r.errors.length===0).length===0}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-50">
+                  {importing?'Бүртгэж байна...':'✓ Бүртгэх'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   )
 }
