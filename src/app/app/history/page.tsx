@@ -289,9 +289,10 @@ export default function HistoryPage() {
         const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : importGlobalDate
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
         const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
-        const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
-        const rawStatus=(r['Статус']||'').toString().trim()
-        const status=rawStatus.includes('Төлсөн')||rawStatus.toLowerCase().includes('delivered')?'delivered':'pending'
+        const rawDelv=String(r['Төлбөр']||r['Хүргэлт (₮)']||r['Хүргэлт']||'').trim()
+        const isTolson=rawDelv.includes('Төлсөн')||rawDelv.toLowerCase().includes('paid')
+        const delv=isTolson?0:(parseInt(rawDelv.replace(/[^\d]/g,''))||0)
+        const status=isTolson?'delivered':'pending'
         const parsedItems=parseItems(baraaText)
 
         // Давхар import шалгах
@@ -353,13 +354,21 @@ export default function HistoryPage() {
         store_id:activeStoreId||null
       }).select().single()
       if(!ord) continue
-      const totalQty=row.items.reduce((a:number,x:any)=>a+x.qty,0)||1
-      const unitPrice=Math.round(row.price/totalQty)
-      const orderItems=row.items.map((it:any)=>({
-        order_id:ord.id,product_name:it.product?.name||it.name,
-        variant_label:null,quantity:it.qty,unit_price:unitPrice
-      }))
+      // Нийт үнэ: барааны unit_price × qty-аас тооцоолох (эсвэл Excel-ийн price)
+      const orderItems=row.items.map((it:any)=>{
+        const unitPrice=it.product?.unit_price||Math.round((row.price||0)/row.items.length)||0
+        return {
+          order_id:ord.id,
+          product_name:it.product?.name||it.name,
+          product_id:it.product?.id||null,
+          variant_label:it.selectedVariantIdx>=0&&it.product?.variants?
+            [it.product.variants[it.selectedVariantIdx]?.size,it.product.variants[it.selectedVariantIdx]?.color].filter(Boolean).join(' / '):null,
+          quantity:it.qty,
+          unit_price:unitPrice
+        }
+      })
       if(orderItems.length>0) await supabase.from('order_items').insert(orderItems)
+      // Stock хасах — restock_log бүртгэлгүй
       for(const it of row.items){
         const prod=it.product?prodList.find((p:any)=>p.id===it.product.id):null
         if(!prod) continue
@@ -372,17 +381,11 @@ export default function HistoryPage() {
             await supabase.from('products').update({variants:nv,stock:nt}).eq('id',prod.id)
             prod.variants=nv; prod.stock=nt
           }
-          // vIdx<0 бол хасахгүй — variant сонгоогүй
         } else {
           const ns=Math.max(0,(prod.stock||0)-it.qty)
           await supabase.from('products').update({stock:ns}).eq('id',prod.id)
           prod.stock=ns
         }
-        await supabase.from('restock_log').insert({
-          user_id:targetId,product_id:prod.id,product_name:prod.name,
-          quantity:it.qty,type:'out',note:`Импорт — ${row.phone}`,
-          date:row.date,store_id:activeStoreId||null
-        })
       }
       cnt++
     }
@@ -625,7 +628,27 @@ export default function HistoryPage() {
                             <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
                           </>
                         ):(
-                          <span className="text-gray-500">✅ {it.product.name} × {it.qty}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-emerald-600">✅</span>
+                            <span className="text-gray-600">{it.product.name}</span>
+                            <span className="text-gray-400">×</span>
+                            <input type="number" min="1"
+                              className="w-12 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-center"
+                              value={it.qty}
+                              onChange={e=>{
+                                const qty=Math.max(1,parseInt(e.target.value)||1)
+                                setImportPreview((prev:any)=>{
+                                  if(!prev) return prev
+                                  const next=[...prev]
+                                  const newItems=[...next[i].items]
+                                  newItems[j]={...newItems[j],qty}
+                                  next[i]={...next[i],items:newItems}
+                                  return next
+                                })
+                              }}
+                            />
+                            <span className="text-gray-400 text-[10px]">ш</span>
+                          </div>
                         )}
                       </div>
                     ))}
