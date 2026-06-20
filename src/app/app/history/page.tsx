@@ -262,7 +262,10 @@ export default function HistoryPage() {
         setImportMsg('Файлд өгөгдөл олдсонгүй. Template-ийн форматтай таарч байгааг шалгана уу.')
         setImporting(false); return
       }
-      setImportMsg(`${rows.length} мөр унших боломжтой...`)
+      // Debug: 1-р мөрийн бүтцийг харуул
+      const firstKeys=Object.keys(rows[0]||{})
+      const firstVals=firstKeys.map(k=>String(rows[0][k]).slice(0,20))
+      setImportMsg(`Keys: [${firstKeys.join(' | ')}] → [${firstVals.join(' | ')}]`)
       const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
       const prodList=products||[]
 
@@ -630,9 +633,6 @@ export default function HistoryPage() {
                   {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string, j:number)=>(
                     <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
                   ))}
-                  {row.errors.length>0&&(
-                    <div className="mt-1 text-xs font-medium text-red-500">⛔ Энэ захиалга бүртгэгдэхгүй</div>
-                  )}
                 </div>
               ))}
             </div>
