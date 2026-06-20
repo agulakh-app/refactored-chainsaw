@@ -612,7 +612,6 @@ if (error) {
     </div>
   </div>
 ))}
-                    </div>
                   )}
                 </div>
               )
@@ -688,7 +687,7 @@ if (error) {
                       <div>
                         <div className="text-sm text-gray-700">{r.product_name}</div>
                         <div className="text-xs text-gray-400 mt-0.5">
-                          {r.note}
+                          {r.note&&r.note!=='Цэнэглэлт'&&r.note!=='Гараар хасалт'?r.note:''}
                           {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
                         </div>
                       </div>

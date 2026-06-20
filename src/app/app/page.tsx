@@ -172,6 +172,58 @@ export default function DashPage() {
   }
 
   async function setOrderStatus(id:string,status:string){
+    const o=orders.find(x=>x.id===id)
+    if(o){
+      const wasPending=o.status==='pending'
+      const nowCancelled=status==='cancelled'
+      const wasСancelled=o.status==='cancelled'
+      const nowPending=status==='pending'
+      // pending → cancelled: stock буцаана
+      if(wasPending&&nowCancelled){
+        for(const it of(o.order_items||[])){
+          const pid=(it as any).product_id
+          const qty=(it as any).quantity
+          const variantLabel=(it as any).variant_label
+          if(!pid) continue
+          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
+          if(!prod) continue
+          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
+            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
+            if(vIdx>=0){
+              const nv=[...prod.variants]
+              nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
+              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+            }
+          } else {
+            await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
+          }
+        }
+      }
+      // cancelled → pending: stock дахин хасна
+      if(wasСancelled&&nowPending){
+        for(const it of(o.order_items||[])){
+          const pid=(it as any).product_id
+          const qty=(it as any).quantity
+          const variantLabel=(it as any).variant_label
+          if(!pid) continue
+          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
+          if(!prod) continue
+          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
+            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
+            if(vIdx>=0){
+              const nv=[...prod.variants]
+              nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-qty)}
+              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+            }
+          } else {
+            const {data:prod2}=await supabase.from('products').select('stock').eq('id',pid).single()
+            if(prod2) await supabase.from('products').update({stock:Math.max(0,(prod2.stock||0)-qty)}).eq('id',pid)
+          }
+        }
+      }
+    }
     await supabase.from('orders').update({status}).eq('id',id)
     setOpenDropdown(null)
     showFlash(status==='delivered'?'Хүргэгдсэн ✓':status==='cancelled'?'Цуцлагдлаа':'Хүлээгдэж байна болгов')
@@ -556,7 +608,6 @@ export default function DashPage() {
                       {/* Хаяг */}
                       <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">
                         {o.address}
-                        {storeName&&storeFilter==='all'&&<div className="text-[10px] text-emerald-600 mt-0.5">{storeName}</div>}
                       </td>
                       {/* Бараа */}
                       <td className="py-2.5 pl-8 pr-0.5 align-middle text-left">
