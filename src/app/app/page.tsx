@@ -47,7 +47,29 @@ export default function DashPage() {
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
   const [variantEnabled,setVariantEnabled]=useState(false)
   const [openDropdown,setOpenDropdown]=useState<string|null>(null)
+  const [dropdownPos,setDropdownPos]=useState<{top:number,left:number}>({top:0,left:0})
   const dropdownRef=useRef<HTMLDivElement>(null)
+  const [bulkMode,setBulkMode]=useState(false)
+  const [selectedIds,setSelectedIds]=useState<Set<string>>(new Set())
+
+  function toggleSelect(id:string){
+    setSelectedIds(prev=>{const s=new Set(prev);s.has(id)?s.delete(id):s.add(id);return s})
+  }
+  function toggleSelectAll(ids:string[]){
+    const allSelected=ids.every(id=>selectedIds.has(id))
+    setSelectedIds(prev=>{const s=new Set(prev);allSelected?ids.forEach(id=>s.delete(id)):ids.forEach(id=>s.add(id));return s})
+  }
+  async function bulkDelete(){
+    for(const id of Array.from(selectedIds)){
+      const o=orders.find(x=>x.id===id)
+      if(o) await deleteOrder(o,true)
+    }
+    setSelectedIds(new Set());setBulkMode(false);load()
+  }
+  async function bulkDeliver(){
+    await Promise.all(Array.from(selectedIds).map(id=>supabase.from('orders').update({status:'delivered'}).eq('id',id)))
+    setSelectedIds(new Set());setBulkMode(false);load()
+  }
 
   const showFlash=(m:string)=>{setFlash(m);setTimeout(()=>setFlash(''),2500)}
 
@@ -166,37 +188,35 @@ export default function DashPage() {
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
   }
 
-  async function deleteOrder(o:Order){
-    setConfirmModal({msg:'Захиалга устгах уу?', onOk: async()=>{
-    setOpenDropdown(null)
-    if(o.status==='pending'){
-      for(const it of(o.order_items||[])){
-        const pid=(it as any).product_id
-        const qty=(it as any).quantity
-        const variantLabel=(it as any).variant_label
-        if(!pid) continue
-        // DB-с шинэ өгөгдөл татах
-        const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
-        if(!prod) continue
-        if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
-          // Variant-тай бараа
-          const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
-          if(vIdx>=0){
-            const nv=[...prod.variants]
-            nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
-            const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-            await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+  async function deleteOrder(o:Order, silent=false){
+    const doDelete=async()=>{
+      if(o.status==='pending'){
+        for(const it of(o.order_items||[])){
+          const pid=(it as any).product_id
+          const qty=(it as any).quantity
+          const variantLabel=(it as any).variant_label
+          if(!pid) continue
+          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
+          if(!prod) continue
+          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
+            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
+            if(vIdx>=0){
+              const nv=[...prod.variants]
+              nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
+              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
+            }
+          } else {
+            await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
           }
-        } else {
-          // Variant-гүй бараа
-          await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
         }
       }
+      await supabase.from('order_items').delete().eq('order_id',o.id)
+      await supabase.from('orders').delete().eq('id',o.id)
+      if(!silent){showFlash('Устгагдлаа');load()}
     }
-    await supabase.from('order_items').delete().eq('order_id',o.id)
-    await supabase.from('orders').delete().eq('id',o.id)
-    showFlash('Устгагдлаа');load()
-    }})
+    if(silent) return doDelete()
+    setConfirmModal({msg:'Захиалга устгах уу?',onOk:async()=>{setOpenDropdown(null);await doDelete()}})
   }
 
   function copyOrderInfo(o:Order){
@@ -228,6 +248,38 @@ export default function DashPage() {
   return (
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+
+      {/* Portal dropdown */}
+      {openDropdown&&(()=>{
+        const o=orders.find(x=>x.id===openDropdown)
+        if(!o) return null
+        const isDelivered=o.status==='delivered'
+        const isCancelled=o.status==='cancelled'
+        return(
+          <div ref={dropdownRef}
+            style={{position:'fixed',top:dropdownPos.top,left:dropdownPos.left,zIndex:9999,minWidth:160,boxShadow:'0 4px 16px rgba(0,0,0,0.10)'}}
+            className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>}
+            {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
+            {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
+            {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
+            <div className="border-t border-gray-100"/>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+          </div>
+        )
+      })()}
+
+      {/* Bulk action bar */}
+      {bulkMode&&(
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-3" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.12)'}}>
+          <span className="text-sm text-gray-600">{selectedIds.size} сонгогдсон</span>
+          <button onClick={bulkDeliver} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium hover:bg-emerald-100">Бүгдийг хүргэсэн</button>
+          <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу?`,onOk:bulkDelete})} className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 font-medium hover:bg-red-100">Устгах</button>
+          <button onClick={()=>{setBulkMode(false);setSelectedIds(new Set())}} className="text-xs text-gray-400 hover:text-gray-600 px-2">✕ Болих</button>
+        </div>
+      )}
+
       {confirmModal&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
@@ -472,8 +524,21 @@ export default function DashPage() {
           return (
             <div key={date}>
               <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
-                <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
-                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="text-base font-bold text-emerald-700">{fmt(dayNet)}₮</span></span>
+                <div className="flex items-center gap-2">
+                  {bulkMode&&(
+                    <input type="checkbox"
+                      checked={grp.every(o=>selectedIds.has(o.id))}
+                      onChange={()=>toggleSelectAll(grp.map(o=>o.id))}
+                      className="w-3.5 h-3.5 accent-emerald-500"/>
+                  )}
+                  <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="text-base font-bold text-emerald-700">{fmt(dayNet)}₮</span></span>
+                  {!isViewer&&!bulkMode&&(
+                    <button onClick={()=>setBulkMode(true)} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded border border-gray-200 bg-white">Сонгох</button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
@@ -495,15 +560,24 @@ export default function DashPage() {
                   const isDelivered=o.status==='delivered'
                   const isCancelled=o.status==='cancelled'
                   return (
-                    <tr key={o.id} className="border-b border-gray-100">
+                    <tr key={o.id} className={`border-b border-gray-100 ${bulkMode&&selectedIds.has(o.id)?'bg-emerald-50/40':''}`}>
                       {/* Утас */}
                       <td className="py-2.5 pl-4 pr-2 align-middle whitespace-nowrap">
-                        <button onClick={()=>copyOrderInfo(o)} className="text-sm font-semibold text-gray-800 hover:text-emerald-600">
-                          {o.phone}
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          {bulkMode&&(
+                            <input type="checkbox" checked={selectedIds.has(o.id)} onChange={()=>toggleSelect(o.id)}
+                              className="w-3.5 h-3.5 accent-emerald-500 flex-shrink-0"/>
+                          )}
+                          <button onClick={()=>copyOrderInfo(o)} className="text-sm font-semibold text-gray-800 hover:text-emerald-600">
+                            {o.phone}
+                          </button>
+                        </div>
                       </td>
                       {/* Хаяг */}
-                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
+                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">
+                        {o.address}
+                        {storeName&&storeFilter==='all'&&<div className="text-[10px] text-emerald-600 mt-0.5">{storeName}</div>}
+                      </td>
                       {/* Бараа */}
                       <td className="py-2.5 pl-8 pr-0.5 align-middle text-left">
                         {(o.order_items||[]).map((item:any,i:number)=>(
@@ -529,27 +603,19 @@ export default function DashPage() {
                       {/* Төлөв + dropdown */}
                       <td className="py-2.5 pl-1 pr-3 align-middle text-right">
                         {!isViewer?(
-                          <div className="relative inline-block" ref={openDropdown===o.id?dropdownRef:null}>
-                            <button onClick={()=>setOpenDropdown(openDropdown===o.id?null:o.id)}
-                              className={`text-[11px] px-2 py-1 rounded-lg border flex items-center gap-0.5 whitespace-nowrap ${
-                                isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
-                                isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
-                                'bg-amber-50 text-amber-600 border-amber-200'
-                              }`}>
-                              {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
-                            </button>
-                            {openDropdown===o.id&&(
-                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[160px] overflow-hidden" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
-                                {o.status!=='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'delivered');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-emerald-700 hover:bg-emerald-50">Хүргэгдсэн</button>}
-                                {o.status==='delivered'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-amber-600 hover:bg-amber-50">Хүлээгдэж байна</button>}
-                                {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
-                                {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
-                                <div className="border-t border-gray-100"/>
-                                <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                                <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50">Устгах</button>
-                              </div>
-                            )}
-                          </div>
+                          <button
+                            onClick={(e)=>{
+                              const rect=(e.currentTarget as HTMLElement).getBoundingClientRect()
+                              setDropdownPos({top:rect.bottom+4,left:Math.min(rect.left,window.innerWidth-170)})
+                              setOpenDropdown(openDropdown===o.id?null:o.id)
+                            }}
+                            className={`text-[11px] px-2 py-1 rounded-lg border flex items-center gap-0.5 whitespace-nowrap ${
+                              isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
+                              isCancelled?'bg-gray-100 text-gray-400 border-gray-200':
+                              'bg-amber-50 text-amber-600 border-amber-200'
+                            }`}>
+                            {isDelivered?'Хүргэгдсэн':isCancelled?'Цуцлагдсан':'Хүлээгдэж байна'} ▾
+                          </button>
                         ):(
                           <span className={`text-xs px-2.5 py-1 rounded-lg border ${
                             isDelivered?'bg-emerald-50 text-emerald-600 border-emerald-200':
