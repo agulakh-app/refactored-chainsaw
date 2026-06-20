@@ -255,9 +255,9 @@ export default function HistoryPage() {
     const targetId=ownerId||user.id
     try {
       const buf=await file.arrayBuffer()
-      const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,raw:false})
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array'})
       const sheet=wb.Sheets[wb.SheetNames[0]]
-      const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}):[]
+      const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true}):[]
       if(rows.length===0){
         setImportMsg('Файлд өгөгдөл олдсонгүй. Template-ийн форматтай таарч байгааг шалгана уу.')
         setImporting(false); return
