@@ -108,7 +108,7 @@ export default function StockPage() {
     const pvs: Variant[] = p.variants || []
     let variantLabel = ''
 
-    if (variantEnabled && pvs.length > 0) {
+    if (pvs.length > 0) {
       if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
       const v = pvs[rVariantIdx]
       if (!v) return
@@ -450,7 +450,7 @@ if (error) {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Variant</label>
-                {variantEnabled && rVariants.length > 0 ? (
+                {rVariants.length > 0 ? (
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
