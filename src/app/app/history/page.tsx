@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Order } from '@/lib/types'
+import * as XLSX from 'xlsx'
 import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
 function fmt(n: number) { return n.toLocaleString() }
@@ -56,14 +57,6 @@ export default function HistoryPage() {
 
   useEffect(()=>{ load() },[load])
 
-  // XLSX library-г урьдчилан татах
-  useEffect(()=>{
-    if(!(window as any).XLSX){
-      const s=document.createElement('script')
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-      document.head.appendChild(s)
-    }
-  },[])
 
   const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
   const [editModal, setEditModal] = useState<Order|null>(null)
@@ -221,26 +214,17 @@ export default function HistoryPage() {
 
   // Template татах - xlsx формат, огноо текстээр
   function downloadTemplate() {
-    const loadXLSX=():Promise<any>=>new Promise(resolve=>{
-      if((window as any).XLSX){ resolve((window as any).XLSX); return }
-      const s=document.createElement('script')
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-      s.onload=()=>resolve((window as any).XLSX)
-      document.head.appendChild(s)
-    })
-    loadXLSX().then(XLSX=>{
-      const data=[
-        ['Утасны дугаар','Хаяг','Бараа'],
-        ['89639100','Дундговь аймаг','Экс ЭМ'],
-        ['99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2'],
-        ['88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ'],
-      ]
-      const ws=XLSX.utils.aoa_to_sheet(data)
-      ws['!cols']=[{wch:14},{wch:32},{wch:40}]
-      const wb=XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb,ws,'Захиалга')
-      XLSX.writeFile(wb,'olula_template.xlsx')
-    })
+    const data=[
+      ['Утасны дугаар','Хаяг','Бараа'],
+      ['89639100','Дундговь аймаг','Экс ЭМ'],
+      ['99629160','BZD 7 horoo 40 bair','ЭР багц, Суга ЭМ 4, Хөл багц 2'],
+      ['88003313','Modern town 25-1-3','ЭР багц, Суга ЭМ'],
+    ]
+    const ws=XLSX.utils.aoa_to_sheet(data)
+    ws['!cols']=[{wch:14},{wch:32},{wch:40}]
+    const wb=XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb,ws,'Захиалга')
+    XLSX.writeFile(wb,'olula_template.xlsx')
   }
 
   // Бараа текст задлах: "ЭР багц, Суга ЭМ 4, Хөл багц 2" → [{name,qty}]
@@ -267,21 +251,8 @@ export default function HistoryPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     if(!user){ setImporting(false); return }
     const targetId=ownerId||user.id
-
-    const loadXLSX=():Promise<any>=>new Promise((resolve,reject)=>{
-      if((window as any).XLSX){ resolve((window as any).XLSX); return }
-      const s=document.createElement('script')
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-      s.onload=()=>{
-        if((window as any).XLSX) resolve((window as any).XLSX)
-        else reject(new Error('XLSX ачаалагдсангүй'))
-      }
-      s.onerror=()=>reject(new Error('XLSX library ачаалах боломжгүй. Интернет холболт шалгана уу.'))
-      document.head.appendChild(s)
-    })
     try {
       const buf=await file.arrayBuffer()
-      const XLSX=await loadXLSX()
       const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true,raw:false})
       const sheet=wb.Sheets[wb.SheetNames[0]]
       const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false}):[]
