@@ -440,8 +440,8 @@ if (error) {
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
           <div className="space-y-2 flex-1">
-            {/* Мөр 1: Бараа | Variant | Тоо | Нэмэх */}
-            <div className="grid gap-2" style={{gridTemplateColumns:'1.8fr 1.2fr 60px auto'}}>
+            {/* Мөр 1: Бараа | (Variant) | Тоо | Нэмэх */}
+            <div className="grid gap-2" style={{gridTemplateColumns:rVariants.length>0?'1.8fr 1.2fr 60px auto':'1fr 60px auto'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Бараа</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -449,9 +449,9 @@ if (error) {
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Variant</label>
-                {rVariants.length > 0 ? (
+              {rVariants.length > 0 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Variant</label>
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
@@ -459,9 +459,8 @@ if (error) {
                       <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
                     ))}
                   </select>
-                ):(
-                  <div className="w-full px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
-                )}
+                </div>
+              )}
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тоо</label>
