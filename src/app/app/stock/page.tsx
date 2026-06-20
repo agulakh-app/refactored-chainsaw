@@ -131,7 +131,8 @@ export default function StockPage() {
     })
 
     setRQty('1'); setRNote(''); setRVariantIdx(-1)
-    showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
+    const msg = p.name + (variantLabel?' · '+variantLabel:'') + (isNeg?' −'+absQty+'ш хасагдлаа':' +'+absQty+'ш нэмэгдлээ') + ' ✓'
+    showFlash(msg)
     load()
   }
 
@@ -284,10 +285,9 @@ if (error) {
       }
     }
 
-    await supabase.from('restock_log').update({
-      quantity: newQty, date: editDate, note: editNote,
-      ...(editCost?{unit_cost:Number(editCost)}:{})
-    }).eq('id', editLog.id)
+    const updateData: any = { quantity: newQty, date: editDate, note: editNote }
+    if(editCost) updateData.unit_cost = Number(editCost)
+    await supabase.from('restock_log').update(updateData).eq('id', editLog.id)
     // Өртөг өөрчлөгдсөн бол бараанд шинэчлэнэ
     if(editCost){
       const prod=products.find(p=>p.name===editLog.product_name.split(' · ')[0])
