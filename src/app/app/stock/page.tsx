@@ -423,7 +423,6 @@ if (error) {
               <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">(хоосон бол өөрчлөгдөхгүй)</span></label>
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="Хоосон бол өөрчлөгдөхгүй" value={editCost} onChange={e=>setEditCost(e.target.value)} /></div>
-            </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditLog(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
               <button onClick={saveEditLog} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
@@ -616,8 +615,7 @@ if (error) {
                   )}
                 </div>
               )
-            })
-          }
+            })}
           </div>
         </div>
       )}
