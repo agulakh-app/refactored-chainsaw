@@ -719,16 +719,11 @@ if (error) {
             <option value="all">Бүх бараа</option>
             {products.map(p=><option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
-          <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white">
-            <input type="date" className="px-3 py-2 text-sm bg-white w-full appearance-none" style={{WebkitAppearance:'none'}}
+          <div className="flex items-center gap-2">
+            <input type="date" className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
               value={dateFilter} onChange={e=>setDateFilter(e.target.value)} />
-            {!dateFilter && (
-              <span className="absolute inset-0 flex items-center px-3 text-gray-400 text-sm pointer-events-none bg-white">
-                Огноо сонгох
-              </span>
-            )}
+            {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
           </div>
-          {dateFilter&&<button onClick={()=>setDateFilter('')} className="px-2 py-2 rounded-lg border border-gray-200 text-xs text-gray-500 bg-white">✕</button>}
         </div>
         {Object.keys(logGroups).sort((a,b)=>b.localeCompare(a)).map(date=>{
           const grp = logGroups[date]

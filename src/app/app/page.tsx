@@ -489,10 +489,9 @@ export default function DashPage() {
         <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэрээр хайх..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
-          <div className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-white flex items-center">
-            <input type="date" className="w-full px-3 py-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-            {!dateFilter&&<span className="absolute left-0 right-6 flex items-center px-3 text-sm text-gray-400 pointer-events-none bg-white h-full">Огноо...</span>}
-            {dateFilter&&<button onClick={()=>setDateFilter('')} className="absolute right-2 text-gray-400 text-xs px-1">✕</button>}
+          <div className="flex items-center gap-1 w-full">
+            <input type="date" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+            {dateFilter&&<button onClick={()=>setDateFilter('')} className="text-gray-400 text-xs px-2 py-2">✕</button>}
           </div>
           {stores.length>0?(
             <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
