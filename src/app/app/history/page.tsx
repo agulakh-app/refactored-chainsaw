@@ -288,10 +288,12 @@ export default function HistoryPage() {
         const hasOwnDate=!!rawDate
         const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : importGlobalDate
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
-        const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
-        const rawDelv=String(r['Төлбөр']||r['Хүргэлт (₮)']||r['Хүргэлт']||'').trim()
-        const isTolson=rawDelv.includes('Төлсөн')||rawDelv.toLowerCase().includes('paid')
-        const delv=isTolson?0:(parseInt(rawDelv.replace(/[^\d]/g,''))||0)
+        // Хүргэлт багана — тусдаа
+        const delvRaw=String(r['Хүргэлт (₮)']||r['Хүргэлт']||r['Delivery']||'').trim()
+        const delv=parseInt(delvRaw.replace(/[^\d]/g,''))||0
+        // Төлбөр багана — Төлсөн/paid → delivered, тоо → нийт дүн (мэдээлэлд хадгалах)
+        const rawTolbor=String(r['Төлбөр']||r['Статус']||'').trim()
+        const isTolson=rawTolbor.toLowerCase().includes('төлсөн')||rawTolbor.toLowerCase().includes('paid')||rawTolbor.toLowerCase().includes('delivered')
         const status=isTolson?'delivered':'pending'
         const parsedItems=parseItems(baraaText)
 
@@ -323,7 +325,7 @@ export default function HistoryPage() {
         if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
-        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,isDuplicate,hasOwnDate})
+        preview.push({date,phone,address,items:matchedItems,delv,status,errors,rawDate,isDuplicate,hasOwnDate})
       }
       if(preview.length===0){
         setImportMsg('Баталгаажуулах мөр олдсонгүй. Файлын форматыг шалгана уу.')
@@ -356,7 +358,7 @@ export default function HistoryPage() {
       if(!ord) continue
       // Нийт үнэ: барааны unit_price × qty-аас тооцоолох (эсвэл Excel-ийн price)
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=it.product?.unit_price||Math.round((row.price||0)/row.items.length)||0
+        const unitPrice=it.product?.unit_price||0
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
