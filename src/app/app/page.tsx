@@ -176,7 +176,7 @@ export default function DashPage() {
     if(o){
       const wasPending=o.status==='pending'
       const nowCancelled=status==='cancelled'
-      const wasСancelled=o.status==='cancelled'
+      const wasCancelled=o.status==='cancelled'
       const nowPending=status==='pending'
       // pending → cancelled: stock буцаана
       if(wasPending&&nowCancelled){
@@ -201,7 +201,7 @@ export default function DashPage() {
         }
       }
       // cancelled → pending: stock дахин хасна
-      if(wasСancelled&&nowPending){
+      if(wasCancelled&&nowPending){
         for(const it of(o.order_items||[])){
           const pid=(it as any).product_id
           const qty=(it as any).quantity
@@ -277,9 +277,11 @@ export default function DashPage() {
     if(statusFilter!=='all'&&o.status!==statusFilter) return false
     if(dateFilter&&o.date!==dateFilter) return false
     if(productFilter){
-      const hasProduct=(o.order_items||[]).some((it:any)=>
-        (it.product_name||'').toLowerCase().includes(productFilter.toLowerCase())
-      )
+      const pf=productFilter.toLowerCase()
+      const hasProduct=(o.order_items||[]).some((it:any)=>{
+        const fullName=((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase()
+        return fullName.includes(pf)
+      })
       if(!hasProduct) return false
     }
     if(storeFilter!=='all'){
@@ -606,9 +608,7 @@ export default function DashPage() {
                         </div>
                       </td>
                       {/* Хаяг */}
-                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">
-                        {o.address}
-                      </td>
+                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
                       {/* Бараа */}
                       <td className="py-2.5 pl-8 pr-0.5 align-middle text-left">
                         {(o.order_items||[]).map((item:any,i:number)=>(
