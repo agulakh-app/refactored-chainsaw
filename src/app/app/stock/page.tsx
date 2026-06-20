@@ -777,7 +777,7 @@ if (error) {
                               <button onClick={()=>{
                                 setEditLog(r);setEditQty(String(r.quantity));setEditDate(r.date);setEditNote(r.note||'');
                                 const prod=products.find(p=>p.name===r.product_name.split(' · ')[0])
-                                setEditCost(prod?.unit_cost?String(prod.unit_cost):'')
+                                setEditCost((prod as any)?.unit_cost?String((prod as any).unit_cost):'')
                                 setOpenDropdown(null)}}
                                 className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
                               <button onClick={()=>{deleteLog(r);setOpenDropdown(null)}}
