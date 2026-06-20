@@ -161,25 +161,24 @@ export default function StockPage() {
     const noVariantCost = validVariants.length === 0 && nCost ? Number(nCost) : null
 
     const { data: prod, error } = await supabase
-  .from('products')
-  .insert({
-    user_id: targetId,
-    name: nName.trim(),
-    unit_price: Number(nPrice) || 0,
-    stock: totalStock,
-    added_date: nDate,
-    store_id: activeStoreId || null,
-    variants: validVariants.length > 0 ? validVariants : null,
-    cost: noVariantCost
-  })
-  .select()
-  .single()
+      .from('products')
+      .insert({
+        user_id: targetId,
+        name: nName.trim(),
+        unit_price: Number(nPrice) || 0,
+        stock: totalStock,
+        added_date: nDate,
+        store_id: activeStoreId || null,
+        variants: validVariants.length > 0 ? validVariants : null,
+        cost: noVariantCost
+      })
+      .select()
+      .single()
 
-if (error) {
-  console.error(error)
-  alert(error.message)
-  return
-}
+    if (error) {
+      showFlash('Алдаа: ' + error.message)
+      return
+    }
 
     if (prod && totalStock > 0) {
       await supabase.from('restock_log').insert({
