@@ -269,11 +269,11 @@ export default function DashPage() {
       {/* Bulk action bar - дунд гарна */}
       {selectedIds.size>0&&(
         <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
-          <div className="pointer-events-auto bg-white border border-gray-200 rounded-2xl px-6 py-4 flex items-center gap-4" style={{boxShadow:'0 20px 60px rgba(0,0,0,0.15)'}}>
-            <span className="text-sm font-medium text-gray-700">{selectedIds.size} захиалга сонгогдсон</span>
-            <button onClick={bulkDeliver} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">✓ Бүгдийг хүргэсэн</button>
-            <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу? Агуулахад буцаж нэмэгдэнэ.`,onOk:bulkDelete})} className="px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100">Устгах</button>
-            <button onClick={()=>setSelectedIds(new Set())} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          <div className="pointer-events-auto bg-white border border-gray-200 rounded-xl overflow-hidden flex items-center" style={{boxShadow:'0 4px 16px rgba(0,0,0,0.08)'}}>
+            <span className="text-xs text-gray-500 px-4 py-2.5 border-r border-gray-100">{selectedIds.size} захиалга сонгогдсон</span>
+            <button onClick={bulkDeliver} className="text-xs px-4 py-2.5 text-emerald-700 hover:bg-emerald-50">✓ Бүгдийг хүргэсэн</button>
+            <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу?`,onOk:bulkDelete})} className="text-xs px-4 py-2.5 text-red-500 hover:bg-red-50 border-l border-gray-100">Устгах</button>
+            <button onClick={()=>setSelectedIds(new Set())} className="text-xs px-3 py-2.5 text-gray-400 hover:bg-gray-50 border-l border-gray-100">✕</button>
           </div>
         </div>
       )}
