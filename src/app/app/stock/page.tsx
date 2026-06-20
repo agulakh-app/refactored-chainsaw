@@ -252,8 +252,6 @@ export default function StockPage() {
   const rProdData = products.find(p => p.id === rProd)
   const rVariants: Variant[] = rProdData?.variants || []
 
-  const rVariants: Variant[] = rProdData?.variants || []
-
   return (
     <div className="space-y-4">
       {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
