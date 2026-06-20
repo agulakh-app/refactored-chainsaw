@@ -39,6 +39,7 @@ export default function HistoryPage() {
   const [importExpanded, setImportExpanded] = useState(false)
   const [importPreview, setImportPreview] = useState<any[]|null>(null)
   const [importProdList, setImportProdList] = useState<any[]>([])
+  const [importGlobalDate, setImportGlobalDate] = useState(new Date().toISOString().slice(0,10))
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Утасны хайлтын дэлгэрэнгүй
@@ -272,16 +273,17 @@ export default function HistoryPage() {
       const preview:any[]=[]
       for(const r of rows){
         const keys=Object.keys(r)
-        // 1-р багана: Утас — number эсвэл text хоёуланд ажиллана
-        const phoneRaw=r['Утасны дугаар']||r['Утас']||r['Phone']||r[keys[0]]||''
-        const phone=String(phoneRaw).trim().replace(/\s/g,'').replace(/\.0$/,'')
+        // Утасны дугаар — number format, Excel shift-г тэсвэрлэх
+        const phoneRaw=r['Утасны дугаар']??r['Утас']??r['Phone']??r[keys[0]]??''
+        const phone=String(phoneRaw===null||phoneRaw===undefined?'':phoneRaw)
+          .trim().replace(/\s/g,'').replace(/\.0$/,'').replace(/[^0-9+]/g,'')
         // 2-р багана: Хаяг
-        const address=(r['Хаяг']||r['Address']||r[keys[1]]||'').toString().trim()
+        const address=String(r['Хаяг']??r['Address']??r[keys[1]]??'').trim()
         // 3-р багана: Бараа
-        const baraaText=(r['Бараа']||r['Барааны нэр']||r['Product']||r[keys[2]]||'').toString().trim()
-        // Огноо - заавал биш, байхгүй бол өнөөдөр
+        const baraaText=String(r['Бараа']??r['Барааны нэр']??r['Product']??r[keys[2]]??'').trim()
         const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r['Date']||'').toString().trim()
-        const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : new Date().toISOString().slice(0,10)
+        const hasOwnDate=!!rawDate
+        const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : importGlobalDate
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
         const price=parseInt(String(r['Барааны үнэ (₮)']||r['Үнэ']||'0').replace(/[^\d]/g,''))||0
         const delv=parseInt(String(r['Хүргэлт (₮)']||'0').replace(/[^\d]/g,''))||0
@@ -317,7 +319,7 @@ export default function HistoryPage() {
         if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
-        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,isDuplicate})
+        preview.push({date,phone,address,items:matchedItems,price,delv,status,errors,rawDate,isDuplicate,hasOwnDate})
       }
       if(preview.length===0){
         setImportMsg('Баталгаажуулах мөр олдсонгүй. Файлын форматыг шалгана уу.')
@@ -542,10 +544,24 @@ export default function HistoryPage() {
       {importPreview && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl w-full max-w-2xl my-4">
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-              <div>
-                <h3 className="font-semibold text-gray-800">Импортын баталгаажуулалт</h3>
-                <p className="text-xs text-gray-400 mt-0.5">{importPreview.length} захиалга — шалгаад бүртгэнэ үү</p>
+            <div className="p-5 border-b border-gray-100">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-semibold text-gray-800">Импортын баталгаажуулалт</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">{importPreview.length} захиалга — шалгаад бүртгэнэ үү</p>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label className="text-xs text-gray-500 whitespace-nowrap">Нийтийн огноо:</label>
+                <input type="date" value={importGlobalDate}
+                  onChange={e=>{
+                    setImportGlobalDate(e.target.value)
+                    setImportPreview((prev:any)=>prev?.map((r:any)=>
+                      !r.hasOwnDate ? {...r, date:e.target.value} : r
+                    )||null)
+                  }}
+                  className="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white"/>
+                <span className="text-xs text-gray-400">— огноогүй захиалгуудад хэрэглэгдэнэ</span>
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
