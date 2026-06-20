@@ -37,7 +37,8 @@ export default function HistoryPage() {
   const [importing, setImporting] = useState(false)
   const [importMsg, setImportMsg] = useState('')
   const [importExpanded, setImportExpanded] = useState(false)
-  const [importPreview, setImportPreview] = useState<any[]|null>(null) // баталгаажуулах дэлгэц
+  const [importPreview, setImportPreview] = useState<any[]|null>(null)
+  const [importProdList, setImportProdList] = useState<any[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
   // Утасны хайлтын дэлгэрэнгүй
@@ -271,8 +272,9 @@ export default function HistoryPage() {
       const preview:any[]=[]
       for(const r of rows){
         const keys=Object.keys(r)
-        // 1-р багана: Утас
-        const phone=(r['Утасны дугаар']||r['Утас']||r['Phone']||r[keys[0]]||'').toString().trim().replace(/\s/g,'')
+        // 1-р багана: Утас — number эсвэл text хоёуланд ажиллана
+        const phoneRaw=r['Утасны дугаар']||r['Утас']||r['Phone']||r[keys[0]]||''
+        const phone=String(phoneRaw).trim().replace(/\s/g,'').replace(/\.0$/,'')
         // 2-р багана: Хаяг
         const address=(r['Хаяг']||r['Address']||r[keys[1]]||'').toString().trim()
         // 3-р багана: Бараа
@@ -321,6 +323,7 @@ export default function HistoryPage() {
         setImportMsg('Баталгаажуулах мөр олдсонгүй. Файлын форматыг шалгана уу.')
         setImporting(false); return
       }
+      setImportProdList(prodList)
       setImportPreview(preview)
       setImporting(false); setImportMsg('')
     } catch(e:any){ setImportMsg('Файл уншихад алдаа: '+e.message); setImporting(false) }
@@ -549,17 +552,59 @@ export default function HistoryPage() {
               {importPreview.map((row:any, i:number)=>(
                 <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="font-medium text-sm text-gray-800">{row.phone}</span>
-                      {row.address&&<span className="text-xs text-gray-400 ml-2">{row.address}</span>}
-                      <span className="text-xs text-gray-400 ml-2">{row.date}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {row.phone?(
+                        <span className="font-medium text-sm text-gray-800">{row.phone}</span>
+                      ):(
+                        <input
+                          className="border border-red-200 rounded px-2 py-0.5 text-sm text-gray-700 bg-red-50 w-32"
+                          placeholder="Утас..."
+                          onChange={e=>{
+                            const val=e.target.value.trim()
+                            setImportPreview((prev:any)=>{
+                              if(!prev) return prev
+                              const next=[...prev]
+                              next[i]={...next[i],phone:val,
+                                errors:next[i].errors.filter((e2:string)=>e2!=='Утасны дугаар хоосон').concat(!val?['Утасны дугаар хоосон']:[])
+                              }
+                              return next
+                            })
+                          }}
+                        />
+                      )}
+                      {row.address&&<span className="text-xs text-gray-400">{row.address}</span>}
+                      <span className="text-xs text-gray-400">{row.date}</span>
                     </div>
                   </div>
                   <div className="mt-1.5 space-y-1">
                     {row.items.map((it:any, j:number)=>(
-                      <div key={j} className="text-xs">
+                      <div key={j} className="text-xs flex items-center gap-2">
                         {!it.product?(
-                          <span className="text-red-500">🔴 {it.name} × {it.qty} — агуулахад олдсонгүй</span>
+                          <>
+                            <span className="text-red-400">🔴</span>
+                            <input
+                              className="border border-red-200 rounded px-2 py-0.5 text-xs text-gray-700 bg-red-50 flex-1 min-w-0"
+                              value={it.name}
+                              placeholder="Барааны нэр засах..."
+                              onChange={e=>{
+                                const newName=e.target.value
+                                setImportPreview((prev:any)=>{
+                                  if(!prev) return prev
+                                  const next=[...prev]
+                                  const newItems=[...next[i].items]
+                                  const prod=matchProduct(newName,importProdList)
+                                  newItems[j]={...newItems[j],name:newName,product:prod,
+                                    error:!prod?`"${newName}" агуулахад олдсонгүй`:null}
+                                  next[i]={...next[i],items:newItems,
+                                    errors:next[i].errors.filter((e2:string)=>!e2.includes('агуулахад олдсонгүй')&&!e2.includes('Бараа байхгүй'))
+                                      .concat(!prod&&newName?[`"${newName}" агуулахад олдсонгүй`]:[])
+                                  }
+                                  return next
+                                })
+                              }}
+                            />
+                            <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
+                          </>
                         ):(
                           <span className="text-gray-500">✅ {it.product.name} × {it.qty}</span>
                         )}
