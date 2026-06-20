@@ -15,9 +15,6 @@ export default function SettingsPage() {
   const [subStatus, setSubStatus] = useState('')
   const [stores, setStores] = useState<any[]>([])
   const [newStoreName, setNewStoreName] = useState('')
-  const [warehouses, setWarehouses] = useState<any[]>([])
-  const [newWhName, setNewWhName] = useState('')
-  const [newWhAddr, setNewWhAddr] = useState('')
   const [viewers, setViewers] = useState<any[]>([])
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState('viewer')
@@ -33,10 +30,9 @@ export default function SettingsPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     if (!user) return
     setIsAdmin(user.email===ADMIN_PHONE_EMAIL||user.email===ADMIN_EMAIL)
-    const [{ data: prof },{ data: sts },{ data: whs },{ data: vws }] = await Promise.all([
+    const [{ data: prof },{ data: sts },{ data: vws }] = await Promise.all([
       supabase.from('profiles').select('default_delivery_fee,trial_ends_at,subscription_status').single(),
       supabase.from('stores').select('*').eq('user_id',user.id).order('created_at'),
-      supabase.from('warehouses').select('*').eq('user_id',user.id).order('created_at'),
       supabase.from('shared_access').select('*').order('created_at',{ascending:false}),
     ])
     if (prof) {
@@ -45,7 +41,6 @@ export default function SettingsPage() {
       setSubStatus(prof.subscription_status || '')
     }
     setStores(sts||[])
-    setWarehouses(whs||[])
     setViewers(vws||[])
   }
 
@@ -73,21 +68,6 @@ export default function SettingsPage() {
   async function toggleStoreVariant(id: string, current: boolean) {
     await supabase.from('stores').update({ variant_enabled: !current }).eq('id', id)
     loadAll()
-  }
-
-  async function addWarehouse() {
-    if (!newWhName.trim()) { showFlash('Агуулахын нэр оруулна уу'); return }
-    const { data:{ user } } = await supabase.auth.getUser()
-    await supabase.from('warehouses').insert({ user_id:user!.id, name:newWhName.trim(), address:newWhAddr.trim()||null })
-    setNewWhName(''); setNewWhAddr('')
-    showFlash('Агуулах нэмэгдлээ ✓'); loadAll()
-  }
-
-  async function deleteWarehouse(id: string) {
-    if (!confirm('Агуулах устгах уу?')) return
-    const { error } = await supabase.from('warehouses').delete().eq('id',id)
-    if (error) { showFlash('Алдаа: ' + error.message); return }
-    showFlash('Устгагдлаа'); loadAll()
   }
 
   async function addViewer() {
@@ -175,37 +155,6 @@ export default function SettingsPage() {
             placeholder="Дэлгүүрийн нэр" value={newStoreName} onChange={e=>setNewStoreName(e.target.value)}
             onKeyDown={e=>e.key==='Enter'&&addStore()} />
           <button onClick={addStore} disabled={!newStoreName.trim()}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50">
-            Нэмэх
-          </button>
-        </div>
-      </div>
-
-      {/* Агуулахууд */}
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <h2 className="font-medium text-gray-800 mb-1 text-sm">Агуулахууд</h2>
-        <p className="text-xs text-gray-400 mb-4">Бараа хаана хадгалагдаж, хаанаас хүргэгдэхийг тэмдэглэнэ</p>
-        {warehouses.length>0&&(
-          <div className="space-y-2 mb-4">
-            {warehouses.map(w=>(
-              <div key={w.id} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2.5 border border-gray-100">
-                <div>
-                  <div className="text-sm text-gray-700">{w.name}</div>
-                  {w.address&&<div className="text-xs text-gray-400">{w.address}</div>}
-                </div>
-                <button onClick={()=>deleteWarehouse(w.id)} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
-            placeholder="Агуулахын нэр" value={newWhName} onChange={e=>setNewWhName(e.target.value)} />
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
-            placeholder="Хаяг (заавал биш)" value={newWhAddr} onChange={e=>setNewWhAddr(e.target.value)} />
-        </div>
-        <div className="flex justify-end">
-          <button onClick={addWarehouse} disabled={!newWhName.trim()}
             className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700 disabled:opacity-50">
             Нэмэх
           </button>

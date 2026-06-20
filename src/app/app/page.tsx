@@ -270,13 +270,15 @@ export default function DashPage() {
         )
       })()}
 
-      {/* Bulk action bar */}
-      {bulkMode&&(
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center gap-3" style={{boxShadow:'0 8px 24px rgba(0,0,0,0.12)'}}>
-          <span className="text-sm text-gray-600">{selectedIds.size} сонгогдсон</span>
-          <button onClick={bulkDeliver} className="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium hover:bg-emerald-100">Бүгдийг хүргэсэн</button>
-          <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу?`,onOk:bulkDelete})} className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 font-medium hover:bg-red-100">Устгах</button>
-          <button onClick={()=>{setBulkMode(false);setSelectedIds(new Set())}} className="text-xs text-gray-400 hover:text-gray-600 px-2">✕ Болих</button>
+      {/* Bulk action bar - дунд гарна */}
+      {bulkMode&&selectedIds.size>0&&(
+        <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+          <div className="pointer-events-auto bg-white border border-gray-200 rounded-2xl px-6 py-4 flex items-center gap-4" style={{boxShadow:'0 20px 60px rgba(0,0,0,0.15)'}}>
+            <span className="text-sm font-medium text-gray-700">{selectedIds.size} захиалга сонгогдсон</span>
+            <button onClick={bulkDeliver} className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700">✓ Бүгдийг хүргэсэн</button>
+            <button onClick={()=>setConfirmModal({msg:`${selectedIds.size} захиалга устгах уу? Агуулахад буцаж нэмэгдэнэ.`,onOk:bulkDelete})} className="px-4 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100">Устгах</button>
+            <button onClick={()=>{setBulkMode(false);setSelectedIds(new Set())}} className="text-gray-400 hover:text-gray-600 text-sm">✕</button>
+          </div>
         </div>
       )}
 
@@ -525,7 +527,7 @@ export default function DashPage() {
             <div key={date}>
               <div className="px-4 py-2 bg-gray-100 border-y border-gray-200 flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  {bulkMode&&(
+                  {!isViewer&&(
                     <input type="checkbox"
                       checked={grp.every(o=>selectedIds.has(o.id))}
                       onChange={()=>toggleSelectAll(grp.map(o=>o.id))}
@@ -533,12 +535,7 @@ export default function DashPage() {
                   )}
                   <span className="text-xs font-medium text-gray-700">{fmtD(date)}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="text-base font-bold text-emerald-700">{fmt(dayNet)}₮</span></span>
-                  {!isViewer&&!bulkMode&&(
-                    <button onClick={()=>setBulkMode(true)} className="text-xs text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded border border-gray-200 bg-white">Сонгох</button>
-                  )}
-                </div>
+                <span className="text-xs text-gray-400 tabular-nums">{grp.length} захиалга &nbsp;·&nbsp; <span className="text-base font-bold text-emerald-700">{fmt(dayNet)}₮</span></span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse" style={{tableLayout:'fixed'}}>
@@ -560,11 +557,11 @@ export default function DashPage() {
                   const isDelivered=o.status==='delivered'
                   const isCancelled=o.status==='cancelled'
                   return (
-                    <tr key={o.id} className={`border-b border-gray-100 ${bulkMode&&selectedIds.has(o.id)?'bg-emerald-50/40':''}`}>
+                    <tr key={o.id} className={`border-b border-gray-100 ${selectedIds.has(o.id)?'bg-emerald-50/40':''}`}>
                       {/* Утас */}
                       <td className="py-2.5 pl-4 pr-2 align-middle whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
-                          {bulkMode&&(
+                          {!isViewer&&(
                             <input type="checkbox" checked={selectedIds.has(o.id)} onChange={()=>toggleSelect(o.id)}
                               className="w-3.5 h-3.5 accent-emerald-500 flex-shrink-0"/>
                           )}
