@@ -129,7 +129,7 @@ export default function StockPage() {
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
     })
 
-    setRQty('1'); setRNote(''); setRDate(TODAY); setRVariantIdx(-1)
+    setRQty('1'); setRNote(''); setRVariantIdx(-1)
     showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
     load()
   }
@@ -438,14 +438,29 @@ if (error) {
         {/* Агуулахад бараа нэмэх */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
-          <div className="space-y-2">
-            <div className="grid gap-2" style={{gridTemplateColumns:'1fr 60px auto'}}>
+          <div className="space-y-2 flex-1">
+            {/* Мөр 1: Бараа | Variant | Тоо | Нэмэх */}
+            <div className="grid gap-2" style={{gridTemplateColumns:'1.8fr 1.2fr 60px auto'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Бараа</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                   value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
                   {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Variant</label>
+                {variantEnabled && rVariants.length > 0 ? (
+                  <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                    value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
+                    <option value={-1}>— Сонгох —</option>
+                    {rVariants.map((v,i)=>(
+                      <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
+                    ))}
+                  </select>
+                ):(
+                  <div className="w-full px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
+                )}
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тоо</label>
@@ -459,13 +474,12 @@ if (error) {
                 </button>
               </div>
             </div>
-            <div className="grid gap-2" style={{gridTemplateColumns:'1fr 1fr'}}>
+            {/* Мөр 2: Огноо | Тэмдэглэл */}
+            <div className="grid gap-2" style={{gridTemplateColumns:'1fr 2fr'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
-                  <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}}
-                    value={rDate} onChange={e=>setRDate(e.target.value)} />
-                </div>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                  value={rDate} onChange={e=>setRDate(e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
@@ -474,105 +488,34 @@ if (error) {
               </div>
             </div>
           </div>
-          {variantEnabled && rVariants.length > 0 && (
-            <div className="mt-2">
-              <label className="block text-xs text-gray-500 mb-1">Хэмжээ / Өнгө</label>
-              <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
-                <option value={-1}>— Сонгох —</option>
-                {rVariants.map((v, i) => (
-                  <option key={i} value={i}>
-                    {[v.size, v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
           {Number(rQty)<0&&<p className="mt-2 text-xs text-red-500">{Math.abs(Number(rQty))}ш агуулахаас хасагдана</p>}
-          <div className="mt-auto pt-3 flex justify-end">
-            <span className="text-xs text-gray-400">{rDate}</span>
-          </div>
         </div>
         {/* Шинэ бараа оруулах */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-4 text-sm">Шинэ бараа оруулах</h2>
-          {/* Variant байхгүй — PC: 4 багана (Огноогүй), Mobile: нуугдана */}
-          {!variantEnabled && (
-            <div className="hidden sm:grid gap-2" style={{gridTemplateColumns:'2fr 0.8fr 1.3fr 1.3fr'}}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                  min="0" value={nQty} onChange={e=>setNQty(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Зарах үнэ (₮)</label>
-                <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="59,000" value={nPrice?Number(nPrice).toLocaleString():''} onChange={e=>setNPrice(e.target.value.replace(/[^0-9]/g,''))} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Өртөг (₮)</label>
-                <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} />
-              </div>
-            </div>
-          )}
-          {/* Mobile: Нэр | Тоо (нэг мөр), Зарах үнэ | Өртөг (нэг мөр) */}
-          {!variantEnabled && (
-            <div className="sm:hidden space-y-2">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                    min="0" value={nQty} onChange={e=>setNQty(e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Зарах үнэ (₮)</label>
-                  <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                    placeholder="59,000" value={nPrice?Number(nPrice).toLocaleString():''} onChange={e=>setNPrice(e.target.value.replace(/[^0-9]/g,''))} />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Өртөг (₮)</label>
-                <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="37,000" value={nCost?Number(nCost).toLocaleString():''} onChange={e=>setNCost(e.target.value.replace(/[^0-9]/g,''))} />
-              </div>
-            </div>
-          )}
-          {/* Variant байгаа — нэр + огноо дээр, variant table доор */}
-          {variantEnabled && (
-            <div className="grid gap-2 mb-3" style={{gridTemplateColumns:'1fr 1fr'}}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={nDate} onChange={e=>setNDate(e.target.value)} />
-              </div>
-            </div>
-          )}
-          {variantEnabled && (
-            <div className="mt-4">
-              <div className="flex justify-end mb-1">
-                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0',cost:''}])}
-                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap">＋ Variant нэмэх</button>
-              </div>
 
-              {nVariants.length===0 && (
-                <p className="text-xs text-gray-400">Variant байхгүй бол хоосон орхино</p>
-              )}
+          {/* Нэр + Зарах үнэ */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Барааны нэр</label>
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="Барааны нэр" value={nName} onChange={e=>setNName(e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Зарах үнэ (₮)</label>
+              <input type="text" inputMode="numeric" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="59,000" value={nPrice?Number(nPrice).toLocaleString():''} onChange={e=>setNPrice(e.target.value.replace(/[^0-9]/g,''))} />
+            </div>
+          </div>
+
+          {/* Variant хэсэг */}
+          {variantEnabled && (
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-400">Variant</span>
+                <button onClick={()=>setNVariants(v=>[...v,{size:'',color:'',price:'',stock:'0',cost:''}])}
+                  className="text-xs text-emerald-600 hover:underline">＋ Нэмэх</button>
+              </div>
               {nVariants.length>0&&(
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm border-separate" style={{borderSpacing:'0 6px'}}>
@@ -580,30 +523,22 @@ if (error) {
                       <tr>
                         <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Хэмжээ</th>
                         <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өнгө</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Зарах үнэ (₮)</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Өртөг (₮)</th>
-                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Тоо</th>
+                        <th className="text-left text-xs text-gray-400 font-normal pb-1 pr-2">Үнэ (₮)</th>
                         <th></th>
                       </tr>
                     </thead>
                     <tbody>
                       {nVariants.map((v,i)=>(
                         <tr key={i}>
-                          <td className="pr-2"><input className="w-full px-2 py-2.5 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="150x200..." value={v.size}
+                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                            placeholder="L3..." value={v.size}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,size:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
+                          <td className="pr-2"><input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
                             placeholder="Цагаан..." value={v.color}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,color:e.target.value}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
+                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
                             placeholder="59,000" value={v.price?Number(v.price).toLocaleString():''}
                             onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2"><input type="text" inputMode="numeric" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm py-2.5"
-                            placeholder="37,000" value={v.cost?Number(v.cost).toLocaleString():''}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,cost:e.target.value.replace(/[^0-9]/g,'')}:x))}/></td>
-                          <td className="pr-2" style={{width:70}}><input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center py-2.5"
-                            placeholder="0" min="0" value={v.stock}
-                            onChange={e=>setNVariants(vs=>vs.map((x,j)=>j===i?{...x,stock:e.target.value}:x))}/></td>
                           <td style={{width:32}}><button onClick={()=>setNVariants(vs=>vs.filter((_,j)=>j!==i))}
                             className="w-7 h-7 flex items-center justify-center bg-red-50 text-red-400 rounded-lg text-xs hover:bg-red-100">✕</button></td>
                         </tr>
@@ -614,6 +549,7 @@ if (error) {
               )}
             </div>
           )}
+
           <div className="flex justify-end mt-auto pt-3">
             <button onClick={addNewProduct} className="px-5 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700">Нэмэх</button>
           </div>
