@@ -56,6 +56,15 @@ export default function HistoryPage() {
 
   useEffect(()=>{ load() },[load])
 
+  // XLSX library-г урьдчилан татах
+  useEffect(()=>{
+    if(!(window as any).XLSX){
+      const s=document.createElement('script')
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+      document.head.appendChild(s)
+    }
+  },[])
+
   const [confirmModal, setConfirmModal] = useState<{msg:string,onOk:()=>void}|null>(null)
   const [editModal, setEditModal] = useState<Order|null>(null)
   const [editPhone, setEditPhone] = useState('')
@@ -263,11 +272,16 @@ export default function HistoryPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     if(!user){ setImporting(false); return }
     const targetId=ownerId||user.id
-    const loadXLSX=():Promise<any>=>new Promise(resolve=>{
+
+    const loadXLSX=():Promise<any>=>new Promise((resolve,reject)=>{
       if((window as any).XLSX){ resolve((window as any).XLSX); return }
       const s=document.createElement('script')
       s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
-      s.onload=()=>resolve((window as any).XLSX)
+      s.onload=()=>{
+        if((window as any).XLSX) resolve((window as any).XLSX)
+        else reject(new Error('XLSX ачаалагдсангүй'))
+      }
+      s.onerror=()=>reject(new Error('XLSX library ачаалах боломжгүй. Интернет холболт шалгана уу.'))
       document.head.appendChild(s)
     })
     try {
