@@ -420,7 +420,7 @@ if (error) {
               <div><label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   value={editNote} onChange={e=>setEditNote(e.target.value)} /></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">— тухайн өдрийн үнэ</span></label>
+              <div><label className="block text-xs text-gray-500 mb-1">Өртөг (₮) <span className="text-gray-400">(хоосон бол өөрчлөгдөхгүй)</span></label>
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                   placeholder="Хоосон бол өөрчлөгдөхгүй" value={editCost} onChange={e=>setEditCost(e.target.value)} /></div>
             </div>
@@ -612,10 +612,12 @@ if (error) {
     </div>
   </div>
 ))}
+                    </div>
                   )}
                 </div>
               )
-            })}
+            })
+          }
           </div>
         </div>
       )}
