@@ -265,8 +265,12 @@ export default function HistoryPage() {
         setImportMsg('Файлд өгөгдөл олдсонгүй. Template-ийн форматтай таарч байгааг шалгана уу.')
         setImporting(false); return
       }
-      // Debug: 1-р мөрийн бүтцийг харуул
       setImportMsg(`${rows.length} мөр уншиж байна...`)
+      await processRows(rows, targetId)
+    } catch(e:any){ setImportMsg('Файл уншихад алдаа: '+e.message); setImporting(false) }
+  }
+
+  async function processRows(rows: any[], targetId: string) {
       const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
       const prodList=products||[]
 
@@ -339,8 +343,8 @@ export default function HistoryPage() {
       setImportProdList(prodList)
       setImportPreview(preview)
       setImporting(false); setImportMsg('')
-    } catch(e:any){ setImportMsg('Файл уншихад алдаа: '+e.message); setImporting(false) }
   }
+
 
   // Баталгаажуулсны дараа бүртгэх
   async function confirmImport() {
@@ -411,6 +415,29 @@ export default function HistoryPage() {
 
   const groups: Record<string,Order[]> = {}
   filtered.forEach(o=>{ if(!groups[o.date])groups[o.date]=[]; groups[o.date].push(o) })
+
+  const [pasteText, setPasteText] = useState('')
+
+  async function handlePasteImport(text: string) {
+    if(!text.trim()) return
+    setImporting(true); setImportMsg('Боловсруулж байна...')
+    const { data:{ user } } = await supabase.auth.getUser()
+    if(!user){ setImporting(false); return }
+    const targetId=ownerId||user.id
+    // Tab-аар тусгаарлагдсан мөрүүдийг задлах
+    const lines=text.trim().split('\n').filter(l=>l.trim())
+    const rows=lines.map(line=>{
+      const cells=line.split('\t')
+      return {
+        'Утасны дугаар': cells[0]?.trim()||'',
+        'Хаяг': cells[1]?.trim()||'',
+        'Бараа': cells[2]?.trim()||'',
+        'Хүргэлт': cells[3]?.trim()||'',
+        'Төлбөр': cells[4]?.trim()||'',
+      }
+    })
+    await processRows(rows, targetId)
+  }
 
   return (
     <div className="space-y-4">
@@ -544,6 +571,22 @@ export default function HistoryPage() {
                 ))}
               </div>
               {importMsg&&<p className={`text-xs mt-2 font-medium ${importMsg.startsWith('Алдаа')?'text-red-500':'text-emerald-600'}`}>{importMsg}</p>}
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-1.5">Эсвэл Excel-ээс copy хийгээд доор paste хийнэ үү:</p>
+                <textarea
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono resize-none focus:outline-none focus:border-emerald-400"
+                  rows={4}
+                  placeholder={"89639100\tДундговь аймаг\tЭкс ЭМ 2\n99629160\tБЗД хороо\tСуга ЭМ, Экс ЭМ"}
+                  value={pasteText}
+                  onChange={e=>setPasteText(e.target.value)}
+                  onPaste={e=>{
+                    e.preventDefault()
+                    const text=e.clipboardData.getData('text')
+                    setPasteText(text)
+                    setTimeout(()=>handlePasteImport(text),100)
+                  }}
+                />
+              </div>
               <p className="text-xs text-gray-400 mt-2 leading-relaxed">
                 ⚠️ Импорт хийхэд "Тоо ширхэг" нь захиалгын барааны нэртэй (variant бол variant нэртэй) <b>яг таарсан</b> барааны үлдэгдлээс автоматаар хасагдана. Нэр таараагүй бараа агуулахаас хасагдахгүй (захиалга үүснэ, мэдэгдэл харагдана).
               </p>
