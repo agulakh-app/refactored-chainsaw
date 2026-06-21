@@ -359,12 +359,12 @@ export default function HistoryPage() {
       const { data: ord } = await supabase.from('orders').insert({
         user_id:targetId,date:row.date,day_seq:1,
         phone:row.phone,address:row.address||'-',
-        delivery_fee:row.paid?0:row.delv,status:row.status,
+        delivery_fee:row.delv,status:row.status,
         store_id:activeStoreId||null
       }).select().single()
       if(!ord) continue
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=row.paid?0:(it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
+        const unitPrice=it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
