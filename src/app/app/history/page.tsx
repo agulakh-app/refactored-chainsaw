@@ -266,9 +266,7 @@ export default function HistoryPage() {
         setImporting(false); return
       }
       // Debug: 1-р мөрийн бүтцийг харуул
-      const firstKeys=Object.keys(rows[0]||{})
-      const firstVals=firstKeys.map(k=>String(rows[0][k]).slice(0,20))
-      setImportMsg(`Keys: [${firstKeys.join(' | ')}] → [${firstVals.join(' | ')}]`)
+      setImportMsg(`${rows.length} мөр уншиж байна...`)
       const { data: products } = await supabase.from('products').select('*').eq('user_id',targetId)
       const prodList=products||[]
 
