@@ -364,7 +364,7 @@ export default function HistoryPage() {
       }).select().single()
       if(!ord) continue
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0
+        const unitPrice=row.paid?0:(it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
