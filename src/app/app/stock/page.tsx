@@ -438,8 +438,8 @@ if (error) {
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
           <div className="space-y-2 flex-1">
-            {/* Мөр 1: Бараа | Variant | Тоо | Нэмэх */}
-            <div className="grid gap-2" style={{gridTemplateColumns:'1.8fr 1.2fr 60px auto'}}>
+            {/* Мөр 1: Бараа | Тоо | Огноо */}
+            <div className="grid gap-2" style={{gridTemplateColumns:'2fr 60px 140px'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Бараа</label>
                 <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
@@ -448,8 +448,21 @@ if (error) {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Variant</label>
-                {variantEnabled && rVariants.length > 0 ? (
+                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
+                <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
+                  className={`w-full px-2 py-2 rounded-lg border text-sm text-center ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                  value={rDate} onChange={e=>setRDate(e.target.value)} />
+              </div>
+            </div>
+            {/* Мөр 2: Variant (байвал) | Тэмдэглэл | Нэмэх */}
+            <div className="grid gap-2" style={{gridTemplateColumns:rVariants.length>0?'1.2fr 2fr auto':'1fr auto'}}>
+              {rVariants.length > 0 && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Variant</label>
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
@@ -457,33 +470,18 @@ if (error) {
                       <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
                     ))}
                   </select>
-                ):(
-                  <div className="w-full px-3 py-2 rounded-lg border border-gray-100 text-sm text-gray-300 bg-gray-50">—</div>
-                )}
-              </div>
+                </div>
+              )}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                <input type="number" value={rQty} onChange={e=>setRQty(e.target.value)}
-                  className={`w-full px-2 py-2 rounded-lg border text-sm text-center ${Number(rQty)<0?'border-red-200 bg-red-50 text-red-700':'border-gray-200'}`} />
+                <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  placeholder="Нийлүүлэгч..." value={rNote} onChange={e=>setRNote(e.target.value)} />
               </div>
               <div className="flex items-end">
                 <button onClick={addRestock}
                   className={`px-4 py-2 rounded-lg text-sm font-medium text-white whitespace-nowrap ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
                   {Number(rQty)<0?'Хасах':'Нэмэх'}
                 </button>
-              </div>
-            </div>
-            {/* Мөр 2: Огноо | Тэмдэглэл */}
-            <div className="grid gap-2" style={{gridTemplateColumns:'1fr 2fr'}}>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={rDate} onChange={e=>setRDate(e.target.value)} />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                  placeholder="Нийлүүлэгч..." value={rNote} onChange={e=>setRNote(e.target.value)} />
               </div>
             </div>
           </div>
