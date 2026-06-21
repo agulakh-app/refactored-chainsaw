@@ -458,13 +458,24 @@ export default function DashPage() {
                 <button onClick={submitOrder} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">Захиалга бүртгэх</button>
               </div>
             </div>
-            {/* ── DESKTOP ONLY (анхны layout) ── */}
-            <div className="hidden sm:block">
-            <div className="grid grid-cols-3 gap-3">
+            {/* ── DESKTOP ONLY ── */}
+            <div className="hidden sm:block space-y-2">
+            {/* Мөр 1: Утас | Огноо | Төлбөр төлөгдсөн | Хүргэлт */}
+            <div className="grid gap-3" style={{gridTemplateColumns:'1.2fr 1fr auto 1fr'}}>
               <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
                 <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" placeholder="89639100" value={oPhone} onChange={e=>setOPhone(e.target.value)}/></div>
               <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
                 <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDate} onChange={e=>setODate(e.target.value)}/></div>
+              <div className="flex flex-col justify-end pb-0.5">
+                <label className="block text-xs text-gray-500 mb-1 invisible">_</label>
+                <label className="flex items-center gap-2 cursor-pointer h-[38px] px-3 rounded-lg border border-gray-200 bg-white">
+                  <div onClick={()=>setOPaid(!oPaid)}
+                    className={`w-4 h-4 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
+                    {oPaid&&<span className="text-white text-[10px] font-bold">✓</span>}
+                  </div>
+                  <span className="text-xs text-gray-600 whitespace-nowrap">Төлбөр төлөгдсөн</span>
+                </label>
+              </div>
               <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮){defaultDelivery>0&&<span className="text-gray-400 ml-1 text-xs">({fmt(defaultDelivery)}₮)</span>}</label>
                 <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={oDelv} onChange={e=>setODelv(e.target.value)}/></div>
             </div>
