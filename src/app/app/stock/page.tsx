@@ -28,6 +28,8 @@ export default function StockPage() {
 
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
+  const [rProdSearch, setRProdSearch] = useState('')
+  const [rProdOpen, setRProdOpen] = useState(false)
   const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
@@ -442,10 +444,30 @@ if (error) {
             <div className="grid gap-2" style={{gridTemplateColumns:'2fr 60px 140px'}}>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Бараа</label>
-                <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={rProd} onChange={e=>{setRProd(e.target.value);setRVariantIdx(-1)}}>
-                  {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                </select>
+                <div className="relative">
+                  <input
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                    placeholder="Нэрээр хайх..."
+                    value={rProdSearch||products.find(p=>p.id===rProd)?.name||''}
+                    onFocus={()=>{setRProdOpen(true);setRProdSearch('')}}
+                    onChange={e=>{setRProdSearch(e.target.value);setRProdOpen(true)}}
+                    onBlur={()=>setTimeout(()=>setRProdOpen(false),150)}
+                  />
+                  {rProdOpen&&(
+                    <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                      {products
+                        .filter(p=>!rProdSearch||p.name.toLowerCase().includes(rProdSearch.toLowerCase()))
+                        .map(p=>(
+                          <button key={p.id} type="button"
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex justify-between items-center ${p.id===rProd?'bg-emerald-50 text-emerald-700':''}`}
+                            onMouseDown={()=>{setRProd(p.id);setRVariantIdx(-1);setRProdSearch('');setRProdOpen(false)}}>
+                            <span>{p.name}</span>
+                            <span className="text-xs text-gray-400">{p.stock}ш</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тоо</label>
