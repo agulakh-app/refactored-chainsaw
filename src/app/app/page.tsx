@@ -238,7 +238,8 @@ export default function DashPage() {
 
   async function deleteOrder(o:Order, silent=false){
     const doDelete=async()=>{
-      if(o.status==='pending'){
+      // pending болон delivered хоёуланд stock буцаана (cancelled-д буцаагаагүй тул зөвхөн тэр 2)
+      if(o.status==='pending'||o.status==='delivered'){
         for(const it of(o.order_items||[])){
           const pid=(it as any).product_id
           const qty=(it as any).quantity

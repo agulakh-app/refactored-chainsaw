@@ -128,7 +128,7 @@ export default function HistoryPage() {
     setConfirmModal({
       msg: 'Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.',
       onOk: async () => {
-        if(o.status==='pending'){
+        if(o.status==='pending'||o.status==='delivered'){
           for(const it of(o.order_items||[])){
             const pid=(it as any).product_id
             const qty=(it as any).quantity
@@ -359,13 +359,12 @@ export default function HistoryPage() {
       const { data: ord } = await supabase.from('orders').insert({
         user_id:targetId,date:row.date,day_seq:1,
         phone:row.phone,address:row.address||'-',
-        delivery_fee:row.delv,status:row.status,
+        delivery_fee:row.paid?0:row.delv,status:row.status,
         store_id:activeStoreId||null
       }).select().single()
       if(!ord) continue
-      // Нийт үнэ: барааны unit_price × qty-аас тооцоолох (эсвэл Excel-ийн price)
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0
+        const unitPrice=row.paid?0:(it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
