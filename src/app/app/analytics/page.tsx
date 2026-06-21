@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useOwnerId, useActiveStore, useGuestRole } from '../client-layout'
+import { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip } from 'chart.js'
+Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip)
 
 function fmt(n: number) { return n.toLocaleString() }
 
@@ -187,17 +189,8 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     let cancelled = false
-    const loadChartJS = (): Promise<any> => new Promise(resolve => {
-      if ((window as any).Chart) { resolve((window as any).Chart); return }
-      const s = document.createElement('script')
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js'
-      s.onload = () => resolve((window as any).Chart)
-      document.head.appendChild(s)
-    })
 
-    loadChartJS().then(Chart => {
-      if (cancelled || !Chart) return
-
+    if (!cancelled) {
       if (weekdayChartRef.current) weekdayChartRef.current.destroy()
       if (weekdayCanvasRef.current) {
         const wMax = Math.max(...weekdayChartData, 1)
@@ -210,7 +203,7 @@ export default function AnalyticsPage() {
           options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display:false }, tooltip: { callbacks: { label:(c:any)=>fmt(Math.round(c.parsed.y))+'₮' } } },
-            scales: { y: { ticks: { callback:(v:any)=>v>=1000?Math.round(v/1000)+'к':v }, beginAtZero:true } }
+            scales: { y: { ticks: { callback:(v:any)=>Number(v)>=1000?Math.round(Number(v)/1000)+'к':v }, beginAtZero:true } }
           }
         })
       }
@@ -232,12 +225,12 @@ export default function AnalyticsPage() {
             plugins: { legend: { display:false }, tooltip: { callbacks: { label:(c:any)=>c.dataset.label+': '+fmt(Math.round(c.parsed.y))+'₮' } } },
             scales: {
               x: { stacked:true, ticks: { autoSkip:false, maxRotation:60, font:{size:10} } },
-              y: { stacked:true, ticks: { callback:(v:any)=>v>=1000?Math.round(v/1000)+'к':v }, beginAtZero:true }
+              y: { stacked:true, ticks: { callback:(v:any)=>Number(v)>=1000?Math.round(Number(v)/1000)+'к':v }, beginAtZero:true }
             }
           }
         })
       }
-    })
+    }
 
     return () => { cancelled = true }
   }, [JSON.stringify(weekdayChartData), JSON.stringify(topProducts)])
