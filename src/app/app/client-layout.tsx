@@ -44,6 +44,11 @@ function timeLeft(d: string | null) {
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const path = usePathname()
+
+  // Хуудас хадгалах
+  useEffect(()=>{
+    if(path&&path.startsWith('/app')) localStorage.setItem('olula_path',path)
+  },[path])
   const [bizName, setBizName] = useState('')
   const [subStatus, setSubStatus] = useState('trial')
   const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
@@ -54,7 +59,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [ownerName, setOwnerName] = useState('')
   const [stores, setStores] = useState<any[]>([])
-  const [activeStoreId, setActiveStoreId] = useState<string | null>(null)
+  const [activeStoreId, setActiveStoreIdRaw] = useState<string | null>(()=>{
+    if(typeof window==='undefined') return null
+    return localStorage.getItem('olula_store')||null
+  })
+  function setActiveStoreId(id: string|null){
+    setActiveStoreIdRaw(id)
+    if(typeof window!=='undefined'){
+      if(id) localStorage.setItem('olula_store',id)
+      else localStorage.removeItem('olula_store')
+    }
+  }
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   const [adminUser, setAdminUser] = useState(false)
@@ -128,7 +143,18 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         if (p.subscription_status === 'expired') { router.push('/pricing'); return }
         const storeList = sts || []
         setStores(storeList)
-        if (storeList.length > 0) setActiveStoreId(storeList[0].id)
+        // Хадгалсан дэлгүүр сэргээх
+        const savedStore = localStorage.getItem('olula_store')
+        if(savedStore && storeList.find((s:any)=>s.id===savedStore)){
+          setActiveStoreId(savedStore)
+        } else if (storeList.length > 0) {
+          setActiveStoreId(storeList[0].id)
+        }
+        // Хадгалсан хуудас руу шилжих
+        const savedPath = localStorage.getItem('olula_path')
+        if(savedPath && savedPath !== path && savedPath.startsWith('/app')){
+          router.replace(savedPath)
+        }
         setReady(true)
         return
       }
@@ -319,6 +345,16 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </button>
               )
             })}
+            {adminUser&&(
+              <button onClick={()=>router.push('/admin')}
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-0 ${path==='/admin'?'text-[#07e6ae]':'text-gray-400'}`}>
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={path==='/admin'?2:1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                <span className={`text-xs truncate ${path==='/admin'?'font-medium':''}`}>Админ</span>
+                {path==='/admin'&&<div className="w-1 h-1 bg-[#07e6ae] rounded-full"/>}
+              </button>
+            )}
           </div>
         </nav>
       </div>
