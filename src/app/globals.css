@@ -19,3 +19,8 @@ html, body {
 .badge-green { @apply bg-green-100 text-green-800; }
 .badge-amber { @apply bg-amber-100 text-amber-800; }
 .badge-red { @apply bg-red-100 text-red-800; }
+
+/* PWA pull-to-refresh disable - апп доторх гүйлгэлт */
+html, body {
+  overscroll-behavior-y: none;
+}

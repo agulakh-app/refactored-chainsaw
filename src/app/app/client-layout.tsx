@@ -59,16 +59,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [ownerName, setOwnerName] = useState('')
   const [stores, setStores] = useState<any[]>([])
-  const [activeStoreId, setActiveStoreIdRaw] = useState<string | null>(()=>{
-    if(typeof window==='undefined') return null
-    return localStorage.getItem('olula_store')||null
-  })
+  const [activeStoreId, setActiveStoreIdRaw] = useState<string | null>(null)
   function setActiveStoreId(id: string|null){
     setActiveStoreIdRaw(id)
-    if(typeof window!=='undefined'){
+    try {
       if(id) localStorage.setItem('olula_store',id)
       else localStorage.removeItem('olula_store')
-    }
+    } catch(e){}
   }
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [isInstalled, setIsInstalled] = useState(false)
@@ -144,14 +141,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         const storeList = sts || []
         setStores(storeList)
         // Хадгалсан дэлгүүр сэргээх
-        const savedStore = localStorage.getItem('olula_store')
+        let savedStore: string|null = null
+        try { savedStore = localStorage.getItem('olula_store') } catch(e){}
         if(savedStore && storeList.find((s:any)=>s.id===savedStore)){
-          setActiveStoreId(savedStore)
+          setActiveStoreIdRaw(savedStore)
         } else if (storeList.length > 0) {
-          setActiveStoreId(storeList[0].id)
+          setActiveStoreIdRaw(storeList[0].id)
+          try { localStorage.setItem('olula_store', storeList[0].id) } catch(e){}
         }
         // Хадгалсан хуудас руу шилжих
-        const savedPath = localStorage.getItem('olula_path')
+        let savedPath: string|null = null
+        try { savedPath = localStorage.getItem('olula_path') } catch(e){}
         if(savedPath && savedPath !== path && savedPath.startsWith('/app')){
           router.replace(savedPath)
         }
