@@ -70,6 +70,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [isInstalled, setIsInstalled] = useState(false)
   const [adminUser, setAdminUser] = useState(false)
+  const [appLogoUrl, setAppLogoUrl] = useState('')
   const [storeOpen, setStoreOpen] = useState(false)
 
   useEffect(()=>{
@@ -118,6 +119,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           const { data: ownerProfile } = await supabase.from('profiles')
             .select('business_name,plan').eq('id', access.owner_id).single()
           setOwnerName(ownerProfile?.business_name || 'OLULA')
+        // App settings (лого)
+        const { data: sett } = await supabase.from('app_settings').select('logo_url').eq('id','global').single()
+        if(sett?.logo_url) setAppLogoUrl(sett.logo_url)
           setPlan((ownerProfile?.plan as Plan) || 'basic')
           setReady(true)
           return
@@ -191,7 +195,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         {/* Logo + хугацаа */}
         <div className="px-5 pt-4 pb-3 border-b border-white/10">
           <span className="relative inline-flex items-center">
-            <span className="font-extrabold text-lg tracking-tight text-[#07e6ae]">OLULA</span>
+            {appLogoUrl
+              ? <img src={appLogoUrl} alt="logo" className="h-8 object-contain"/>
+              : <span className="font-extrabold text-lg tracking-tight text-[#07e6ae]">OLULA</span>
+            }
             <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
           </span>
           {!isGuest&&subStatus==='active'&&(
@@ -292,7 +299,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
           <div className="px-4">
             <div className="flex items-center justify-between py-3 border-b border-white/10">
               <span className="relative inline-flex items-center">
-                <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">OLULA</span>
+                {appLogoUrl
+                  ? <img src={appLogoUrl} alt="logo" className="h-7 object-contain"/>
+                  : <span className="font-extrabold text-xl tracking-tight text-[#07e6ae]">OLULA</span>
+                }
                 <span className="absolute top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-[#07e6ae] shadow-[0_0_8px_rgba(7,230,174,0.9)]"/>
               </span>
               <div className="flex items-center gap-2">

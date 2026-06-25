@@ -24,7 +24,11 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [orders, setOrders] = useState<any[]>([])
-  const [tab, setTab] = useState<'users'|'payments'|'stats'>('users')
+  const [tab, setTab] = useState<'users'|'payments'|'stats'|'settings'>('users')
+  const [logoUrl, setLogoUrl] = useState('')
+  const [bannerTitle, setBannerTitle] = useState('')
+  const [bannerText, setBannerText] = useState('')
+  const [settingsSaved, setSettingsSaved] = useState(false)
   const [flash, setFlash] = useState('')
   const [extendUserId, setExtendUserId] = useState<string|null>(null)
   const [extendPlan, setExtendPlan] = useState(0)
@@ -42,11 +46,19 @@ export default function AdminPage() {
     setUsers(data.profiles || [])
     setPayments(data.payments || [])
     setOrders(data.orders || [])
+    // Settings ачаалах
+    const { data: sett } = await supabase.from('app_settings').select('*').eq('id','global').single()
+    if(sett){ setLogoUrl(sett.logo_url||''); setBannerTitle(sett.banner_title||''); setBannerText(sett.banner_text||'') }
   }, [router])
 
   useEffect(() => { load() }, [load])
 
-  async function callAdmin(action: string, id: string, data?: any) {
+  async function saveSettings() {
+    await supabase.from('app_settings').upsert({
+      id:'global', logo_url:logoUrl, banner_title:bannerTitle, banner_text:bannerText
+    })
+    setSettingsSaved(true); setTimeout(()=>setSettingsSaved(false),2000)
+  }
     await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -162,7 +174,7 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="flex border-t border-gray-50">
-            {([['users','👥 Хэрэглэгчид'],['payments','💳 Төлбөрүүд'],['stats','📊 Статистик']] as const).map(([t,l])=>(
+            {([['users','👥 Хэрэглэгчид'],['payments','💳 Төлбөрүүд'],['stats','📊 Статистик'],['settings','⚙️ Тохиргоо']] as const).map(([t,l])=>(
               <button key={t} onClick={()=>setTab(t)}
                 className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-all ${tab===t?'border-emerald-600 text-emerald-700':'border-transparent text-gray-500'}`}>
                 {l}{t==='payments'&&pendingPayments.length>0&&<span className="ml-1.5 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingPayments.length}</span>}
@@ -330,6 +342,47 @@ export default function AdminPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+        {tab==='settings'&&(
+          <div className="max-w-lg space-y-6">
+            {/* Лого */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-4">🖼 Лого</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Лого зургийн URL</label>
+                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    placeholder="https://..." value={logoUrl} onChange={e=>setLogoUrl(e.target.value)}/>
+                </div>
+                {logoUrl&&(
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <img src={logoUrl} alt="logo" className="w-10 h-10 object-contain rounded"/>
+                    <span className="text-xs text-gray-500">Урьдчилан харах</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Баннер */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+              <h3 className="font-semibold text-gray-800 mb-4">📢 Нүүр хуудасны баннер</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Гарчиг</label>
+                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    placeholder="OLULA агуулах систем" value={bannerTitle} onChange={e=>setBannerTitle(e.target.value)}/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Текст</label>
+                  <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
+                    placeholder="Танилцуулга текст..." value={bannerText} onChange={e=>setBannerText(e.target.value)}/>
+                </div>
+              </div>
+            </div>
+            <button onClick={saveSettings}
+              className="w-full py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700">
+              {settingsSaved?'✓ Хадгалагдлаа':'Хадгалах'}
+            </button>
           </div>
         )}
       </main>
