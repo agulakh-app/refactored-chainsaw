@@ -201,13 +201,13 @@ export default function ReconcilePage() {
 
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="grid text-xs text-gray-400 font-medium px-4 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1.5fr 80px'}}>
+          <div className="grid text-xs text-gray-400 font-medium px-3 py-2.5 bg-gray-50 border-b border-gray-100"
+            style={{gridTemplateColumns:'52px 90px 90px 80px 110px 1fr 70px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
             <div className="text-right">Зөрүү</div>
-            <div className="pl-2">Эх үүсвэр</div>
+            <div className="pl-3">Эх үүсвэр</div>
             <div className="pl-2">Тэмдэглэл</div>
             <div></div>
           </div>
@@ -224,8 +224,8 @@ export default function ReconcilePage() {
                 return(
                   <div key={r.id}>
                     {!isEdit?(
-                      <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1.5fr 80px'}}>
+                      <div className="grid items-center px-3 py-2.5 hover:bg-gray-50/50"
+                        style={{gridTemplateColumns:'52px 90px 90px 80px 110px 1fr 70px'}}>
                         <div className="text-xs font-medium text-gray-700">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </div>
@@ -240,7 +240,7 @@ export default function ReconcilePage() {
                             </span>
                           )}
                         </div>
-                        <div className="pl-2 text-xs text-gray-700 truncate">{r.courier}</div>
+                        <div className="pl-3 text-xs text-gray-700 truncate">{r.courier}</div>
                         <div className="pl-2 text-xs text-gray-400 truncate">{r.note||'—'}</div>
                         <div className="flex gap-1 justify-end">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
