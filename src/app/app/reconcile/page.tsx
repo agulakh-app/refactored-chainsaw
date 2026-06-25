@@ -202,7 +202,7 @@ export default function ReconcilePage() {
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="grid text-xs text-gray-400 font-medium px-3 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'52px 90px 90px 80px 110px 1fr 70px'}}>
+            style={{gridTemplateColumns:'52px 90px 90px 80px 130px 1fr 70px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
@@ -225,7 +225,7 @@ export default function ReconcilePage() {
                   <div key={r.id}>
                     {!isEdit?(
                       <div className="grid items-center px-3 py-2.5 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'52px 90px 90px 80px 110px 1fr 70px'}}>
+                        style={{gridTemplateColumns:'52px 90px 90px 80px 130px 1fr 70px'}}>
                         <div className="text-xs font-medium text-gray-700">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </div>
