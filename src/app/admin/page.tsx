@@ -61,6 +61,8 @@ export default function AdminPage() {
     const { data } = supabase.storage.from('assets').getPublicUrl(path)
     setLogoUrl(data.publicUrl)
   }
+
+  async function saveSettings() {
     await supabase.from('app_settings').upsert({
       id:'global', logo_url:logoUrl, banner_title:bannerTitle, banner_text:bannerText
     })
