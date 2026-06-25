@@ -1,10 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-// ── Баннер дата ───────────────────────────────────────────────
-// Зургийг /public/banners/ дотор байршуулна (жишээ: banner1.jpg)
-// Текстийг доороос шинэчилнэ
 export type Banner = {
   image: string;
   badge: string;
@@ -14,31 +12,10 @@ export type Banner = {
   ctaHref: string;
 };
 
-const BANNERS: Banner[] = [
-  {
-    image: "",
-    badge: "Агуулахын удирдлагын систем",
-    title: "Агуулахаа гартаа атга",
-    subtitle: "Бараа бүртгэл, захиалга, ашгийн тооцоог автоматжуулсан — жижиг бизнест зориулсан хэрэгсэл.",
-    ctaLabel: "7 хоног үнэгүй туршаад үз →",
-    ctaHref: "/login",
-  },
-  {
-    image: "",
-    badge: "Хаана ч ажиллана",
-    title: "Гар утас, веб — бүгд нэг дор",
-    subtitle: "Дэлгүүр дээрээсээ ч, гэрээсээ ч агуулахаа удирдаарай.",
-    ctaLabel: "Боломжуудыг харах →",
-    ctaHref: "#features",
-  },
-  {
-    image: "",
-    badge: "Олон дэлгүүр, нэг систем",
-    title: "Бизнесээ өсгөхөд бэлэн",
-    subtitle: "Хэдэн ч салбар, агуулахыг нэг дороос хянаж, ашгаа тооцоорой.",
-    ctaLabel: "Үнэ тариф харах →",
-    ctaHref: "/pricing",
-  },
+const DEFAULT_BANNERS: Banner[] = [
+  { image:"", badge:"Агуулахын удирдлагын систем", title:"Агуулахаа гартаа атга", subtitle:"Бараа бүртгэл, захиалга, ашгийн тооцоог автоматжуулсан — жижиг бизнест зориулсан хэрэгсэл.", ctaLabel:"7 хоног үнэгүй туршаад үз →", ctaHref:"/login" },
+  { image:"", badge:"Хаана ч ажиллана", title:"Гар утас, веб — бүгд нэг дор", subtitle:"Дэлгүүр дээрээсээ ч, гэрээсээ ч агуулахаа удирдаарай.", ctaLabel:"Боломжуудыг харах →", ctaHref:"#features" },
+  { image:"", badge:"Олон дэлгүүр, нэг систем", title:"Бизнесээ өсгөхөд бэлэн", subtitle:"Хэдэн ч салбар, агуулахыг нэг дороос хянаж, ашгаа тооцоорой.", ctaLabel:"Үнэ тариф харах →", ctaHref:"/pricing" },
 ];
 
 const AUTOPLAY_MS = 6000;
@@ -46,6 +23,23 @@ const AUTOPLAY_MS = 6000;
 export default function HeroCarousel() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [BANNERS, setBanners] = useState<Banner[]>(DEFAULT_BANNERS);
+  const [logoUrl, setLogoUrl] = useState('');
+
+  useEffect(()=>{
+    supabase.from('app_settings').select('*').eq('id','global').single().then(({data})=>{
+      if(!data) return
+      if(data.logo_url) setLogoUrl(data.logo_url)
+      if(data.banners && Array.isArray(data.banners)){
+        setBanners(DEFAULT_BANNERS.map((def,i)=>({
+          ...def,
+          image: data.banners[i]?.image||'',
+          title: data.banners[i]?.title||def.title,
+          subtitle: data.banners[i]?.text||def.subtitle,
+        })))
+      }
+    })
+  },[])
 
   const goTo = useCallback((i: number) => {
     setIndex((i + BANNERS.length) % BANNERS.length);

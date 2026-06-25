@@ -1,10 +1,17 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState('');
+
+  useEffect(()=>{
+    supabase.from('app_settings').select('logo_url').eq('id','global').single()
+      .then(({data})=>{ if(data?.logo_url) setLogoUrl(data.logo_url) })
+  },[])
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 40);
@@ -41,6 +48,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center" }}>
             <span style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+              {logoUrl ? (
+                <img src={logoUrl} alt="logo" style={{height:32, objectFit:'contain'}}/>
+              ) : (
               <span style={{
                 fontSize: 20,
                 fontWeight: 800,
@@ -49,6 +59,7 @@ export default function Navbar() {
               }}>
                 OLULA
               </span>
+              )}
               <span style={{
                 position: "absolute",
                 top: 1,

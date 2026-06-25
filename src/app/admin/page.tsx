@@ -26,8 +26,11 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [tab, setTab] = useState<'users'|'payments'|'stats'|'settings'>('users')
   const [logoUrl, setLogoUrl] = useState('')
-  const [bannerTitle, setBannerTitle] = useState('')
-  const [bannerText, setBannerText] = useState('')
+  const [banners, setBanners] = useState([
+    {image:'',title:'Агуулахаа гартаа атга',text:'Бараа бүртгэл, захиалга, ашгийн тооцоог автоматжуулсан — жижиг бизнест зориулсан хэрэгсэл.'},
+    {image:'',title:'Гар утас, веб — бүгд нэг дор',text:'Дэлгүүр дээрээсээ ч, гэрээсээ ч агуулахаа удирдаарай.'},
+    {image:'',title:'Бизнесээ өсгөхөд бэлэн',text:'Хэдэн ч салбар, агуулахыг нэг дороос хянаж, ашгаа тооцоорой.'},
+  ])
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [flash, setFlash] = useState('')
   const [extendUserId, setExtendUserId] = useState<string|null>(null)
@@ -48,7 +51,10 @@ export default function AdminPage() {
     setOrders(data.orders || [])
     // Settings ачаалах
     const { data: sett } = await supabase.from('app_settings').select('*').eq('id','global').single()
-    if(sett){ setLogoUrl(sett.logo_url||''); setBannerTitle(sett.banner_title||''); setBannerText(sett.banner_text||'') }
+    if(sett){
+      setLogoUrl(sett.logo_url||'')
+      if(sett.banners) setBanners(sett.banners)
+    }
   }, [router])
 
   useEffect(() => { load() }, [load])
@@ -64,9 +70,18 @@ export default function AdminPage() {
 
   async function saveSettings() {
     await supabase.from('app_settings').upsert({
-      id:'global', logo_url:logoUrl, banner_title:bannerTitle, banner_text:bannerText
+      id:'global', logo_url:logoUrl, banners
     })
     setSettingsSaved(true); setTimeout(()=>setSettingsSaved(false),2000)
+  }
+
+  async function uploadBannerImage(file: File, idx: number) {
+    const ext = file.name.split('.').pop()
+    const path = `banner${idx+1}.${ext}`
+    const { error } = await supabase.storage.from('assets').upload(path, file, { upsert: true })
+    if(error){ alert('Upload алдаа: '+error.message); return }
+    const { data } = supabase.storage.from('assets').getPublicUrl(path)
+    setBanners(prev=>prev.map((b,i)=>i===idx?{...b,image:data.publicUrl}:b))
   }
 
   async function callAdmin(action: string, id: string, data?: any) {
@@ -382,18 +397,33 @@ export default function AdminPage() {
             </div>
             {/* Баннер */}
             <div className="bg-white rounded-2xl border border-gray-100 p-5">
-              <h3 className="font-semibold text-gray-800 mb-4">📢 Нүүр хуудасны баннер</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Гарчиг</label>
-                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                    placeholder="OLULA агуулах систем" value={bannerTitle} onChange={e=>setBannerTitle(e.target.value)}/>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Текст</label>
-                  <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={3}
-                    placeholder="Танилцуулга текст..." value={bannerText} onChange={e=>setBannerText(e.target.value)}/>
-                </div>
+              <h3 className="font-semibold text-gray-800 mb-4">📢 Нүүр хуудасны баннерууд</h3>
+              <div className="space-y-6">
+                {banners.map((b,i)=>(
+                  <div key={i} className="border border-gray-100 rounded-xl p-4 space-y-3">
+                    <div className="text-xs font-medium text-gray-500">Баннер {i+1}</div>
+                    {/* Зураг */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Зураг upload</label>
+                      <input type="file" accept="image/*"
+                        onChange={e=>{ if(e.target.files?.[0]) uploadBannerImage(e.target.files[0],i) }}
+                        className="w-full text-sm text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-emerald-50 file:text-emerald-700"/>
+                      {b.image&&<img src={b.image} className="mt-2 h-20 w-full object-cover rounded-lg"/>}
+                    </div>
+                    {/* Гарчиг */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Гарчиг</label>
+                      <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                        value={b.title} onChange={e=>setBanners(prev=>prev.map((x,j)=>j===i?{...x,title:e.target.value}:x))}/>
+                    </div>
+                    {/* Текст */}
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Дэд текст</label>
+                      <textarea className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none" rows={2}
+                        value={b.text} onChange={e=>setBanners(prev=>prev.map((x,j)=>j===i?{...x,text:e.target.value}:x))}/>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
             <button onClick={saveSettings}
