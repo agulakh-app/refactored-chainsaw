@@ -25,12 +25,13 @@ export default function ReconcilePage() {
   const [editId, setEditId] = useState<string|null>(null)
   const [editData, setEditData] = useState<any>({})
   const [sourceDropOpen, setSourceDropOpen] = useState(false)
+  const [hiddenSources, setHiddenSources] = useState<string[]>([])
   const sourceRef = useRef<HTMLDivElement>(null)
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
 
   // Өмнө ашигласан эх үүсвэрүүд
-  const savedSources: string[] = Array.from(new Set(recs.map((r:any)=>r.courier).filter(Boolean)))
+  const savedSources: string[] = Array.from(new Set(recs.map((r:any)=>r.courier).filter(Boolean))).filter((s:any)=>!hiddenSources.includes(s)) as string[]
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
@@ -128,7 +129,7 @@ export default function ReconcilePage() {
 
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5">
             <div className="text-xs text-gray-400 mb-0.5">Тооцоолсон орлого</div>
-            <div className="text-lg font-bold text-gray-800">{fmt(systemAmt)}₮</div>
+            <div className="text-lg font-bold text-emerald-600">{fmt(systemAmt)}₮</div>
             <div className="text-xs text-gray-400">{recOrderCount} хүргэгдсэн захиалга</div>
           </div>
 
@@ -154,10 +155,18 @@ export default function ReconcilePage() {
               {sourceDropOpen&&filteredSources.length>0&&(
                 <div className="absolute top-full left-0 right-0 z-30 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
                   {filteredSources.map(s=>(
-                    <button key={s} onMouseDown={()=>{ setRecSource(s); setSourceDropOpen(false) }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 hover:text-emerald-700">
-                      {s}
-                    </button>
+                    <div key={s} className="flex items-center hover:bg-emerald-50 group">
+                      <button onMouseDown={()=>{ setRecSource(s); setSourceDropOpen(false) }}
+                        className="flex-1 text-left px-3 py-2 text-sm text-gray-700 group-hover:text-emerald-700">
+                        {s}
+                      </button>
+                      <button onMouseDown={(e)=>{
+                        e.preventDefault()
+                        setHiddenSources(prev=>[...prev,s])
+                        setSourceDropOpen(false)
+                      }}
+                        className="px-2 py-2 text-gray-300 hover:text-red-400 text-xs">✕</button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -193,12 +202,12 @@ export default function ReconcilePage() {
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="grid text-xs text-gray-400 font-medium px-4 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'75px 90px 100px 90px 1fr 120px 80px'}}>
+            style={{gridTemplateColumns:'70px 100px 100px 90px 120px 1fr 90px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
             <div className="text-right">Зөрүү</div>
-            <div className="pl-2">Эх үүсвэр</div>
+            <div className="pl-3">Эх үүсвэр</div>
             <div>Тэмдэглэл</div>
             <div></div>
           </div>
@@ -216,7 +225,7 @@ export default function ReconcilePage() {
                   <div key={r.id}>
                     {!isEdit?(
                       <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50 text-sm"
-                        style={{gridTemplateColumns:'75px 90px 100px 90px 1fr 120px 80px'}}>
+                        style={{gridTemplateColumns:'70px 100px 100px 90px 120px 1fr 90px'}}>
                         <div>
                           <div className="text-xs font-medium text-gray-700">{fmtD(r.date_from)}</div>
                           {r.date_from!==r.date_to&&<div className="text-xs text-gray-400">{fmtD(r.date_to)}</div>}
@@ -232,7 +241,7 @@ export default function ReconcilePage() {
                             </span>
                           )}
                         </div>
-                        <div className="pl-2 text-xs text-gray-600 truncate">{r.courier}</div>
+                        <div className="pl-3 text-xs text-gray-600 truncate">{r.courier}</div>
                         <div className="text-xs text-gray-400 truncate">{r.note||'—'}</div>
                         <div className="flex gap-1 justify-end">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
