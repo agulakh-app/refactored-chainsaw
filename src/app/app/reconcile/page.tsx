@@ -207,7 +207,7 @@ export default function ReconcilePage() {
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
             <div className="text-right">Зөрүү</div>
-            <div className="pl-6">Эх үүсвэр</div>
+            <div>Эх үүсвэр</div>
             <div className="pl-2">Тэмдэглэл</div>
             <div></div>
           </div>
@@ -240,7 +240,7 @@ export default function ReconcilePage() {
                             </span>
                           )}
                         </div>
-                        <div className="pl-6 text-xs text-gray-700 truncate">{r.courier}</div>
+                        <div className="text-xs text-gray-700 truncate">{r.courier}</div>
                         <div className="pl-2 text-xs text-gray-400 truncate">{r.note||'—'}</div>
                         <div className="flex gap-1 justify-end">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
