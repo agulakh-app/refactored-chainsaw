@@ -45,9 +45,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const router = useRouter()
   const path = usePathname()
 
-  // Хуудас хадгалах
+  // Хуудас хадгалах — client side only
   useEffect(()=>{
-    if(path&&path.startsWith('/app')) localStorage.setItem('olula_path',path)
+    if(typeof window==='undefined') return
+    if(path&&path.startsWith('/app')) {
+      try { localStorage.setItem('olula_path',path) } catch(e){}
+    }
   },[path])
   const [bizName, setBizName] = useState('')
   const [subStatus, setSubStatus] = useState('trial')

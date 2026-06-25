@@ -16,7 +16,7 @@ export type Banner = {
 
 const BANNERS: Banner[] = [
   {
-    image: "/banners/banner1.jpg",
+    image: "",
     badge: "Агуулахын удирдлагын систем",
     title: "Агуулахаа гартаа атга",
     subtitle: "Бараа бүртгэл, захиалга, ашгийн тооцоог автоматжуулсан — жижиг бизнест зориулсан хэрэгсэл.",
@@ -24,7 +24,7 @@ const BANNERS: Banner[] = [
     ctaHref: "/login",
   },
   {
-    image: "/banners/banner2.jpg",
+    image: "",
     badge: "Хаана ч ажиллана",
     title: "Гар утас, веб — бүгд нэг дор",
     subtitle: "Дэлгүүр дээрээсээ ч, гэрээсээ ч агуулахаа удирдаарай.",
@@ -32,7 +32,7 @@ const BANNERS: Banner[] = [
     ctaHref: "#features",
   },
   {
-    image: "/banners/banner3.jpg",
+    image: "",
     badge: "Олон дэлгүүр, нэг систем",
     title: "Бизнесээ өсгөхөд бэлэн",
     subtitle: "Хэдэн ч салбар, агуулахыг нэг дороос хянаж, ашгаа тооцоорой.",
