@@ -53,7 +53,14 @@ export default function AdminPage() {
 
   useEffect(() => { load() }, [load])
 
-  async function saveSettings() {
+  async function uploadLogo(file: File) {
+    const ext = file.name.split('.').pop()
+    const path = `logo.${ext}`
+    const { error } = await supabase.storage.from('assets').upload(path, file, { upsert: true })
+    if(error){ alert('Upload алдаа: '+error.message); return }
+    const { data } = supabase.storage.from('assets').getPublicUrl(path)
+    setLogoUrl(data.publicUrl)
+  }
     await supabase.from('app_settings').upsert({
       id:'global', logo_url:logoUrl, banner_title:bannerTitle, banner_text:bannerText
     })
@@ -351,13 +358,19 @@ export default function AdminPage() {
               <h3 className="font-semibold text-gray-800 mb-4">🖼 Лого</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Лого зургийн URL</label>
+                  <label className="block text-xs text-gray-500 mb-2">Зураг upload хийх</label>
+                  <input type="file" accept="image/*"
+                    onChange={e=>{ if(e.target.files?.[0]) uploadLogo(e.target.files[0]) }}
+                    className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Эсвэл URL шууд оруулах</label>
                   <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
                     placeholder="https://..." value={logoUrl} onChange={e=>setLogoUrl(e.target.value)}/>
                 </div>
                 {logoUrl&&(
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <img src={logoUrl} alt="logo" className="w-10 h-10 object-contain rounded"/>
+                    <img src={logoUrl} alt="logo" className="w-12 h-12 object-contain rounded"/>
                     <span className="text-xs text-gray-500">Урьдчилан харах</span>
                   </div>
                 )}
