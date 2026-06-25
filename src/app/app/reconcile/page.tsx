@@ -109,9 +109,9 @@ export default function ReconcilePage() {
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
-      <div className="grid grid-cols-2 gap-4 items-start">
-        {/* Зүүн: Форм */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+      <div className="flex gap-4 items-start">
+        {/* Зүүн: Форм — 1/5 хасаад */}
+        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3" style={{width:'22%',flexShrink:0}}>
           <h2 className="font-semibold text-gray-800 text-sm">Тооцоо бүртгэх</h2>
 
           <div className="grid grid-cols-2 gap-2">
@@ -202,13 +202,13 @@ export default function ReconcilePage() {
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="grid text-xs text-gray-400 font-medium px-4 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'70px 100px 100px 90px 120px 1fr 90px'}}>
+            style={{gridTemplateColumns:'60px 100px 100px 85px 100px 1fr 90px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
             <div className="text-right">Зөрүү</div>
-            <div className="pl-3">Эх үүсвэр</div>
-            <div>Тэмдэглэл</div>
+            <div className="pl-2">Эх үүсвэр</div>
+            <div className="pl-2">Тэмдэглэл</div>
             <div></div>
           </div>
 
@@ -224,14 +224,13 @@ export default function ReconcilePage() {
                 return(
                   <div key={r.id}>
                     {!isEdit?(
-                      <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50 text-sm"
-                        style={{gridTemplateColumns:'70px 100px 100px 90px 120px 1fr 90px'}}>
-                        <div>
-                          <div className="text-xs font-medium text-gray-700">{fmtD(r.date_from)}</div>
-                          {r.date_from!==r.date_to&&<div className="text-xs text-gray-400">{fmtD(r.date_to)}</div>}
+                      <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
+                        style={{gridTemplateColumns:'60px 100px 100px 85px 100px 1fr 90px'}}>
+                        <div className="text-xs font-medium text-gray-700">
+                          {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </div>
-                        <div className="text-right text-gray-500 text-xs">{fmt(r.system_amount)}₮</div>
-                        <div className="text-right font-medium text-gray-800 text-xs">{fmt(r.received_amount)}₮</div>
+                        <div className="text-right text-xs text-gray-500">{fmt(r.system_amount)}₮</div>
+                        <div className="text-right text-xs font-medium text-gray-800">{fmt(r.received_amount)}₮</div>
                         <div className="text-right">
                           {d===0?(
                             <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Таарсан</span>
@@ -241,8 +240,8 @@ export default function ReconcilePage() {
                             </span>
                           )}
                         </div>
-                        <div className="pl-3 text-xs text-gray-600 truncate">{r.courier}</div>
-                        <div className="text-xs text-gray-400 truncate">{r.note||'—'}</div>
+                        <div className="pl-2 text-xs text-gray-700 truncate">{r.courier}</div>
+                        <div className="pl-2 text-xs text-gray-400 truncate">{r.note||'—'}</div>
                         <div className="flex gap-1 justify-end">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
                             className="text-xs text-gray-400 hover:text-gray-700 px-1.5 py-1 rounded hover:bg-gray-100">Засах</button>
