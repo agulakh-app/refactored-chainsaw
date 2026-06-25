@@ -68,6 +68,8 @@ export default function AdminPage() {
     })
     setSettingsSaved(true); setTimeout(()=>setSettingsSaved(false),2000)
   }
+
+  async function callAdmin(action: string, id: string, data?: any) {
     await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
