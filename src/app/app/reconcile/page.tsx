@@ -108,9 +108,9 @@ export default function ReconcilePage() {
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
-      <div className="flex gap-4 items-start">
+      <div className="grid grid-cols-2 gap-4 items-start">
         {/* Зүүн: Форм */}
-        <div className="w-72 flex-shrink-0 bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
           <h2 className="font-semibold text-gray-800 text-sm">Тооцоо бүртгэх</h2>
 
           <div className="grid grid-cols-2 gap-2">
