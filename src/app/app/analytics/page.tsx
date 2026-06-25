@@ -42,6 +42,7 @@ export default function AnalyticsPage() {
   const [eAmt, setEAmt] = useState('')
   const [flash, setFlash] = useState('')
   const [expPage, setExpPage] = useState(1)
+  const [prodPage, setProdPage] = useState(1)
 
   // Хүргэлтийн тооцоо тулгалт
   const [reconciliations, setReconciliations] = useState<any[]>([])
@@ -76,8 +77,6 @@ export default function AnalyticsPage() {
     setExpenses(exps||[])
     setProducts(prods||[])
     // Тулгалтууд татах
-    const { data:{ user } } = await supabase.auth.getUser()
-    const targetId = ownerId || user?.id
     if(targetId){
       const { data: recs } = await supabase.from('delivery_reconciliations')
         .select('*').eq('user_id', targetId).order('created_at',{ascending:false})
@@ -449,7 +448,7 @@ export default function AnalyticsPage() {
           <p className="text-center text-gray-400 text-sm py-6">Мэдээлэл алга</p>
         ):(
           <div className="space-y-3">
-            {ranking.map(([name,{qty,revenue,cost}],idx)=>{
+            {ranking.slice(0, prodPage*10).map(([name,{qty,revenue,cost}],idx)=>{
               const profit = revenue - cost
               const margin = revenue > 0 ? Math.round((profit/revenue)*100) : 0
               return (
@@ -472,6 +471,12 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             )})}
+            {prodPage*10 < ranking.length&&(
+              <button onClick={()=>setProdPage(p=>p+1)}
+                className="w-full text-xs text-emerald-600 hover:underline py-1">
+                Дэлгэх ({ranking.length - prodPage*10} үлдсэн)
+              </button>
+            )}
           </div>
         )}
       </div>
