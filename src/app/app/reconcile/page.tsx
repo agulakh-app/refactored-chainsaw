@@ -109,9 +109,9 @@ export default function ReconcilePage() {
     <div className="space-y-4">
       {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
-      <div className="flex gap-4 items-start">
+      <div className="grid gap-4 items-start" style={{gridTemplateColumns:'2fr 3fr'}}>
         {/* Зүүн: Форм — 1/5 хасаад */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3" style={{width:'22%',flexShrink:0}}>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
           <h2 className="font-semibold text-gray-800 text-sm">Тооцоо бүртгэх</h2>
 
           <div className="grid grid-cols-2 gap-2">
@@ -202,7 +202,7 @@ export default function ReconcilePage() {
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="grid text-xs text-gray-400 font-medium px-4 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'60px 100px 100px 85px 100px 1fr 90px'}}>
+            style={{gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1.5fr 80px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
@@ -225,7 +225,7 @@ export default function ReconcilePage() {
                   <div key={r.id}>
                     {!isEdit?(
                       <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'60px 100px 100px 85px 100px 1fr 90px'}}>
+                        style={{gridTemplateColumns:'55px 1fr 1fr 1fr 1fr 1.5fr 80px'}}>
                         <div className="text-xs font-medium text-gray-700">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </div>
