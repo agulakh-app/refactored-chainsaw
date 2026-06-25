@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useOwnerId, useActiveStore } from '../client-layout'
 import type { Order } from '@/lib/types'
@@ -24,8 +24,13 @@ export default function ReconcilePage() {
   const [flash, setFlash] = useState('')
   const [editId, setEditId] = useState<string|null>(null)
   const [editData, setEditData] = useState<any>({})
+  const [sourceDropOpen, setSourceDropOpen] = useState(false)
+  const sourceRef = useRef<HTMLDivElement>(null)
 
   const showFlash = (m: string) => { setFlash(m); setTimeout(()=>setFlash(''),2500) }
+
+  // Өмнө ашигласан эх үүсвэрүүд
+  const savedSources: string[] = Array.from(new Set(recs.map((r:any)=>r.courier).filter(Boolean)))
 
   const load = useCallback(async () => {
     const { data:{ user } } = await supabase.auth.getUser()
@@ -40,6 +45,14 @@ export default function ReconcilePage() {
   },[ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
+
+  useEffect(()=>{
+    function handleClick(e: MouseEvent){
+      if(sourceRef.current&&!sourceRef.current.contains(e.target as Node)) setSourceDropOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return()=>document.removeEventListener('mousedown', handleClick)
+  },[])
 
   const calcSystemAmt = (from: string, to: string) =>
     orders.filter(o=>{ const d=o.date||''; return d>=from&&d<=to })
@@ -88,6 +101,7 @@ export default function ReconcilePage() {
     showFlash('Устгагдлаа'); load()
   }
 
+  const filteredSources = savedSources.filter(s=>s.toLowerCase().includes(recSource.toLowerCase())&&s!==recSource)
   const visibleRecs = showAll ? recs : recs.slice(0,5)
 
   return (
@@ -99,7 +113,6 @@ export default function ReconcilePage() {
         <div className="w-72 flex-shrink-0 bg-white rounded-xl border border-gray-100 p-4 space-y-3">
           <h2 className="font-semibold text-gray-800 text-sm">Тооцоо бүртгэх</h2>
 
-          {/* Огноо */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Эхлэх</label>
@@ -113,18 +126,42 @@ export default function ReconcilePage() {
             </div>
           </div>
 
-          {/* Тооцоолсон орлого */}
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5">
             <div className="text-xs text-gray-400 mb-0.5">Тооцоолсон орлого</div>
             <div className="text-lg font-bold text-gray-800">{fmt(systemAmt)}₮</div>
             <div className="text-xs text-gray-400">{recOrderCount} хүргэгдсэн захиалга</div>
           </div>
 
-          {/* Орлого тушаасан */}
+          {/* Эх үүсвэр — dropdown + x */}
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Орлого тушаасан (эх үүсвэр)</label>
-            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Супердэлив, худалдагч..." value={recSource} onChange={e=>setRecSource(e.target.value)}/>
+            <label className="block text-xs text-gray-400 mb-1">Орлого тушаасан</label>
+            <div className="relative" ref={sourceRef}>
+              <div className="flex items-center gap-1">
+                <input
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  placeholder="Супердэлив, худалдагч..."
+                  value={recSource}
+                  onChange={e=>{ setRecSource(e.target.value); setSourceDropOpen(true) }}
+                  onFocus={()=>setSourceDropOpen(true)}
+                />
+                {recSource&&(
+                  <button onClick={()=>setRecSource('')}
+                    className="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 flex-shrink-0">
+                    ✕
+                  </button>
+                )}
+              </div>
+              {sourceDropOpen&&filteredSources.length>0&&(
+                <div className="absolute top-full left-0 right-0 z-30 bg-white border border-gray-200 rounded-lg mt-1 shadow-lg overflow-hidden">
+                  {filteredSources.map(s=>(
+                    <button key={s} onMouseDown={()=>{ setRecSource(s); setSourceDropOpen(false) }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 hover:text-emerald-700">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -133,7 +170,6 @@ export default function ReconcilePage() {
               placeholder="0" value={recReceived} onChange={e=>setRecReceived(e.target.value)}/>
           </div>
 
-          {/* Зөрүү */}
           {recReceived&&(
             <div className={`rounded-lg px-3 py-2 text-sm font-medium flex items-center justify-between ${
               diff===0?'bg-emerald-50 text-emerald-700':diff>0?'bg-blue-50 text-blue-700':'bg-red-50 text-red-600'}`}>
@@ -149,21 +185,21 @@ export default function ReconcilePage() {
           </div>
 
           <button onClick={save} disabled={saving||!recSource||!recReceived}
-            className="w-full py-2 bg-[#0a2e24] text-white rounded-lg text-sm font-medium disabled:opacity-40">
+            className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-40">
             {saving?'Хадгалж байна...':'Хадгалах'}
           </button>
         </div>
 
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
-          {/* Толгой */}
           <div className="grid text-xs text-gray-400 font-medium px-4 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'80px 1fr 110px 110px 90px auto'}}>
+            style={{gridTemplateColumns:'75px 90px 100px 90px 1fr 120px 80px'}}>
             <div>Огноо</div>
-            <div>Эх үүсвэр</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
             <div className="text-right">Зөрүү</div>
+            <div className="pl-2">Эх үүсвэр</div>
+            <div>Тэмдэглэл</div>
             <div></div>
           </div>
 
@@ -179,28 +215,26 @@ export default function ReconcilePage() {
                 return(
                   <div key={r.id}>
                     {!isEdit?(
-                      <div className="grid items-center px-4 py-3 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'80px 1fr 110px 110px 90px auto'}}>
+                      <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50 text-sm"
+                        style={{gridTemplateColumns:'75px 90px 100px 90px 1fr 120px 80px'}}>
                         <div>
                           <div className="text-xs font-medium text-gray-700">{fmtD(r.date_from)}</div>
                           {r.date_from!==r.date_to&&<div className="text-xs text-gray-400">{fmtD(r.date_to)}</div>}
                         </div>
-                        <div>
-                          <div className="text-sm text-gray-700">{r.courier}</div>
-                          {r.note&&<div className="text-xs text-gray-400 truncate">{r.note}</div>}
-                        </div>
-                        <div className="text-right text-sm text-gray-500">{fmt(r.system_amount)}₮</div>
-                        <div className="text-right text-sm font-medium text-gray-800">{fmt(r.received_amount)}₮</div>
+                        <div className="text-right text-gray-500 text-xs">{fmt(r.system_amount)}₮</div>
+                        <div className="text-right font-medium text-gray-800 text-xs">{fmt(r.received_amount)}₮</div>
                         <div className="text-right">
                           {d===0?(
-                            <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Таарсан</span>
+                            <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Таарсан</span>
                           ):(
-                            <span className={`text-sm font-bold ${d>0?'text-blue-600':'text-red-500'}`}>
+                            <span className={`text-xs font-bold ${d>0?'text-blue-600':'text-red-500'}`}>
                               {d>0?'+':''}{fmt(d)}₮
                             </span>
                           )}
                         </div>
-                        <div className="flex gap-1 pl-2">
+                        <div className="pl-2 text-xs text-gray-600 truncate">{r.courier}</div>
+                        <div className="text-xs text-gray-400 truncate">{r.note||'—'}</div>
+                        <div className="flex gap-1 justify-end">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
                             className="text-xs text-gray-400 hover:text-gray-700 px-1.5 py-1 rounded hover:bg-gray-100">Засах</button>
                           <button onClick={()=>deleteRec(r.id)}
@@ -208,8 +242,8 @@ export default function ReconcilePage() {
                         </div>
                       </div>
                     ):(
-                      <div className="px-4 py-3 bg-blue-50/20 space-y-2">
-                        <div className="grid gap-2" style={{gridTemplateColumns:'1fr 1fr 1fr 1fr'}}>
+                      <div className="px-4 py-3 bg-gray-50/50 space-y-2">
+                        <div className="grid gap-2" style={{gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr'}}>
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">Эхлэх</label>
                             <input type="date" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
@@ -221,36 +255,35 @@ export default function ReconcilePage() {
                               value={editData.date_to} onChange={e=>setEditData((p:any)=>({...p,date_to:e.target.value}))}/>
                           </div>
                           <div>
+                            <label className="block text-xs text-gray-400 mb-1">Тушаасан (₮)</label>
+                            <input type="text" inputMode="numeric" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
+                              value={editData.received_amount} onChange={e=>setEditData((p:any)=>({...p,received_amount:e.target.value}))}/>
+                          </div>
+                          <div>
                             <label className="block text-xs text-gray-400 mb-1">Эх үүсвэр</label>
                             <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
                               value={editData.courier} onChange={e=>setEditData((p:any)=>({...p,courier:e.target.value}))}/>
                           </div>
                           <div>
-                            <label className="block text-xs text-gray-400 mb-1">Тушаасан (₮)</label>
-                            <input type="text" inputMode="numeric" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
-                              value={editData.received_amount} onChange={e=>setEditData((p:any)=>({...p,received_amount:e.target.value}))}/>
+                            <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
+                            <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
+                              value={editData.note||''} onChange={e=>setEditData((p:any)=>({...p,note:e.target.value}))}/>
                           </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
-                          <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
-                            value={editData.note||''} onChange={e=>setEditData((p:any)=>({...p,note:e.target.value}))}/>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <button onClick={()=>setEditId(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg">Болих</button>
-                          <button onClick={()=>saveEdit(r.id)} className="px-3 py-1.5 text-xs bg-[#0a2e24] text-white rounded-lg">Хадгалах</button>
+                          <button onClick={()=>saveEdit(r.id)} className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Хадгалах</button>
                         </div>
                       </div>
                     )}
                   </div>
                 )
               })}
-
               {recs.length>5&&(
-                <div className="px-4 py-3 text-center">
+                <div className="px-4 py-2.5 text-center border-t border-gray-100">
                   <button onClick={()=>setShowAll(!showAll)}
                     className="text-xs text-emerald-600 hover:underline">
-                    {showAll?'Хураах':` Дэлгэх (${recs.length-5} үлдсэн)`}
+                    {showAll?'Хураах':`Дэлгэх (${recs.length-5} үлдсэн)`}
                   </button>
                 </div>
               )}
