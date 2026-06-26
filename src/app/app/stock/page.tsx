@@ -25,6 +25,8 @@ export default function StockPage() {
   const [logFilter, setLogFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('')
   const [variantEnabled, setVariantEnabled] = useState(false)
+  const [stockTab, setStockTab] = useState<'list'|'audit'|'log'>('list')
+  const [auditOrders, setAuditOrders] = useState<any[]>([])
 
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
@@ -91,6 +93,12 @@ export default function StockPage() {
     setLogs(ls||[])
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
+    // Аудитын захиалгууд татах
+    if(targetId){
+      const oq = supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).in('status',['pending','delivered'])
+      const { data: ords } = activeStoreId ? await oq.eq('store_id',activeStoreId) : await oq
+      setAuditOrders(ords||[])
+    }
   },[rProd, ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
@@ -309,6 +317,16 @@ if (error) {
   return (
     <div className="space-y-4">
       {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+
+      {/* Tab товчнууд */}
+      <div className="flex gap-2 border-b border-gray-100 pb-0">
+        {([['list','Бараа жагсаалт'],['audit','Аудит'],['log','Бүртгэл']] as const).map(([t,l])=>(
+          <button key={t} onClick={()=>setStockTab(t)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all ${stockTab===t?'border-emerald-600 text-emerald-700':'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            {l}
+          </button>
+        ))}
+      </div>
       {confirmModal&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
@@ -433,9 +451,8 @@ if (error) {
       )}
 
       {/* Агуулахад бараа нэмэх | Шинэ бараа — зэрэгцээ */}
-      {!isViewer && (
+      {!isViewer && stockTab==='list' && (
         <div className="grid grid-cols-2 gap-4 items-stretch">
-
         {/* Агуулахад бараа нэмэх */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
           <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
@@ -578,7 +595,7 @@ if (error) {
       )}
 
       {/* Бараа жагсаалт */}
-      {products.length > 0 && (
+      {stockTab==='list' && products.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
             <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
@@ -640,8 +657,101 @@ if (error) {
         </div>
       )}
 
+      {/* Аудит хэсэг */}
+      {stockTab==='audit' && (() => {
+        // Захиалгаас variant бүрийн зарагдсан тоог тооцоолох
+        const soldMap: Record<string, Record<string, number>> = {}
+        for(const o of auditOrders){
+          if(!['pending','delivered'].includes(o.status)) continue
+          for(const it of (o.order_items||[])){
+            const pid = it.product_id
+            const vl = it.variant_label||'__total__'
+            if(!soldMap[pid]) soldMap[pid]={}
+            soldMap[pid][vl] = (soldMap[pid][vl]||0) + it.quantity
+          }
+        }
+        // Цэнэглэсэн тоо restock_log-оос
+        const restockMap: Record<string, Record<string, number>> = {}
+        for(const l of logs){
+          if(l.type!=='in') continue
+          const pid = l.product_id
+          const vl = (l as any).variant_label||'__total__'
+          if(!restockMap[pid]) restockMap[pid]={}
+          restockMap[pid][vl] = (restockMap[pid][vl]||0) + l.quantity
+        }
+
+        const rows: any[] = []
+        for(const p of products){
+          const pvs: any[] = (p as any).variants||[]
+          if(pvs.length>0){
+            for(const v of pvs){
+              const vl = [v.size,v.color].filter(Boolean).join(' / ')
+              const restocked = restockMap[p.id]?.[vl]||0
+              const sold = soldMap[p.id]?.[vl]||0
+              const expected = Math.max(0, restocked - sold)
+              const actual = v.stock||0
+              const diff = actual - expected
+              rows.push({name:p.id, label:p.name, variant:vl, restocked, sold, expected, actual, diff})
+            }
+          } else {
+            const restocked = restockMap[p.id]?.['__total__']||0
+            const sold = soldMap[p.id]?.['__total__']||0
+            const expected = Math.max(0, restocked - sold)
+            const actual = p.stock||0
+            const diff = actual - expected
+            rows.push({name:p.id, label:p.name, variant:'', restocked, sold, expected, actual, diff})
+          }
+        }
+
+        const hasIssue = rows.some(r=>r.diff!==0)
+
+        return (
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-medium text-gray-800 text-sm">Агуулахын аудит</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Цэнэглэсэн − Зарагдсан = Байх ёстой үлдэгдэл</p>
+              </div>
+              {hasIssue
+                ? <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>
+                : <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">✅ Бүгд таарч байна</span>
+              }
+            </div>
+            <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
+              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px'}}>
+              <div>Бараа</div>
+              <div>Variant</div>
+              <div className="text-right">Цэнэглэсэн</div>
+              <div className="text-right">Зарагдсан</div>
+              <div className="text-right">Байх ёстой</div>
+              <div className="text-right">Систем</div>
+              <div className="text-right">Зөрүү</div>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {rows.map((r,i)=>(
+                <div key={i} className={`grid items-center px-4 py-2.5 text-sm ${r.diff!==0?'bg-red-50/30':''}`}
+                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px'}}>
+                  <div className="font-medium text-gray-700 text-xs">{r.label}</div>
+                  <div className="text-xs text-gray-500">{r.variant||'—'}</div>
+                  <div className="text-right text-xs text-gray-500">{r.restocked}ш</div>
+                  <div className="text-right text-xs text-gray-500">{r.sold}ш</div>
+                  <div className="text-right text-xs font-medium text-gray-700">{r.expected}ш</div>
+                  <div className="text-right text-xs font-medium text-gray-700">{r.actual}ш</div>
+                  <div className="text-right text-xs font-bold">
+                    {r.diff===0
+                      ? <span className="text-emerald-500">✓</span>
+                      : <span className={r.diff>0?'text-blue-500':'text-red-500'}>{r.diff>0?'+':''}{r.diff}ш</span>
+                    }
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Цэнэглэлтийн бүртгэл */}
-      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      {stockTab==='log' && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-medium text-gray-800 text-sm">Агуулах дахь бараа</h2>
           {!isViewer&&(
@@ -744,7 +854,7 @@ if (error) {
           )
         })}
         {filteredLogs.length===0&&<p className="text-center text-gray-400 text-sm py-8">Бүртгэл алга</p>}
-      </div>
+      </div>}
     </div>
   )
 }
