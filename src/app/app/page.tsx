@@ -131,6 +131,9 @@ export default function DashPage() {
       const p=products.find(x=>x.id===it.product_id)
       if(!p){showFlash('Бараа олдсонгүй');return}
       const pvs:any[]=(p as any).variants||[]
+      if(pvs.length>0&&!it.variant_label){
+        showFlash(p.name+' — хэмжээ/өнгө заавал сонгоно уу!'); return
+      }
       if(pvs.length>0&&it.variant_label){
         const v=pvs.find((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label)
         if(!v||v.stock<Number(it.qty)){showFlash((p.name+' · '+it.variant_label)+' хүрэлцэхгүй! '+(v?.stock||0)+'ш');return}
