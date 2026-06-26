@@ -135,6 +135,7 @@ export default function StockPage() {
     await supabase.from('restock_log').insert({
       user_id: targetId, product_id: rProd,
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
+      variant_label: variantLabel||null,
       quantity: absQty, type: isNeg ? 'out' : 'in',
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
     })
@@ -675,7 +676,9 @@ if (error) {
         for(const l of logs){
           if(l.type!=='in') continue
           const pid = l.product_id
-          const vl = (l as any).variant_label||'__total__'
+          // variant_label шинэ column, эсвэл product_name-с задлах (жишээ: "Битүү · 40/41 / Ягаан")
+          const vl = (l as any).variant_label || 
+            (l.product_name.includes(' · ') ? l.product_name.split(' · ').slice(1).join(' · ') : '__total__')
           if(!restockMap[pid]) restockMap[pid]={}
           restockMap[pid][vl] = (restockMap[pid][vl]||0) + l.quantity
         }
