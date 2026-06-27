@@ -27,6 +27,8 @@ export default function StockPage() {
   const [variantEnabled, setVariantEnabled] = useState(false)
   const [stockTab, setStockTab] = useState<'list'|'audit'|'log'>('list')
   const [auditOrders, setAuditOrders] = useState<any[]>([])
+  const [auditEdit, setAuditEdit] = useState<{productId:string,label:string,variant:string,current:number}|null>(null)
+  const [auditEditVal, setAuditEditVal] = useState('')
 
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
@@ -328,7 +330,41 @@ if (error) {
           </button>
         ))}
       </div>
-      {confirmModal&&(
+      {auditEdit&&(
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
+            <h3 className="font-semibold text-gray-800 mb-1">{auditEdit.label}</h3>
+            {auditEdit.variant&&<p className="text-xs text-gray-400 mb-4">{auditEdit.variant}</p>}
+            <p className="text-xs text-gray-500 mb-3">Одоогийн систем дэх тоо: <span className="font-medium text-gray-800">{auditEdit.current}ш</span></p>
+            <label className="block text-xs text-gray-500 mb-1">Шинэ тоо</label>
+            <input type="number" autoFocus
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-4"
+              value={auditEditVal}
+              onChange={e=>setAuditEditVal(e.target.value)}
+              onKeyDown={async e=>{ if(e.key==='Enter') document.getElementById('audit-save-btn')?.click() }}
+            />
+            <div className="flex gap-2">
+              <button onClick={()=>setAuditEdit(null)}
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
+              <button id="audit-save-btn" onClick={async()=>{
+                const ns = parseInt(auditEditVal)||0
+                const prod = products.find(p=>p.id===auditEdit.productId)
+                if(!prod){setAuditEdit(null);return}
+                const pvs:any[]=(prod as any).variants||[]
+                if(pvs.length>0&&auditEdit.variant){
+                  const nv=pvs.map((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===auditEdit.variant?{...v,stock:ns}:v)
+                  const nt=nv.reduce((a:number,v:any)=>a+v.stock,0)
+                  await supabase.from('products').update({variants:nv,stock:nt}).eq('id',auditEdit.productId)
+                } else {
+                  await supabase.from('products').update({stock:ns}).eq('id',auditEdit.productId)
+                }
+                setAuditEdit(null); showFlash('Засварлагдлаа ✓'); load()
+              }}
+                className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
             <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
@@ -749,23 +785,9 @@ if (error) {
                   </div>
                   <div className="text-right">
                     {r.diff!==0&&(
-                      <button onClick={async()=>{
-                        if(!confirm(`"${r.label}${r.variant?' · '+r.variant:''}" — системийг ${r.expected}ш болгох уу?`)) return
-                        const prod = products.find(p=>p.id===r.name)
-                        if(!prod) return
-                        const pvs:any[] = (prod as any).variants||[]
-                        if(pvs.length>0&&r.variant){
-                          const nv = pvs.map((v:any)=>
-                            [v.size,v.color].filter(Boolean).join(' / ')===r.variant
-                              ? {...v,stock:r.expected} : v
-                          )
-                          const nt = nv.reduce((a:number,v:any)=>a+v.stock,0)
-                          await supabase.from('products').update({variants:nv,stock:nt}).eq('id',r.name)
-                        } else {
-                          await supabase.from('products').update({stock:r.expected}).eq('id',r.name)
-                        }
-                        showFlash('Засварлагдлаа ✓')
-                        load()
+                      <button onClick={()=>{
+                        setAuditEdit({productId:r.name,label:r.label,variant:r.variant,current:r.actual})
+                        setAuditEditVal(String(r.expected))
                       }}
                         className="text-xs text-emerald-600 hover:underline px-1">
                         Засах
