@@ -721,7 +721,7 @@ if (error) {
               }
             </div>
             <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px'}}>
+              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
               <div>Бараа</div>
               <div>Variant</div>
               <div className="text-right">Цэнэглэсэн</div>
@@ -729,11 +729,12 @@ if (error) {
               <div className="text-right">Байх ёстой</div>
               <div className="text-right">Систем</div>
               <div className="text-right">Зөрүү</div>
+              <div></div>
             </div>
             <div className="divide-y divide-gray-100">
               {rows.map((r,i)=>(
                 <div key={i} className={`grid items-center px-4 py-2.5 text-sm ${r.diff!==0?'bg-red-50/30':''}`}
-                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px'}}>
+                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
                   <div className="font-medium text-gray-700 text-xs">{r.label}</div>
                   <div className="text-xs text-gray-500">{r.variant||'—'}</div>
                   <div className="text-right text-xs text-gray-500">{r.restocked}ш</div>
@@ -745,6 +746,31 @@ if (error) {
                       ? <span className="text-emerald-500">✓</span>
                       : <span className={r.diff>0?'text-blue-500':'text-red-500'}>{r.diff>0?'+':''}{r.diff}ш</span>
                     }
+                  </div>
+                  <div className="text-right">
+                    {r.diff!==0&&(
+                      <button onClick={async()=>{
+                        if(!confirm(`"${r.label}${r.variant?' · '+r.variant:''}" — системийг ${r.expected}ш болгох уу?`)) return
+                        const prod = products.find(p=>p.id===r.name)
+                        if(!prod) return
+                        const pvs:any[] = (prod as any).variants||[]
+                        if(pvs.length>0&&r.variant){
+                          const nv = pvs.map((v:any)=>
+                            [v.size,v.color].filter(Boolean).join(' / ')===r.variant
+                              ? {...v,stock:r.expected} : v
+                          )
+                          const nt = nv.reduce((a:number,v:any)=>a+v.stock,0)
+                          await supabase.from('products').update({variants:nv,stock:nt}).eq('id',r.name)
+                        } else {
+                          await supabase.from('products').update({stock:r.expected}).eq('id',r.name)
+                        }
+                        showFlash('Засварлагдлаа ✓')
+                        load()
+                      }}
+                        className="text-xs text-emerald-600 hover:underline px-1">
+                        Засах
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
