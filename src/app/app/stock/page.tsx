@@ -25,10 +25,20 @@ export default function StockPage() {
   const [logFilter, setLogFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('')
   const [variantEnabled, setVariantEnabled] = useState(false)
-  const [stockTab, setStockTab] = useState<'list'|'audit'|'log'>('list')
+  const [stockTab, setStockTab] = useState<'list'|'control'|'log'>('list')
   const [auditOrders, setAuditOrders] = useState<any[]>([])
   const [auditEdit, setAuditEdit] = useState<{productId:string,label:string,variant:string,current:number}|null>(null)
   const [auditEditVal, setAuditEditVal] = useState('')
+  const [supply, setSupply] = useState<any[]>([])
+  const [supplyExpanded, setSupplyExpanded] = useState<Set<string>>(new Set())
+  const [showSupplyForm, setShowSupplyForm] = useState(false)
+  const [fProdId, setFProdId] = useState('')
+  const [fVariant, setFVariant] = useState('')
+  const [fType, setFType] = useState<'ordered'|'received'>('ordered')
+  const [fQty, setFQty] = useState('')
+  const [fDate, setFDate] = useState(TODAY)
+  const [fNote, setFNote] = useState('')
+  const [fSaving, setFSaving] = useState(false)
 
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
@@ -100,12 +110,32 @@ export default function StockPage() {
       const oq = supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).in('status',['pending','delivered'])
       const { data: ords } = activeStoreId ? await oq.eq('store_id',activeStoreId) : await oq
       setAuditOrders(ords||[])
+      const { data: sup } = await supabase.from('supply_log').select('*').eq('user_id',targetId).order('date',{ascending:false})
+      setSupply(sup||[])
+      if(!fProdId&&prods&&prods.length>0) setFProdId(prods[0].id)
     }
   },[rProd, ownerId, activeStoreId])
 
   useEffect(()=>{ load() },[load])
 
   // Агуулахад бараа нэмэх — variant stock шинэчлэх
+  async function saveSupply() {
+    if(!fProdId||!fQty) return
+    const { data:{ user } } = await supabase.auth.getUser()
+    const targetId = ownerId || user?.id
+    if(!targetId) return
+    setFSaving(true)
+    const prod = products.find(p=>p.id===fProdId)
+    await supabase.from('supply_log').insert({
+      user_id:targetId, store_id:activeStoreId||null,
+      product_id:fProdId, product_name:prod?.name||'',
+      variant_label:fVariant||null, type:fType,
+      quantity:parseInt(fQty)||0, date:fDate, note:fNote||null
+    })
+    setFQty(''); setFNote('')
+    setFSaving(false); showFlash('Хадгалагдлаа ✓'); load()
+  }
+
   async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
@@ -323,7 +353,7 @@ if (error) {
 
       {/* Tab товчнууд */}
       <div className="flex gap-2 border-b border-gray-100 pb-0">
-        {([['list','Бараа жагсаалт'],['audit','Аудит'],['log','Бүртгэл']] as const).map(([t,l])=>(
+        {([['list','Бараа жагсаалт'],['control','Хяналт'],['log','Бүртгэл']] as const).map(([t,l])=>(
           <button key={t} onClick={()=>setStockTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all ${stockTab===t?'border-emerald-600 text-emerald-700':'border-transparent text-gray-500 hover:text-gray-700'}`}>
             {l}
@@ -695,8 +725,8 @@ if (error) {
         </div>
       )}
 
-      {/* Аудит хэсэг */}
-      {stockTab==='audit' && (() => {
+      {/* Хяналт — Нийлүүлэлт + Аудит */}
+      {stockTab==='control' && (() => {
         // Захиалгаас variant бүрийн зарагдсан тоог тооцоолох
         const soldMap: Record<string, Record<string, number>> = {}
         for(const o of auditOrders){
@@ -745,7 +775,163 @@ if (error) {
 
         const hasIssue = rows.some(r=>r.diff!==0)
 
+        // Нийлүүлэлт нэгтгэл
+        type PK = {id:string;label:string;variant:string}
+        const prodKeys: PK[] = []
+        for(const p of products){
+          const pvs:any[]=p.variants||[]
+          if(pvs.length>0) pvs.forEach((v:any)=>prodKeys.push({id:p.id,label:p.name,variant:[v.size,v.color].filter(Boolean).join(' / ')}))
+          else prodKeys.push({id:p.id,label:p.name,variant:''})
+        }
+        function getSupSummary(pk:PK){
+          const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
+          const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
+          const ordered=supply.filter(s=>ms(s)&&s.type==='ordered').reduce((a:number,s:any)=>a+s.quantity,0)
+          const received=supply.filter(s=>ms(s)&&s.type==='received').reduce((a:number,s:any)=>a+s.quantity,0)
+          const restocked=logs.filter((l:any)=>l.type==='in'&&ml(l)).reduce((a:number,l:any)=>a+l.quantity,0)
+          const sold=(soldMap[pk.id]?.[pk.variant||'__total__'])||0
+          const stock=pk.variant?(products.find(p=>p.id===pk.id)?.variants||[]).find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===pk.variant)?.stock||0:products.find(p=>p.id===pk.id)?.stock||0
+          return {ordered,received,restocked,sold,stock}
+        }
+        function getSupDetail(pk:PK){
+          const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
+          const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
+          return [
+            ...supply.filter(ms).map((s:any)=>({id:s.id,date:s.date,type:s.type,qty:s.quantity,note:s.note,del:true})),
+            ...logs.filter((l:any)=>l.type==='in'&&ml(l)).map((l:any)=>({id:l.id,date:l.date,type:'restocked',qty:l.quantity,note:l.note,del:false})),
+          ].sort((a,b)=>b.date.localeCompare(a.date))
+        }
+        const supKeys=prodKeys.filter(pk=>{const s=getSupSummary(pk);return s.ordered>0||s.received>0||s.restocked>0})
+        const tlabel:Record<string,string>={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
+        const tcolor:Record<string,string>={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
+        const fmtD2=(d:string)=>{if(!d)return'';const[,m,day]=d.split('-');return m+'/'+day}
+        const selFProd=products.find(p=>p.id===fProdId)
+        const fVariants:any[]=selFProd?.variants||[]
+
         return (
+          <div className="space-y-4">
+          {/* Нийлүүлэлт */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-medium text-gray-800 text-sm">Нийлүүлэлтийн бүртгэл</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
+              </div>
+              <button onClick={()=>setShowSupplyForm(!showSupplyForm)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showSupplyForm?'bg-gray-100 text-gray-600':'bg-[#0a2e24] text-white'}`}>
+                {showSupplyForm?'Болих':'＋ Бүртгэх'}
+              </button>
+            </div>
+
+            {showSupplyForm&&(
+              <div className="px-4 pb-4 pt-3 border-b border-gray-100 space-y-3">
+                <div className="grid gap-3" style={{gridTemplateColumns:fVariants.length>0?'1fr 1fr':'1fr'}}>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Бараа</label>
+                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                      value={fProdId} onChange={e=>{setFProdId(e.target.value);setFVariant('')}}>
+                      {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                  {fVariants.length>0&&(
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Variant</label>
+                      <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                        value={fVariant} onChange={e=>setFVariant(e.target.value)}>
+                        <option value="">— Сонгох —</option>
+                        {fVariants.map((v:any,i:number)=><option key={i} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Төрөл</label>
+                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                      value={fType} onChange={e=>setFType(e.target.value as any)}>
+                      <option value="ordered">Захиалсан</option>
+                      <option value="received">Ирсэн / Хүлээн авсан</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Тоо ширхэг</label>
+                    <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                      value={fQty} onChange={e=>setFQty(e.target.value)} placeholder="0"/>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Огноо</label>
+                    <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                      value={fDate} onChange={e=>setFDate(e.target.value)}/>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
+                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    placeholder="1ш гэмтэлтэй ирсэн, дутуу г.м..." value={fNote} onChange={e=>setFNote(e.target.value)}/>
+                </div>
+                <button onClick={saveSupply} disabled={fSaving||!fProdId||!fQty}
+                  className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">
+                  {fSaving?'Хадгалж байна...':'Хадгалах'}
+                </button>
+              </div>
+            )}
+
+            {supKeys.length===0?(
+              <p className="text-center text-gray-400 text-sm py-8">Бүртгэл байхгүй</p>
+            ):(
+              <div>
+                <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
+                  style={{gridTemplateColumns:'1.8fr 70px 70px 80px 70px 60px 20px'}}>
+                  <div>Барааны нэр</div>
+                  <div className="text-right">Захиалсан</div>
+                  <div className="text-right">Ирсэн</div>
+                  <div className="text-right">Цэнэглэсэн</div>
+                  <div className="text-right">Зарагдсан</div>
+                  <div className="text-right">Үлдэгдэл</div>
+                  <div></div>
+                </div>
+                <div className="divide-y divide-gray-100">
+                  {supKeys.map((pk,i)=>{
+                    const s=getSupSummary(pk)
+                    const det=getSupDetail(pk)
+                    const ekey=pk.id+pk.variant
+                    const isExp=supplyExpanded.has(ekey)
+                    return(
+                      <div key={i}>
+                        <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50 cursor-pointer select-none"
+                          style={{gridTemplateColumns:'1.8fr 70px 70px 80px 70px 60px 20px'}}
+                          onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
+                          <div>
+                            <span className="text-sm font-medium text-gray-700">{pk.label}</span>
+                            {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
+                          </div>
+                          <div className="text-right text-xs font-medium text-blue-600">{s.ordered>0?s.ordered+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
+                          <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
+                          <div className="text-right text-xs font-bold text-gray-800">{s.stock}ш</div>
+                          <div className="text-xs text-gray-300 text-right">{isExp?'▲':'▼'}</div>
+                        </div>
+                        {isExp&&(
+                          <div className="border-t border-gray-100 bg-gray-50/30">
+                            {det.map((d:any,j:number)=>(
+                              <div key={j} className="flex items-center gap-3 px-6 py-2 border-b border-gray-100 last:border-0">
+                                <span className="text-xs text-gray-400 w-10 flex-shrink-0">{fmtD2(d.date)}</span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${tcolor[d.type]}`}>{tlabel[d.type]}</span>
+                                <span className="text-xs font-bold text-gray-700 w-10 text-right flex-shrink-0">+{d.qty}ш</span>
+                                <span className="text-xs text-gray-400 italic flex-1">{d.note||''}</span>
+                                {d.del&&<button onClick={async e=>{e.stopPropagation();await supabase.from('supply_log').delete().eq('id',d.id);load()}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -798,6 +984,7 @@ if (error) {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         )
       })()}
