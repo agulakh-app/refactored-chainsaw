@@ -48,6 +48,7 @@ export default function StockPage() {
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
   const [rNote, setRNote] = useState('')
+  const [rAction, setRAction] = useState<'restock'|'ordered'|'received'>('restock')
 
   // Шинэ бараа
   const [nName, setNName] = useState('')
@@ -144,17 +145,34 @@ export default function StockPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const isNeg = qty < 0
     const absQty = Math.abs(qty)
-
     const pvs: Variant[] = p.variants || []
     let variantLabel = ''
-
     if (variantEnabled && pvs.length > 0) {
       if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
       const v = pvs[rVariantIdx]
       if (!v) return
       variantLabel = [v.size, v.color].filter(Boolean).join(' / ')
+    }
+
+    // Захиалсан / Ирсэн — зөвхөн бүртгэл, stock-д нөлөөлөхгүй
+    if (rAction === 'ordered' || rAction === 'received') {
+      await supabase.from('supply_log').insert({
+        user_id: targetId, store_id: activeStoreId||null,
+        product_id: rProd, product_name: p.name,
+        variant_label: variantLabel||null,
+        type: rAction, quantity: absQty, date: rDate, note: rNote||null
+      })
+      setRQty('1'); setRNote('')
+      showFlash((rAction==='ordered'?'Захиалсан':'Ирсэн')+' бүртгэгдлээ ✓')
+      load()
+      return
+    }
+
+    // Цэнэглэлт — stock-г өөрчилнө
+    const isNeg = qty < 0
+    if (variantEnabled && pvs.length > 0) {
+      const v = pvs[rVariantIdx]
       const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
       const newVariants = pvs.map((vv, i) => i === rVariantIdx ? {...vv, stock: newVStock} : vv)
       const newTotalStock = newVariants.reduce((a, vv) => a + vv.stock, 0)
@@ -523,7 +541,15 @@ if (error) {
         <div className="grid grid-cols-2 gap-4 items-stretch">
         {/* Агуулахад бараа нэмэх */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col">
-          <h2 className="font-medium text-gray-800 mb-3 text-sm">Агуулахад бараа нэмэх</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-medium text-gray-800 text-sm">Бараа бүртгэх</h2>
+            <select value={rAction} onChange={e=>setRAction(e.target.value as any)}
+              className="text-xs px-2 py-1 rounded-lg border border-gray-200 bg-white">
+              <option value="ordered">Захиалсан</option>
+              <option value="received">Ирсэн / Хүлээн авсан</option>
+              <option value="restock">Цэнэглэсэн</option>
+            </select>
+          </div>
           <div className="space-y-2 flex-1">
             {/* Мөр 1: Бараа | Тоо | Огноо */}
             <div className="grid gap-2" style={{gridTemplateColumns:'2fr 60px 140px'}}>
@@ -587,7 +613,7 @@ if (error) {
               <div className="flex items-end">
                 <button onClick={addRestock}
                   className={`px-4 py-2 rounded-lg text-sm font-medium text-white whitespace-nowrap ${Number(rQty)<0?'bg-red-500 hover:bg-red-600':'bg-emerald-600 hover:bg-emerald-700'}`}>
-                  {Number(rQty)<0?'Хасах':'Нэмэх'}
+                  {rAction!=='restock' ? 'Хадгалах' : (Number(rQty)<0?'Хасах':'Нэмэх')}
                 </button>
               </div>
             </div>
@@ -747,71 +773,12 @@ if (error) {
 
         return (
           <div className="space-y-4">
-          {/* Нийлүүлэлт */}
+          {/* Барааны нэгдсэн хяналт хүснэгт */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-medium text-gray-800 text-sm">Нийлүүлэлтийн бүртгэл</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
-              </div>
-              <button onClick={()=>setShowSupplyForm(!showSupplyForm)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showSupplyForm?'bg-gray-100 text-gray-600':'bg-[#0a2e24] text-white'}`}>
-                {showSupplyForm?'Болих':'＋ Бүртгэх'}
-              </button>
+            <div className="px-4 py-3 border-b border-gray-100">
+              <h2 className="font-medium text-gray-800 text-sm">Барааны нэгдсэн хяналт</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
             </div>
-
-            {showSupplyForm&&(
-              <div className="px-4 pb-4 pt-3 border-b border-gray-100 space-y-3">
-                <div className="grid gap-3" style={{gridTemplateColumns:fVariants.length>0?'1fr 1fr':'1fr'}}>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Бараа</label>
-                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                      value={fProdId} onChange={e=>{setFProdId(e.target.value);setFVariant('')}}>
-                      {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                  {fVariants.length>0&&(
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Variant</label>
-                      <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                        value={fVariant} onChange={e=>setFVariant(e.target.value)}>
-                        <option value="">— Сонгох —</option>
-                        {fVariants.map((v:any,i:number)=><option key={i} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Төрөл</label>
-                    <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                      value={fType} onChange={e=>setFType(e.target.value as any)}>
-                      <option value="ordered">Захиалсан</option>
-                      <option value="received">Ирсэн / Хүлээн авсан</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Тоо ширхэг</label>
-                    <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                      value={fQty} onChange={e=>setFQty(e.target.value)} placeholder="0"/>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Огноо</label>
-                    <input type="date" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                      value={fDate} onChange={e=>setFDate(e.target.value)}/>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
-                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
-                    placeholder="1ш гэмтэлтэй ирсэн, дутуу г.м..." value={fNote} onChange={e=>setFNote(e.target.value)}/>
-                </div>
-                <button onClick={saveSupply} disabled={fSaving||!fProdId||!fQty}
-                  className="w-full py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">
-                  {fSaving?'Хадгалж байна...':'Хадгалах'}
-                </button>
-              </div>
-            )}
 
             {supKeys.length===0?(
               <p className="text-center text-gray-400 text-sm py-8">Бүртгэл байхгүй</p>
