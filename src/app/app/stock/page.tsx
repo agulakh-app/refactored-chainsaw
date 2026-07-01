@@ -359,11 +359,11 @@ if (error) {
   if (logFilter !== 'all') filteredLogs = filteredLogs.filter(l => l.product_name.startsWith(logFilter))
   if (dateFilter) filteredLogs = filteredLogs.filter(l => l.date === dateFilter)
 
-  const logGroups: Record<string, RestockLog[]> = {}
+  const logGroups: {[key: string]: RestockLog[]} = {}
   filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
 
   const rProdData = products.find(p => p.id === rProd)
-  const rVariants = (rProdData?.variants || []) as Variant[]
+  const rVariants: Variant[] = rProdData?.variants || []
 
   return (
     <div className="space-y-4">
@@ -691,7 +691,7 @@ if (error) {
       {/* Барааны нэгдсэн хяналт */}
       {stockTab==='list' && (() => {
         // Захиалгаас variant бүрийн зарагдсан тоог тооцоолох
-        const soldMap: Record<string, Record<string, number>> = {}
+        const soldMap: {[pid:string]: {[vl:string]: number}} = {}
         for(const o of auditOrders){
           if(!['pending','delivered'].includes(o.status)) continue
           for(const it of (o.order_items||[])){
@@ -702,7 +702,7 @@ if (error) {
           }
         }
         // Цэнэглэсэн тоо restock_log-оос
-        const restockMap: Record<string, Record<string, number>> = {}
+        const restockMap: {[pid:string]: {[vl:string]: number}} = {}
         for(const l of logs){
           if(l.type!=='in') continue
           const pid = l.product_id
@@ -765,8 +765,8 @@ if (error) {
           ].sort((a,b)=>b.date.localeCompare(a.date))
         }
         const supKeys=prodKeys.filter(pk=>{const s=getSupSummary(pk);return s.ordered>0||s.received>0||s.restocked>0})
-        const tlabel:Record<string,string>={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
-        const tcolor:Record<string,string>={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
+        const tlabel:{[k:string]:string}={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
+        const tcolor:{[k:string]:string}={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
         const fmtD2=(d:string)=>{if(!d)return'';const[,m,day]=d.split('-');return m+'/'+day}
         const selFProd=products.find(p=>p.id===fProdId)
         const fVariants:any[]=selFProd?.variants||[]
