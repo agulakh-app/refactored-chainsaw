@@ -26,19 +26,19 @@ export default function StockPage() {
   const [dateFilter, setDateFilter] = useState('')
   const [variantEnabled, setVariantEnabled] = useState(false)
   const [stockTab, setStockTab] = useState<'list'|'log'>('list')
-  const [auditOrders, setAuditOrders] = useState<any[]>([])
-  const [auditEdit, setAuditEdit] = useState<{productId:string,label:string,variant:string,current:number}|null>(null)
-  const [auditEditVal, setAuditEditVal] = useState('')
+  const [rAction, setRAction] = useState<'restock'|'ordered'|'received'>('restock')
   const [supply, setSupply] = useState<any[]>([])
   const [supplyExpanded, setSupplyExpanded] = useState<Set<string>>(new Set())
-  const [showSupplyForm, setShowSupplyForm] = useState(false)
   const [fProdId, setFProdId] = useState('')
   const [fVariant, setFVariant] = useState('')
   const [fType, setFType] = useState<'ordered'|'received'>('ordered')
   const [fQty, setFQty] = useState('')
   const [fDate, setFDate] = useState(TODAY)
-  const [fNote, setFNote] = useState('')
+  const [fNote2, setFNote2] = useState('')
   const [fSaving, setFSaving] = useState(false)
+  const [auditOrders, setAuditOrders] = useState<any[]>([])
+  const [auditEdit, setAuditEdit] = useState<{productId:string,label:string,variant:string,current:number}|null>(null)
+  const [auditEditVal, setAuditEditVal] = useState('')
 
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
@@ -48,7 +48,6 @@ export default function StockPage() {
   const [rQty, setRQty] = useState('1')
   const [rDate, setRDate] = useState(TODAY)
   const [rNote, setRNote] = useState('')
-  const [rAction, setRAction] = useState<'restock'|'ordered'|'received'>('restock')
 
   // Шинэ бараа
   const [nName, setNName] = useState('')
@@ -126,18 +125,18 @@ export default function StockPage() {
     const targetId = ownerId || user?.id
     if(!targetId) return
     setFSaving(true)
-    const prod = products.find(p=>p.id===fProdId)
+    const prod = products.find((p:any)=>p.id===fProdId)
     await supabase.from('supply_log').insert({
       user_id:targetId, store_id:activeStoreId||null,
       product_id:fProdId, product_name:prod?.name||'',
       variant_label:fVariant||null, type:fType,
-      quantity:parseInt(fQty)||0, date:fDate, note:fNote||null
+      quantity:parseInt(fQty)||0, date:fDate, note:fNote2||null
     })
-    setFQty(''); setFNote('')
+    setFQty(''); setFNote2('')
     setFSaving(false); showFlash('Хадгалагдлаа ✓'); load()
   }
 
-  async function addRestock() {
+    async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
     const p = products.find(x=>x.id===rProd)
@@ -146,21 +145,19 @@ export default function StockPage() {
     const targetId = ownerId || user?.id
     if (!targetId) return
     const absQty = Math.abs(qty)
-    const pvs: Variant[] = p.variants || []
-    let variantLabel = ''
-    if (variantEnabled && pvs.length > 0) {
+    const pvs2: Variant[] = p.variants || []
+    let variantLabel2 = ''
+    if (variantEnabled && pvs2.length > 0) {
       if (rVariantIdx < 0) { showFlash('Variant сонгоно уу'); return }
-      const v = pvs[rVariantIdx]
-      if (!v) return
-      variantLabel = [v.size, v.color].filter(Boolean).join(' / ')
+      const v2 = pvs2[rVariantIdx]
+      if (!v2) return
+      variantLabel2 = [v2.size, v2.color].filter(Boolean).join(' / ')
     }
-
-    // Захиалсан / Ирсэн — зөвхөн бүртгэл, stock-д нөлөөлөхгүй
     if (rAction === 'ordered' || rAction === 'received') {
       await supabase.from('supply_log').insert({
         user_id: targetId, store_id: activeStoreId||null,
         product_id: rProd, product_name: p.name,
-        variant_label: variantLabel||null,
+        variant_label: variantLabel2||null,
         type: rAction, quantity: absQty, date: rDate, note: rNote||null
       })
       setRQty('1'); setRNote('')
@@ -168,9 +165,11 @@ export default function StockPage() {
       load()
       return
     }
-
-    // Цэнэглэлт — stock-г өөрчилнө
     const isNeg = qty < 0
+
+    const pvs: Variant[] = p.variants || []
+    let variantLabel = variantLabel2
+
     if (variantEnabled && pvs.length > 0) {
       const v = pvs[rVariantIdx]
       const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
@@ -359,7 +358,7 @@ if (error) {
   if (logFilter !== 'all') filteredLogs = filteredLogs.filter(l => l.product_name.startsWith(logFilter))
   if (dateFilter) filteredLogs = filteredLogs.filter(l => l.date === dateFilter)
 
-  const logGroups: {[key: string]: RestockLog[]} = {}
+  const logGroups: Record<string, RestockLog[]> = {}
   filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
 
   const rProdData = products.find(p => p.id === rProd)
@@ -371,10 +370,10 @@ if (error) {
 
       {/* Tab товчнууд */}
       <div className="flex gap-2 border-b border-gray-100 pb-0">
-        {([['list','Бараа бүртгэл'],['log','Бүртгэл']] as const).map(([t,l])=>(
+        {(['list','log'] as Array<'list'|'log'>).map(t=>(
           <button key={t} onClick={()=>setStockTab(t)}
             className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-all ${stockTab===t?'border-emerald-600 text-emerald-700':'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            {l}
+            {t==='list'?'Бараа бүртгэл':'Агуулах цэнэглэлт'}
           </button>
         ))}
       </div>
@@ -413,7 +412,6 @@ if (error) {
           </div>
         </div>
       )}
-      {confirmModal&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
             <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
@@ -688,10 +686,73 @@ if (error) {
         </div>
       )}
 
-      {/* Барааны нэгдсэн хяналт */}
+      {/* Бараа жагсаалт — хяналт tab дотор харагдана */}
+      {false && products.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {products.map(p => {
+              const pvs: Variant[] = p.variants || []
+              return (
+                <div key={p.id} className="px-4 py-3 hover:bg-gray-50">
+                  <div className="flex items-center justify-between mb-1">
+  <div className="flex items-center gap-2 flex-1 min-w-0">
+    <span className="text-sm font-medium text-gray-700 truncate">{p.name}</span>
+    {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded flex-shrink-0">Дууссан</span>}
+    {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded flex-shrink-0">Цөөн</span>}
+  </div>
+  <div className="flex items-center gap-3 flex-shrink-0">
+    {pvs.length===0 && (
+      <span className="text-xs text-gray-400 hidden sm:inline">
+        {fmt(p.unit_price)}₮{p.cost?<span className="text-orange-400 ml-1">(өртөг {fmt(p.cost)}₮)</span>:null}
+      </span>
+    )}
+    <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
+                      {!isViewer && (
+                        <div className="relative" ref={openDropdown===p.id?dropdownRef:null}>
+                          <button onClick={()=>setOpenDropdown(openDropdown===p.id?null:p.id)}
+                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">
+                            Үйлдэл ▾
+                          </button>
+                          {openDropdown===p.id&&(
+                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[120px] overflow-hidden shadow-lg">
+                              <button onClick={()=>{openEditProd(p);setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+                              <button onClick={()=>{deleteProduct(p.id,p.name);setOpenDropdown(null)}}
+                                className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {pvs.length > 0 && (
+                    <div className="mt-1.5 space-y-1">
+                      {pvs.map((v, i) => (
+  <div key={i} className="flex items-center justify-between text-xs py-0.5">
+    <span className="text-gray-500 w-32 truncate">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
+    <div className="flex items-center gap-3 flex-shrink-0">
+      {(v as any).cost>0&&<span className="text-gray-400 w-24 text-right">өртөг: {fmt(Number((v as any).cost))}₮</span>}
+      <span className="text-emerald-600 w-20 text-right">{fmt(Number(v.price))}₮</span>
+      <span className={`w-10 text-right font-medium ${v.stock===0?'text-red-500':v.stock<=5?'text-amber-500':'text-gray-600'}`}>{v.stock}ш</span>
+    </div>
+  </div>
+))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Аудит хэсэг */}
       {stockTab==='list' && (() => {
         // Захиалгаас variant бүрийн зарагдсан тоог тооцоолох
-        const soldMap: {[pid:string]: {[vl:string]: number}} = {}
+        const soldMap: Record<string, Record<string, number>> = {}
         for(const o of auditOrders){
           if(!['pending','delivered'].includes(o.status)) continue
           for(const it of (o.order_items||[])){
@@ -702,7 +763,7 @@ if (error) {
           }
         }
         // Цэнэглэсэн тоо restock_log-оос
-        const restockMap: {[pid:string]: {[vl:string]: number}} = {}
+        const restockMap: Record<string, Record<string, number>> = {}
         for(const l of logs){
           if(l.type!=='in') continue
           const pid = l.product_id
@@ -738,54 +799,56 @@ if (error) {
 
         const hasIssue = rows.some(r=>r.diff!==0)
 
-        // Нийлүүлэлт нэгтгэл
-        type PK = {id:string;label:string;variant:string}
-        const prodKeys: PK[] = []
+        // Supply нэгтгэл
+        type PK2 = {id:string;label:string;variant:string}
+        const prodKeys2: PK2[] = []
         for(const p of products){
-          const pvs:any[]=p.variants||[]
-          if(pvs.length>0) pvs.forEach((v:any)=>prodKeys.push({id:p.id,label:p.name,variant:[v.size,v.color].filter(Boolean).join(' / ')}))
-          else prodKeys.push({id:p.id,label:p.name,variant:''})
+          const pvs2:any[]=p.variants||[]
+          if(pvs2.length>0) pvs2.forEach((v:any)=>prodKeys2.push({id:p.id,label:p.name,variant:[v.size,v.color].filter(Boolean).join(' / ')}))
+          else prodKeys2.push({id:p.id,label:p.name,variant:''})
         }
-        function getSupSummary(pk:PK){
+        function getSupSummary2(pk:PK2){
           const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
           const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
-          const ordered=supply.filter(s=>ms(s)&&s.type==='ordered').reduce((a:number,s:any)=>a+s.quantity,0)
-          const received=supply.filter(s=>ms(s)&&s.type==='received').reduce((a:number,s:any)=>a+s.quantity,0)
+          const ordered=supply.filter((s:any)=>ms(s)&&s.type==='ordered').reduce((a:number,s:any)=>a+s.quantity,0)
+          const received=supply.filter((s:any)=>ms(s)&&s.type==='received').reduce((a:number,s:any)=>a+s.quantity,0)
           const restocked=logs.filter((l:any)=>l.type==='in'&&ml(l)).reduce((a:number,l:any)=>a+l.quantity,0)
           const sold=(soldMap[pk.id]?.[pk.variant||'__total__'])||0
           const stock=pk.variant?(products.find(p=>p.id===pk.id)?.variants||[]).find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===pk.variant)?.stock||0:products.find(p=>p.id===pk.id)?.stock||0
-          return {ordered,received,restocked,sold,stock}
+          const expected=Math.max(0,restocked-sold)
+          const zoruu=stock-expected
+          return {ordered,received,restocked,sold,stock,zoruu}
         }
-        function getSupDetail(pk:PK){
+        function getSupDetail2(pk:PK2){
           const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
           const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
+          const fmtD2=(d:string)=>{if(!d)return'';const[,m,day]=d.split('-');return m+'/'+day}
           return [
-            ...supply.filter(ms).map((s:any)=>({id:s.id,date:s.date,type:s.type,qty:s.quantity,note:s.note,del:true})),
-            ...logs.filter((l:any)=>l.type==='in'&&ml(l)).map((l:any)=>({id:l.id,date:l.date,type:'restocked',qty:l.quantity,note:l.note,del:false})),
+            ...supply.filter(ms).map((s:any)=>({id:s.id,date:s.date,type:s.type,qty:s.quantity,note:s.note,del:true,fmtD:fmtD2(s.date)})),
+            ...logs.filter((l:any)=>l.type==='in'&&ml(l)).map((l:any)=>({id:l.id,date:l.date,type:'restocked',qty:l.quantity,note:l.note,del:false,fmtD:fmtD2(l.date)})),
           ].sort((a,b)=>b.date.localeCompare(a.date))
         }
-        const supKeys=prodKeys.filter(pk=>{const s=getSupSummary(pk);return s.ordered>0||s.received>0||s.restocked>0})
-        const tlabel:{[k:string]:string}={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
-        const tcolor:{[k:string]:string}={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
-        const fmtD2=(d:string)=>{if(!d)return'';const[,m,day]=d.split('-');return m+'/'+day}
-        const selFProd=products.find(p=>p.id===fProdId)
-        const fVariants:any[]=selFProd?.variants||[]
+        const supKeys2=prodKeys2.filter(pk=>{const s=getSupSummary2(pk);return s.ordered>0||s.received>0||s.restocked>0})
+        const tlabel2:{[k:string]:string}={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
+        const tcolor2:{[k:string]:string}={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
 
         return (
           <div className="space-y-4">
-          {/* Барааны нэгдсэн хяналт хүснэгт */}
+          {/* Нэгдсэн хяналт хүснэгт */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="font-medium text-gray-800 text-sm">Барааны нэгдсэн хяналт</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-medium text-gray-800 text-sm">Барааны нэгдсэн хяналт</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
+              </div>
+              {hasIssue&&<span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>}
             </div>
-
-            {supKeys.length===0?(
-              <p className="text-center text-gray-400 text-sm py-8">Бүртгэл байхгүй</p>
+            {supKeys2.length===0?(
+              <p className="text-center text-gray-400 text-sm py-8">Бүртгэл байхгүй — Бараа бүртгэх дарж эхлэнэ</p>
             ):(
               <div>
                 <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-                  style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 70px 70px 50px 20px'}}>
+                  style={{gridTemplateColumns:'1.6fr 65px 65px 80px 65px 65px 65px 40px 20px'}}>
                   <div>Барааны нэр</div>
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
@@ -797,20 +860,17 @@ if (error) {
                   <div></div>
                 </div>
                 <div className="divide-y divide-gray-100">
-                  {supKeys.map((pk,i)=>{
-                    const s=getSupSummary(pk)
-                    const det=getSupDetail(pk)
+                  {supKeys2.map((pk,i)=>{
+                    const s=getSupSummary2(pk)
+                    const det=getSupDetail2(pk)
                     const ekey=pk.id+pk.variant
                     const isExp=supplyExpanded.has(ekey)
                     const fullProd=products.find(p=>p.id===pk.id)
-                    // Зөрүү: байх ёстой (цэнэглэсэн-зарагдсан) vs систем дэх тоо
-                    const expected=Math.max(0, s.restocked-s.sold)
-                    const zoruu=s.stock-expected
                     return(
-                      <div key={i} className={zoruu!==0?'bg-red-50/20':''}>
+                      <div key={i} className={s.zoruu!==0?'bg-red-50/20':''}>
                         <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                          style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 70px 70px 50px 20px'}}>
-                          <div className="cursor-pointer select-none" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
+                          style={{gridTemplateColumns:'1.6fr 65px 65px 80px 65px 65px 65px 40px 20px'}}>
+                          <div className="cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
                             {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
                           </div>
@@ -820,10 +880,7 @@ if (error) {
                           <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
                           <div className="text-right text-xs font-bold text-gray-800">{s.stock}ш</div>
                           <div className="text-right text-xs font-bold">
-                            {zoruu===0
-                              ? <span className="text-emerald-500">✓</span>
-                              : <span className={zoruu>0?'text-blue-500':'text-red-500'}>{zoruu>0?'+':''}{zoruu}ш</span>
-                            }
+                            {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
                           <div className="text-right">
                             {!isViewer&&!pk.variant&&fullProd&&(
@@ -836,11 +893,11 @@ if (error) {
                           <div className="border-t border-gray-100 bg-gray-50/30">
                             {det.map((d:any,j:number)=>(
                               <div key={j} className="flex items-center gap-3 px-6 py-2 border-b border-gray-100 last:border-0">
-                                <span className="text-xs text-gray-400 w-10 flex-shrink-0">{fmtD2(d.date)}</span>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${tcolor[d.type]}`}>{tlabel[d.type]}</span>
+                                <span className="text-xs text-gray-400 w-10 flex-shrink-0">{d.fmtD}</span>
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${tcolor2[d.type]}`}>{tlabel2[d.type]}</span>
                                 <span className="text-xs font-bold text-gray-700 w-10 text-right flex-shrink-0">+{d.qty}ш</span>
                                 <span className="text-xs text-gray-400 italic flex-1">{d.note||''}</span>
-                                {d.del&&<button onClick={async e=>{e.stopPropagation();await supabase.from('supply_log').delete().eq('id',d.id);load()}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                                {d.del&&<button onClick={async(e:any)=>{e.stopPropagation();await supabase.from('supply_log').delete().eq('id',d.id);load()}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
                               </div>
                             ))}
                           </div>
@@ -851,6 +908,61 @@ if (error) {
                 </div>
               </div>
             )}
+          </div>
+          {/* Аудит */}
+          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h2 className="font-medium text-gray-800 text-sm">Агуулахын аудит</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Цэнэглэсэн − Зарагдсан = Байх ёстой үлдэгдэл</p>
+              </div>
+              {hasIssue
+                ? <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>
+                : <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">✅ Бүгд таарч байна</span>
+              }
+            </div>
+            <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
+              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
+              <div>Бараа</div>
+              <div>Variant</div>
+              <div className="text-right">Цэнэглэсэн</div>
+              <div className="text-right">Зарагдсан</div>
+              <div className="text-right">Байх ёстой</div>
+              <div className="text-right">Систем</div>
+              <div className="text-right">Зөрүү</div>
+              <div></div>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {rows.map((r,i)=>(
+                <div key={i} className={`grid items-center px-4 py-2.5 text-sm ${r.diff!==0?'bg-red-50/30':''}`}
+                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
+                  <div className="font-medium text-gray-700 text-xs">{r.label}</div>
+                  <div className="text-xs text-gray-500">{r.variant||'—'}</div>
+                  <div className="text-right text-xs text-gray-500">{r.restocked}ш</div>
+                  <div className="text-right text-xs text-gray-500">{r.sold}ш</div>
+                  <div className="text-right text-xs font-medium text-gray-700">{r.expected}ш</div>
+                  <div className="text-right text-xs font-medium text-gray-700">{r.actual}ш</div>
+                  <div className="text-right text-xs font-bold">
+                    {r.diff===0
+                      ? <span className="text-emerald-500">✓</span>
+                      : <span className={r.diff>0?'text-blue-500':'text-red-500'}>{r.diff>0?'+':''}{r.diff}ш</span>
+                    }
+                  </div>
+                  <div className="text-right">
+                    {r.diff!==0&&(
+                      <button onClick={()=>{
+                        setAuditEdit({productId:r.name,label:r.label,variant:r.variant,current:r.actual})
+                        setAuditEditVal(String(r.expected))
+                      }}
+                        className="text-xs text-emerald-600 hover:underline px-1">
+                        Засах
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           </div>
         )
       })()}
