@@ -425,7 +425,6 @@ if (error) {
           </div>
         </div>
       )}
-      )}
 
       {/* Edit product modal — stock, зарах үнэ, өртөг */}
       {!isViewer && editProd && (
@@ -849,60 +848,6 @@ if (error) {
                 </div>
               </div>
             )}
-          </div>
-          {/* Аудит */}
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-medium text-gray-800 text-sm">Агуулахын аудит</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Цэнэглэсэн − Зарагдсан = Байх ёстой үлдэгдэл</p>
-              </div>
-              {hasIssue
-                ? <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>
-                : <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">✅ Бүгд таарч байна</span>
-              }
-            </div>
-            <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
-              <div>Бараа</div>
-              <div>Variant</div>
-              <div className="text-right">Цэнэглэсэн</div>
-              <div className="text-right">Зарагдсан</div>
-              <div className="text-right">Байх ёстой</div>
-              <div className="text-right">Систем</div>
-              <div className="text-right">Зөрүү</div>
-              <div></div>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {rows.map((r,i)=>(
-                <div key={i} className={`grid items-center px-4 py-2.5 text-sm ${r.diff!==0?'bg-red-50/30':''}`}
-                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
-                  <div className="font-medium text-gray-700 text-xs">{r.label}</div>
-                  <div className="text-xs text-gray-500">{r.variant||'—'}</div>
-                  <div className="text-right text-xs text-gray-500">{r.restocked}ш</div>
-                  <div className="text-right text-xs text-gray-500">{r.sold}ш</div>
-                  <div className="text-right text-xs font-medium text-gray-700">{r.expected}ш</div>
-                  <div className="text-right text-xs font-medium text-gray-700">{r.actual}ш</div>
-                  <div className="text-right text-xs font-bold">
-                    {r.diff===0
-                      ? <span className="text-emerald-500">✓</span>
-                      : <span className={r.diff>0?'text-blue-500':'text-red-500'}>{r.diff>0?'+':''}{r.diff}ш</span>
-                    }
-                  </div>
-                  <div className="text-right">
-                    {r.diff!==0&&(
-                      <button onClick={()=>{
-                        setAuditEdit({productId:r.name,label:r.label,variant:r.variant,current:r.actual})
-                        setAuditEditVal(String(r.expected))
-                      }}
-                        className="text-xs text-emerald-600 hover:underline px-1">
-                        Засах
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
           </div>
         )
