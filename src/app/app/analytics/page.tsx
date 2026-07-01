@@ -3,8 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useOwnerId, useActiveStore, useGuestRole } from '../client-layout'
-import { Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip } from 'chart.js'
-Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip)
 
 function fmt(n: number) { return n.toLocaleString() }
 
@@ -235,7 +233,9 @@ export default function AnalyticsPage() {
   useEffect(() => {
     let cancelled = false
 
-    if (!cancelled) {
+    import('chart.js').then(({ Chart, BarController, BarElement, CategoryScale, LinearScale, Tooltip }) => {
+      Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip)
+      if (cancelled) return
       if (weekdayChartRef.current) weekdayChartRef.current.destroy()
       if (weekdayCanvasRef.current) {
         const wMax = Math.max(...weekdayChartData, 1)
@@ -275,7 +275,7 @@ export default function AnalyticsPage() {
           }
         })
       }
-    }
+    })
 
     return () => { cancelled = true }
   }, [JSON.stringify(weekdayChartData), JSON.stringify(topProducts)])
