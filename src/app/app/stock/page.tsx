@@ -363,7 +363,7 @@ if (error) {
   filteredLogs.forEach(l => { if(!logGroups[l.date]) logGroups[l.date]=[]; logGroups[l.date].push(l) })
 
   const rProdData = products.find(p => p.id === rProd)
-  const rVariants: Variant[] = rProdData?.variants || []
+  const rVariants = (rProdData?.variants || []) as Variant[]
 
   return (
     <div className="space-y-4">
