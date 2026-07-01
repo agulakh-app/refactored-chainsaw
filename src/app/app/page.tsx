@@ -343,7 +343,7 @@ export default function DashPage() {
             <div className="flex gap-3">
               <button onClick={()=>setConfirmModal(null)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
-              <button onClick={()=>{confirmModal.onOk();setConfirmModal(null)}}
+              <button onClick={()=>{const ok=confirmModal?.onOk; setConfirmModal(null); ok&&ok()}}
                 className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
             </div>
           </div>
