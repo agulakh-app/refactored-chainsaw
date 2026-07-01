@@ -414,7 +414,7 @@ if (error) {
       )}
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
-            <p className="text-sm text-gray-700 text-center mb-5">{confirmModal.msg}</p>
+            <p className="text-sm text-gray-700 text-center mb-5">{confirmModal?.msg}</p>
             <div className="flex gap-3">
               <button onClick={()=>setConfirmModal(null)}
                 className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
