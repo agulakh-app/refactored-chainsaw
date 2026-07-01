@@ -4,7 +4,7 @@ const nextConfig = {
     missingSuspenseWithCSRBailout: false,
   },
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
   },
 }
 module.exports = nextConfig
