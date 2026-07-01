@@ -785,13 +785,14 @@ if (error) {
             ):(
               <div>
                 <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-                  style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 60px 50px 20px'}}>
+                  style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 70px 70px 50px 20px'}}>
                   <div>Барааны нэр</div>
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
                   <div className="text-right">Цэнэглэсэн</div>
                   <div className="text-right">Зарагдсан</div>
                   <div className="text-right">Үлдэгдэл</div>
+                  <div className="text-right">Зөрүү</div>
                   <div></div>
                   <div></div>
                 </div>
@@ -802,19 +803,28 @@ if (error) {
                     const ekey=pk.id+pk.variant
                     const isExp=supplyExpanded.has(ekey)
                     const fullProd=products.find(p=>p.id===pk.id)
+                    // Зөрүү: байх ёстой (цэнэглэсэн-зарагдсан) vs систем дэх тоо
+                    const expected=Math.max(0, s.restocked-s.sold)
+                    const zoruu=s.stock-expected
                     return(
-                      <div key={i}>
+                      <div key={i} className={zoruu!==0?'bg-red-50/20':''}>
                         <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                          style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 60px 50px 20px'}}>
+                          style={{gridTemplateColumns:'1.6fr 70px 70px 80px 70px 70px 70px 50px 20px'}}>
                           <div className="cursor-pointer select-none" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
                             {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
                           </div>
-                          <div className="text-right text-xs font-medium text-blue-600 cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{s.ordered>0?s.ordered+'ш':'—'}</div>
-                          <div className="text-right text-xs font-medium text-emerald-600 cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{s.received>0?s.received+'ш':'—'}</div>
-                          <div className="text-right text-xs font-medium text-orange-500 cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{s.restocked>0?s.restocked+'ш':'—'}</div>
-                          <div className="text-right text-xs text-gray-600 cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{s.sold>0?s.sold+'ш':'—'}</div>
-                          <div className="text-right text-xs font-bold text-gray-800 cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{s.stock}ш</div>
+                          <div className="text-right text-xs font-medium text-blue-600">{s.ordered>0?s.ordered+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
+                          <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
+                          <div className="text-right text-xs font-bold text-gray-800">{s.stock}ш</div>
+                          <div className="text-right text-xs font-bold">
+                            {zoruu===0
+                              ? <span className="text-emerald-500">✓</span>
+                              : <span className={zoruu>0?'text-blue-500':'text-red-500'}>{zoruu>0?'+':''}{zoruu}ш</span>
+                            }
+                          </div>
                           <div className="text-right">
                             {!isViewer&&!pk.variant&&fullProd&&(
                               <button onClick={()=>openEditProd(fullProd)} className="text-xs text-gray-400 hover:text-gray-700">Засах</button>
@@ -841,60 +851,6 @@ if (error) {
                 </div>
               </div>
             )}
-          </div>
-          <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="font-medium text-gray-800 text-sm">Агуулахын аудит</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Цэнэглэсэн − Зарагдсан = Байх ёстой үлдэгдэл</p>
-              </div>
-              {hasIssue
-                ? <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>
-                : <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">✅ Бүгд таарч байна</span>
-              }
-            </div>
-            <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-              style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
-              <div>Бараа</div>
-              <div>Variant</div>
-              <div className="text-right">Цэнэглэсэн</div>
-              <div className="text-right">Зарагдсан</div>
-              <div className="text-right">Байх ёстой</div>
-              <div className="text-right">Систем</div>
-              <div className="text-right">Зөрүү</div>
-              <div></div>
-            </div>
-            <div className="divide-y divide-gray-100">
-              {rows.map((r,i)=>(
-                <div key={i} className={`grid items-center px-4 py-2.5 text-sm ${r.diff!==0?'bg-red-50/30':''}`}
-                  style={{gridTemplateColumns:'1fr 120px 70px 70px 80px 80px 70px 60px'}}>
-                  <div className="font-medium text-gray-700 text-xs">{r.label}</div>
-                  <div className="text-xs text-gray-500">{r.variant||'—'}</div>
-                  <div className="text-right text-xs text-gray-500">{r.restocked}ш</div>
-                  <div className="text-right text-xs text-gray-500">{r.sold}ш</div>
-                  <div className="text-right text-xs font-medium text-gray-700">{r.expected}ш</div>
-                  <div className="text-right text-xs font-medium text-gray-700">{r.actual}ш</div>
-                  <div className="text-right text-xs font-bold">
-                    {r.diff===0
-                      ? <span className="text-emerald-500">✓</span>
-                      : <span className={r.diff>0?'text-blue-500':'text-red-500'}>{r.diff>0?'+':''}{r.diff}ш</span>
-                    }
-                  </div>
-                  <div className="text-right">
-                    {r.diff!==0&&(
-                      <button onClick={()=>{
-                        setAuditEdit({productId:r.name,label:r.label,variant:r.variant,current:r.actual})
-                        setAuditEditVal(String(r.expected))
-                      }}
-                        className="text-xs text-emerald-600 hover:underline px-1">
-                        Засах
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
           </div>
         )
       })()}
