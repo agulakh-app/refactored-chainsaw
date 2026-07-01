@@ -412,6 +412,7 @@ if (error) {
           </div>
         </div>
       )}
+      {confirmModal&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-xs shadow-xl">
             <p className="text-sm text-gray-700 text-center mb-5">{confirmModal?.msg}</p>
@@ -423,6 +424,7 @@ if (error) {
             </div>
           </div>
         </div>
+      )}
       )}
 
       {/* Edit product modal — stock, зарах үнэ, өртөг */}
@@ -687,67 +689,6 @@ if (error) {
       )}
 
       {/* Бараа жагсаалт — хяналт tab дотор харагдана */}
-      {false && products.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="font-medium text-gray-800 text-sm">Бараа жагсаалт</h2>
-          </div>
-          <div className="divide-y divide-gray-50">
-            {products.map(p => {
-              const pvs: Variant[] = p.variants || []
-              return (
-                <div key={p.id} className="px-4 py-3 hover:bg-gray-50">
-                  <div className="flex items-center justify-between mb-1">
-  <div className="flex items-center gap-2 flex-1 min-w-0">
-    <span className="text-sm font-medium text-gray-700 truncate">{p.name}</span>
-    {p.stock === 0 && <span className="text-xs px-1.5 py-0.5 bg-red-50 text-red-500 border border-red-100 rounded flex-shrink-0">Дууссан</span>}
-    {p.stock > 0 && p.stock <= 10 && <span className="text-xs px-1.5 py-0.5 bg-amber-50 text-amber-500 border border-amber-100 rounded flex-shrink-0">Цөөн</span>}
-  </div>
-  <div className="flex items-center gap-3 flex-shrink-0">
-    {pvs.length===0 && (
-      <span className="text-xs text-gray-400 hidden sm:inline">
-        {fmt(p.unit_price)}₮{p.cost?<span className="text-orange-400 ml-1">(өртөг {fmt(p.cost)}₮)</span>:null}
-      </span>
-    )}
-    <span className="text-sm text-gray-500 w-16 text-right">{p.stock}ш</span>
-                      {!isViewer && (
-                        <div className="relative" ref={openDropdown===p.id?dropdownRef:null}>
-                          <button onClick={()=>setOpenDropdown(openDropdown===p.id?null:p.id)}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-500 hover:bg-gray-50">
-                            Үйлдэл ▾
-                          </button>
-                          {openDropdown===p.id&&(
-                            <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl z-30 min-w-[120px] overflow-hidden shadow-lg">
-                              <button onClick={()=>{openEditProd(p);setOpenDropdown(null)}}
-                                className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
-                              <button onClick={()=>{deleteProduct(p.id,p.name);setOpenDropdown(null)}}
-                                className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  {pvs.length > 0 && (
-                    <div className="mt-1.5 space-y-1">
-                      {pvs.map((v, i) => (
-  <div key={i} className="flex items-center justify-between text-xs py-0.5">
-    <span className="text-gray-500 w-32 truncate">{[v.size, v.color].filter(Boolean).join(' / ')}</span>
-    <div className="flex items-center gap-3 flex-shrink-0">
-      {(v as any).cost>0&&<span className="text-gray-400 w-24 text-right">өртөг: {fmt(Number((v as any).cost))}₮</span>}
-      <span className="text-emerald-600 w-20 text-right">{fmt(Number(v.price))}₮</span>
-      <span className={`w-10 text-right font-medium ${v.stock===0?'text-red-500':v.stock<=5?'text-amber-500':'text-gray-600'}`}>{v.stock}ш</span>
-    </div>
-  </div>
-))}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Аудит хэсэг */}
       {stockTab==='list' && (() => {
