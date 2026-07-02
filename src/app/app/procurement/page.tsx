@@ -11,6 +11,7 @@ export default function ProcurementPage() {
   const activeStoreId = useActiveStore()
   const [products, setProducts] = useState([])
   const [supply, setSupply] = useState([])
+  const [restockLogs, setRestockLogs] = useState([])
   const [flash, setFlash] = useState('')
   const [expanded, setExpanded] = useState(new Set())
   const [procDate, setProcDate] = useState(TODAY)
@@ -27,13 +28,15 @@ export default function ProcurementPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const uid = ownerId || user?.id
     if (!uid) return
-    const [{ data: prods }, { data: sup }, { data: ords }] = await Promise.all([
+    const [{ data: prods }, { data: sup }, { data: rlogs }, { data: ords }] = await Promise.all([
       supabase.from('products').select('*').eq('user_id', uid),
       supabase.from('supply_log').select('*').eq('user_id', uid).order('date', {ascending:false}),
+      supabase.from('restock_log').select('*').eq('user_id', uid).eq('type','in').order('date',{ascending:false}),
       supabase.from('orders').select('*, order_items(*)').eq('user_id', uid).in('status',['pending','delivered']),
     ])
     setProducts(prods||[])
     setSupply(sup||[])
+    setRestockLogs(rlogs||[])
     setOrders(ords||[])
   }, [ownerId, activeStoreId])
 
@@ -80,7 +83,13 @@ export default function ProcurementPage() {
     const ml = (l) => l.product_id===pid && (vl ? l.variant_label===vl : !l.variant_label||l.variant_label==='')
     const ordered = supply.filter(s=>ms(s)&&s.type==='ordered').reduce((a,s)=>a+s.quantity,0)
     const received = supply.filter(s=>ms(s)&&s.type==='received').reduce((a,s)=>a+s.quantity,0)
-    const restocked = supply.filter(s=>ms(s)&&s.type==='restocked').reduce((a,s)=>a+s.quantity,0)
+    const fromSupply = supply.filter(s=>ms(s)&&s.type==='restocked').reduce((a,s)=>a+s.quantity,0)
+    const fromRestock = restockLogs.filter(l=>{
+      if (l.product_id !== pid) return false
+      const lv = l.variant_label || ''
+      return vl ? lv === vl : lv === ''
+    }).reduce((a,l)=>a+l.quantity,0)
+    const restocked = fromSupply + fromRestock
     const sold = orders.reduce((a,o)=>{
       return a+(o.order_items||[]).filter(it=>it.product_id===pid&&(vl?it.variant_label===vl:!it.variant_label||it.variant_label==='')).reduce((b,it)=>b+it.quantity,0)
     },0)
@@ -96,11 +105,11 @@ export default function ProcurementPage() {
       for (const v of pvs) {
         const vl = [v.size,v.color].filter(Boolean).join(' / ')
         const s = getSummary(p.id, vl)
-        if (s.ordered||s.received||s.restocked) rows.push({id:p.id,label:p.name,variant:vl,...s})
+      if (s.ordered||s.received||s.restocked||s.stock) rows.push({id:p.id,label:p.name,variant:vl,...s})
       }
     } else {
       const s = getSummary(p.id, '')
-      if (s.ordered||s.received||s.restocked) rows.push({id:p.id,label:p.name,variant:'',...s})
+      if (s.ordered||s.received||s.restocked||s.stock) rows.push({id:p.id,label:p.name,variant:'',...s})
     }
   }
 
@@ -229,7 +238,14 @@ export default function ProcurementPage() {
                   const isExp=expanded.has(ekey)
                   const expected=Math.max(0,r.restocked-r.sold)
                   const zoruu=r.stock-expected
-                  const det=supply.filter(s=>s.product_id===r.id&&(r.variant?s.variant_label===r.variant:!s.variant_label||s.variant_label==='')).sort((a,b)=>b.date.localeCompare(a.date))
+                  const det=[
+                    ...supply.filter(s=>s.product_id===r.id&&(r.variant?s.variant_label===r.variant:!s.variant_label||s.variant_label==='')),
+                    ...restockLogs.filter(l=>{
+                      if(l.product_id!==r.id) return false
+                      const lv=l.variant_label||''
+                      return r.variant ? lv===r.variant : lv===''
+                    }).map(l=>({...l,type:'restocked',quantity:l.quantity}))
+                  ].sort((a,b)=>b.date.localeCompare(a.date))
                   return(
                     <div key={i} className={zoruu!==0?'bg-red-50/20':''}>
                       <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50 cursor-pointer"
