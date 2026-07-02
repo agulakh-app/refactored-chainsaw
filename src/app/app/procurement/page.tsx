@@ -260,15 +260,25 @@ export default function ProcurementPage() {
                 const pvs=prod?.variants||[]
                 const shipPer = totalQtyAll>0&&it.qty ? Math.round(totalShip*(parseInt(it.qty)||0)/totalQtyAll) : 0
                 return(
-                  <div key={idx} className="space-y-1">
-                    <div className="grid gap-1.5 items-center"
+                  <div key={idx} className="mb-1">
+                    <div className="grid gap-1.5 items-start"
                       style={{gridTemplateColumns:'2fr 75px 70px 75px 70px 20px'}}>
-                      <select value={it.productId}
-                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,productId:e.target.value,variant:''}:x))}
-                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
-                        <option value="">— Сонгох —</option>
-                        {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
+                      <div>
+                        <select value={it.productId}
+                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,productId:e.target.value,variant:''}:x))}
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
+                          <option value="">— Сонгох —</option>
+                          {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                        {pvs.length>0&&(
+                          <select value={it.variant}
+                            onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,variant:e.target.value}:x))}
+                            className="w-full mt-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
+                            <option value="">— Variant —</option>
+                            {pvs.map((v,vi)=><option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
+                          </select>
+                        )}
+                      </div>
                       <input type="number" placeholder="0" value={it.qty}
                         onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
@@ -286,14 +296,6 @@ export default function ProcurementPage() {
                       <button onClick={()=>setProcItems(prev=>prev.filter((_,i)=>i!==idx))}
                         className="text-gray-300 hover:text-red-400 text-xs">✕</button>
                     </div>
-                    {pvs.length>0&&(
-                      <select value={it.variant}
-                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,variant:e.target.value}:x))}
-                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
-                        <option value="">— Variant сонгох —</option>
-                        {pvs.map((v,vi)=><option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
-                      </select>
-                    )}
                   </div>
                 )
               })}
