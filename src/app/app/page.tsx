@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Product, Order } from '@/lib/types'
+import { consumeOrderItems, releaseOrderItems, insertOrderOutLogs, deleteOrderOutLogs, updateOrderOutLogsDate } from '@/lib/stockMovement'
 import { useGuestRole, useOwnerId, useActiveStore, useSetActiveStore } from './client-layout'
 
 const TODAY = new Date().toISOString().slice(0,10)
@@ -156,18 +157,10 @@ export default function DashPage() {
         unit_price:(it as any).paid?0:Number(it.price),
         variant_label:it.variant_label||null
       })))
-      for(const it of oItems){
-        const p=products.find(x=>x.id===it.product_id)!
-        const pvs:any[]=(p as any).variants||[]
-        if(pvs.length>0&&it.variant_label){
-          const newVariants=pvs.map((vv:any)=>[vv.size,vv.color].filter(Boolean).join(' / ')===it.variant_label?{...vv,stock:Math.max(0,vv.stock-Number(it.qty))}:vv)
-          const newTotal=newVariants.reduce((a:number,vv:any)=>a+vv.stock,0)
-          await supabase.from('products').update({variants:newVariants,stock:newTotal}).eq('id',it.product_id)
-        } else {
-          await supabase.from('products').update({stock:p.stock-Number(it.qty)}).eq('id',it.product_id)
-        }
-        await supabase.from('restock_log').insert({user_id:targetId,product_id:it.product_id,product_name:it.product_name+(it.variant_label?' · '+it.variant_label:''),quantity:Number(it.qty),type:'out',note:'Захиалга',date:oDate||TODAY})
-      }
+      // Stock хасах + 'out' хөдөлгөөний бүртгэл — нэгдсэн логикоор (store_id, variant_label бүрэн)
+      const movItems=oItems.map(it=>({product_id:it.product_id,product_name:it.product_name,variant_label:it.variant_label||null,quantity:Number(it.qty)}))
+      await consumeOrderItems(movItems)
+      await insertOrderOutLogs(targetId,activeStoreId||null,oDate||TODAY,movItems)
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
     setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
@@ -176,55 +169,21 @@ export default function DashPage() {
 
   async function setOrderStatus(id:string,status:string){
     const o=orders.find(x=>x.id===id)
-    if(o){
-      const wasPending=o.status==='pending'
-      const nowCancelled=status==='cancelled'
-      const wasCancelled=o.status==='cancelled'
-      const nowPending=status==='pending'
-      // pending → cancelled: stock буцаана
-      if(wasPending&&nowCancelled){
-        for(const it of(o.order_items||[])){
-          const pid=(it as any).product_id
-          const qty=(it as any).quantity
-          const variantLabel=(it as any).variant_label
-          if(!pid) continue
-          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
-          if(!prod) continue
-          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
-            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
-            if(vIdx>=0){
-              const nv=[...prod.variants]
-              nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
-              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
-            }
-          } else {
-            await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
-          }
-        }
-      }
-      // cancelled → pending: stock дахин хасна
-      if(wasCancelled&&nowPending){
-        for(const it of(o.order_items||[])){
-          const pid=(it as any).product_id
-          const qty=(it as any).quantity
-          const variantLabel=(it as any).variant_label
-          if(!pid) continue
-          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
-          if(!prod) continue
-          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
-            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
-            if(vIdx>=0){
-              const nv=[...prod.variants]
-              nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-qty)}
-              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
-            }
-          } else {
-            const {data:prod2}=await supabase.from('products').select('stock').eq('id',pid).single()
-            if(prod2) await supabase.from('products').update({stock:Math.max(0,(prod2.stock||0)-qty)}).eq('id',pid)
-          }
-        }
+    if(o&&o.status!==status){
+      // Ерөнхий дүрэм: cancelled ≠ агуулахаас хасагдсан.
+      // pending/delivered → cancelled: stock буцааж, out-лог арилгана.
+      // cancelled → pending/delivered: stock дахин хасаж, out-лог сэргээнэ.
+      const wasHeld=o.status!=='cancelled'
+      const nowHeld=status!=='cancelled'
+      const{data:{user}}=await supabase.auth.getUser()
+      const targetId=ownerId||user?.id
+      const items=(o.order_items||[]) as any[]
+      if(wasHeld&&!nowHeld){
+        await releaseOrderItems(items)
+        if(targetId) await deleteOrderOutLogs(targetId,o.date,items)
+      } else if(!wasHeld&&nowHeld){
+        await consumeOrderItems(items)
+        if(targetId) await insertOrderOutLogs(targetId,(o as any).store_id||null,o.date,items)
       }
     }
     await supabase.from('orders').update({status}).eq('id',id)
@@ -235,33 +194,39 @@ export default function DashPage() {
 
   async function saveEditOrder(){
     if(!editOrder) return
+    const{data:{user}}=await supabase.auth.getUser()
+    const targetId=ownerId||user?.id
+    const items=(editOrder.order_items||[]) as any[]
+    // Статус өөрчлөгдвөл stock болон out-логийг мөн уялдуулна
+    if(editStatus!==editOrder.status){
+      const wasHeld=editOrder.status!=='cancelled'
+      const nowHeld=editStatus!=='cancelled'
+      if(wasHeld&&!nowHeld){
+        await releaseOrderItems(items)
+        if(targetId) await deleteOrderOutLogs(targetId,editOrder.date,items)
+      } else if(!wasHeld&&nowHeld){
+        await consumeOrderItems(items)
+        if(targetId) await insertOrderOutLogs(targetId,(editOrder as any).store_id||null,editDate||editOrder.date,items)
+      }
+    }
+    // Огноо өөрчлөгдвөл out-логийн огноог мөн шинэчилнэ
+    if(targetId&&editDate&&editDate!==editOrder.date&&editStatus!=='cancelled'&&editOrder.status!=='cancelled'){
+      await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
+    }
     await supabase.from('orders').update({phone:editPhone,address:editAddr,status:editStatus,delivery_fee:Number(editDelv)||0,date:editDate}).eq('id',editOrder.id)
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
   }
 
   async function deleteOrder(o:Order, silent=false){
     const doDelete=async()=>{
-      // pending болон delivered хоёуланд stock буцаана (cancelled-д буцаагаагүй тул зөвхөн тэр 2)
+      // pending болон delivered хоёуланд stock буцааж, 'out' хөдөлгөөний
+      // бүртгэлийг хамт устгана (cancelled-д stock аль хэдийн буцсан, лог арилсан)
       if(o.status==='pending'||o.status==='delivered'){
-        for(const it of(o.order_items||[])){
-          const pid=(it as any).product_id
-          const qty=(it as any).quantity
-          const variantLabel=(it as any).variant_label
-          if(!pid) continue
-          const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
-          if(!prod) continue
-          if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
-            const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
-            if(vIdx>=0){
-              const nv=[...prod.variants]
-              nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
-              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
-            }
-          } else {
-            await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
-          }
-        }
+        const{data:{user}}=await supabase.auth.getUser()
+        const targetId=ownerId||user?.id
+        const items=(o.order_items||[]) as any[]
+        await releaseOrderItems(items)
+        if(targetId) await deleteOrderOutLogs(targetId,o.date,items)
       }
       await supabase.from('order_items').delete().eq('order_id',o.id)
       await supabase.from('orders').delete().eq('id',o.id)
