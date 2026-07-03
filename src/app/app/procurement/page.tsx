@@ -279,22 +279,32 @@ export default function ProcurementPage() {
                           </select>
                         )}
                       </div>
-                      <input type="number" placeholder="0" value={it.qty}
-                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
-                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
-                      <div className="text-right">
+                      <div>
+                        <input type="number" placeholder="0" value={it.qty}
+                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
+                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
+                      </div>
+                      <div>
                         <input type="number" placeholder="0" value={it.cost}
                           onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,cost:e.target.value}:x))}
                           className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
                         {shipPer>0&&<div className="text-xs text-orange-400 mt-0.5">+{shipPer.toLocaleString()}₮</div>}
+                        {pvs.length>0&&!shipPer&&<div className="mt-1 h-[26px]"/>}
                       </div>
-                      <input type="number" placeholder="0" value={it.received}
-                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,received:e.target.value}:x))}
-                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right bg-emerald-50"/>
-                      <input type="date" value={procDate} onChange={e=>setProcDate(e.target.value)}
-                        className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-xs"/>
+                      <div>
+                        <input type="number" placeholder="0" value={it.received}
+                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,received:e.target.value}:x))}
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right bg-emerald-50"/>
+                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
+                      </div>
+                      <div>
+                        <input type="date" value={procDate} onChange={e=>setProcDate(e.target.value)}
+                          className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-xs"/>
+                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
+                      </div>
                       <button onClick={()=>setProcItems(prev=>prev.filter((_,i)=>i!==idx))}
-                        className="text-gray-300 hover:text-red-400 text-xs">✕</button>
+                        className="text-gray-300 hover:text-red-400 text-xs mt-1">✕</button>
                     </div>
                   </div>
                 )
