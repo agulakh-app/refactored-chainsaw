@@ -115,6 +115,7 @@ export default function StockPage() {
     setLogs(ls||[])
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
+    if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
       const oq = supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).in('status',['pending','delivered'])
