@@ -260,52 +260,44 @@ export default function ProcurementPage() {
                 const pvs=prod?.variants||[]
                 const shipPer = totalQtyAll>0&&it.qty ? Math.round(totalShip*(parseInt(it.qty)||0)/totalQtyAll) : 0
                 return(
-                  <div key={idx} className="mb-1">
-                    <div className="grid gap-1.5 items-start"
+                  <div key={idx} className="mb-2">
+                    <div className="grid gap-1.5 items-center"
                       style={{gridTemplateColumns:'2fr 75px 70px 75px 70px 20px'}}>
-                      <div>
-                        <select value={it.productId}
-                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,productId:e.target.value,variant:''}:x))}
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
-                          <option value="">— Сонгох —</option>
-                          {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                        {pvs.length>0&&(
-                          <select value={it.variant}
-                            onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,variant:e.target.value}:x))}
-                            className="w-full mt-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
-                            <option value="">— Variant —</option>
-                            {pvs.map((v,vi)=><option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
-                          </select>
-                        )}
-                      </div>
-                      <div>
-                        <input type="number" placeholder="0" value={it.qty}
-                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
-                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
-                      </div>
+                      <select value={it.productId}
+                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,productId:e.target.value,variant:''}:x))}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white">
+                        <option value="">— Сонгох —</option>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <input type="number" placeholder="0" value={it.qty}
+                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,qty:e.target.value}:x))}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
                       <div>
                         <input type="number" placeholder="0" value={it.cost}
                           onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,cost:e.target.value}:x))}
                           className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"/>
-                        {shipPer>0&&<div className="text-xs text-orange-400 mt-0.5">+{shipPer.toLocaleString()}₮</div>}
-                        {pvs.length>0&&!shipPer&&<div className="mt-1 h-[26px]"/>}
+                        {shipPer>0&&<div className="text-xs text-orange-400 mt-0.5 text-right">+{shipPer.toLocaleString()}₮</div>}
                       </div>
-                      <div>
-                        <input type="number" placeholder="0" value={it.received}
-                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,received:e.target.value}:x))}
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right bg-emerald-50"/>
-                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
-                      </div>
-                      <div>
-                        <input type="date" value={procDate} onChange={e=>setProcDate(e.target.value)}
-                          className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-xs"/>
-                        {pvs.length>0&&<div className="mt-1 h-[26px]"/>}
-                      </div>
+                      <input type="number" placeholder="0" value={it.received}
+                        onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,received:e.target.value}:x))}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right bg-emerald-50"/>
+                      <input type="date" value={procDate} onChange={e=>setProcDate(e.target.value)}
+                        className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-xs"/>
                       <button onClick={()=>setProcItems(prev=>prev.filter((_,i)=>i!==idx))}
-                        className="text-gray-300 hover:text-red-400 text-xs mt-1">✕</button>
+                        className="text-gray-300 hover:text-red-400 text-xs">✕</button>
                     </div>
+                    {pvs.length>0&&(
+                      <div className="grid gap-1.5 mt-1"
+                        style={{gridTemplateColumns:'2fr 75px 70px 75px 70px 20px'}}>
+                        <select value={it.variant}
+                          onChange={e=>setProcItems(prev=>prev.map((x,i)=>i===idx?{...x,variant:e.target.value}:x))}
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-xs">
+                          <option value="">— Variant —</option>
+                          {pvs.map((v,vi)=><option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>{[v.size,v.color].filter(Boolean).join(' / ')}</option>)}
+                        </select>
+                        <div/><div/><div/><div/><div/>
+                      </div>
+                    )}
                   </div>
                 )
               })}
