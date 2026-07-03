@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Order } from '@/lib/types'
+import { consumeOrderItems, releaseOrderItems, insertOrderOutLogs, deleteOrderOutLogs } from '@/lib/stockMovement'
 import * as XLSX from 'xlsx'
 import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
 
@@ -99,13 +100,36 @@ export default function HistoryPage() {
     })
   }
   async function bulkDeliver(){
-    const ids=Array.from(selectedIds)
-    await Promise.all(ids.map(id=>supabase.from('orders').update({status:'delivered'}).eq('id',id)))
+    const{data:{user}}=await supabase.auth.getUser()
+    const targetId=ownerId||user?.id
+    for(const id of Array.from(selectedIds)){
+      const o=orders.find(x=>x.id===id)
+      if(!o||o.status==='delivered') continue
+      // Цуцлагдсаныг хүргэгдсэн болгоход stock дахин хасагдаж, out-лог сэргэнэ
+      if(o.status==='cancelled'){
+        const items=(o.order_items||[]) as any[]
+        await consumeOrderItems(items)
+        if(targetId) await insertOrderOutLogs(targetId,(o as any).store_id||null,o.date,items)
+      }
+      await supabase.from('orders').update({status:'delivered'}).eq('id',id)
+    }
     setSelectedIds(new Set()); load()
   }
   async function bulkDelete(){
-    const ids=Array.from(selectedIds)
-    await Promise.all(ids.map(id=>supabase.from('orders').delete().eq('id',id)))
+    const{data:{user}}=await supabase.auth.getUser()
+    const targetId=ownerId||user?.id
+    for(const id of Array.from(selectedIds)){
+      const o=orders.find(x=>x.id===id)
+      if(!o){ await supabase.from('orders').delete().eq('id',id); continue }
+      // pending/delivered захиалга устгахад stock буцааж, out-логийг цэвэрлэнэ
+      if(o.status==='pending'||o.status==='delivered'){
+        const items=(o.order_items||[]) as any[]
+        await releaseOrderItems(items)
+        if(targetId) await deleteOrderOutLogs(targetId,o.date,items)
+      }
+      await supabase.from('order_items').delete().eq('order_id',o.id)
+      await supabase.from('orders').delete().eq('id',o.id)
+    }
     setSelectedIds(new Set()); load()
   }
 
@@ -120,6 +144,22 @@ export default function HistoryPage() {
   },[])
 
   async function setOrderStatus(id: string, s: string) {
+    const o=orders.find(x=>x.id===id)
+    if(o&&o.status!==s){
+      // Захиалгын хуудастай ижил дүрэм: цуцлахад stock буцаж, сэргээхэд дахин хасагдана
+      const wasHeld=o.status!=='cancelled'
+      const nowHeld=s!=='cancelled'
+      const{data:{user}}=await supabase.auth.getUser()
+      const targetId=ownerId||user?.id
+      const items=(o.order_items||[]) as any[]
+      if(wasHeld&&!nowHeld){
+        await releaseOrderItems(items)
+        if(targetId) await deleteOrderOutLogs(targetId,o.date,items)
+      } else if(!wasHeld&&nowHeld){
+        await consumeOrderItems(items)
+        if(targetId) await insertOrderOutLogs(targetId,(o as any).store_id||null,o.date,items)
+      }
+    }
     await supabase.from('orders').update({status:s}).eq('id',id)
     load()
   }
@@ -129,25 +169,11 @@ export default function HistoryPage() {
       msg: 'Энэ захиалгыг бүр мөсөн устгах уу? Энэ үйлдлийг буцаах боломжгүй.',
       onOk: async () => {
         if(o.status==='pending'||o.status==='delivered'){
-          for(const it of(o.order_items||[])){
-            const pid=(it as any).product_id
-            const qty=(it as any).quantity
-            const variantLabel=(it as any).variant_label
-            if(!pid) continue
-            const {data:prod}=await supabase.from('products').select('*').eq('id',pid).single()
-            if(!prod) continue
-            if(Array.isArray(prod.variants)&&prod.variants.length>0&&variantLabel){
-              const vIdx=prod.variants.findIndex((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===variantLabel)
-              if(vIdx>=0){
-                const nv=[...prod.variants]
-                nv[vIdx]={...nv[vIdx],stock:(nv[vIdx].stock||0)+qty}
-                const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-                await supabase.from('products').update({variants:nv,stock:nt}).eq('id',pid)
-              }
-            } else {
-              await supabase.from('products').update({stock:(prod.stock||0)+qty}).eq('id',pid)
-            }
-          }
+          const{data:{user}}=await supabase.auth.getUser()
+          const targetId=ownerId||user?.id
+          const items=(o.order_items||[]) as any[]
+          await releaseOrderItems(items)
+          if(targetId) await deleteOrderOutLogs(targetId,o.date,items)
         }
         await supabase.from('order_items').delete().eq('order_id', o.id)
         await supabase.from('orders').delete().eq('id', o.id)
@@ -378,24 +404,32 @@ export default function HistoryPage() {
         }
       })
       if(orderItems.length>0) await supabase.from('order_items').insert(orderItems)
-      // Stock хасах — restock_log бүртгэлгүй
-      for(const it of row.items){
-        const prod=it.product?prodList.find((p:any)=>p.id===it.product.id):null
-        if(!prod) continue
-        if(Array.isArray(prod.variants)&&prod.variants.length>0){
-          const vIdx=it.selectedVariantIdx>=0?it.selectedVariantIdx:-1
-          if(vIdx>=0){
-            const nv=[...prod.variants]
-            nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-it.qty)}
-            const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
-            await supabase.from('products').update({variants:nv,stock:nt}).eq('id',prod.id)
-            prod.variants=nv; prod.stock=nt
+      // Stock хасах + 'out' хөдөлгөөний бүртгэл — цуцлагдсан мөрөнд хасалт хийхгүй
+      if(row.status!=='cancelled'){
+        const logItems:any[]=[]
+        for(const it of row.items){
+          const prod=it.product?prodList.find((p:any)=>p.id===it.product.id):null
+          if(!prod) continue
+          let vl:string|null=null
+          if(Array.isArray(prod.variants)&&prod.variants.length>0){
+            const vIdx=it.selectedVariantIdx>=0?it.selectedVariantIdx:-1
+            if(vIdx>=0){
+              vl=[prod.variants[vIdx]?.size,prod.variants[vIdx]?.color].filter(Boolean).join(' / ')||null
+              const nv=[...prod.variants]
+              nv[vIdx]={...nv[vIdx],stock:Math.max(0,(nv[vIdx].stock||0)-it.qty)}
+              const nt=nv.reduce((a:number,v:any)=>a+(v.stock||0),0)
+              await supabase.from('products').update({variants:nv,stock:nt}).eq('id',prod.id)
+              prod.variants=nv; prod.stock=nt
+            }
+          } else {
+            const ns=Math.max(0,(prod.stock||0)-it.qty)
+            await supabase.from('products').update({stock:ns}).eq('id',prod.id)
+            prod.stock=ns
           }
-        } else {
-          const ns=Math.max(0,(prod.stock||0)-it.qty)
-          await supabase.from('products').update({stock:ns}).eq('id',prod.id)
-          prod.stock=ns
+          logItems.push({product_id:prod.id,product_name:prod.name,variant_label:vl,quantity:it.qty})
         }
+        // Хөдөлгөөний бүртгэл — устгах/цуцлах үйлдэлтэй уялдана
+        if(logItems.length>0) await insertOrderOutLogs(targetId,activeStoreId||null,row.date,logItems)
       }
       cnt++
     }
