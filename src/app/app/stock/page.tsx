@@ -28,6 +28,10 @@ export default function StockPage() {
   const [stockTab, setStockTab] = useState<'list'|'log'>('list')
   const [rAction, setRAction] = useState<'restock'|'ordered'|'received'>('restock')
   const [supply, setSupply] = useState<any[]>([])
+  const [supKeys2, setSupKeys2] = useState<any[]>([])
+  const [hasIssue, setHasIssue] = useState(false)
+  const tlabel2 = {ordered:'Захиалсан',received:'Хүлээн авсан',restocked:'Цэнэглэсэн'} as any
+  const tcolor2 = {ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'} as any
   const [pItems, setPItems] = useState([{pid:'',vl:'',qty:'',recv:''}])
   const [pShip, setPShip] = useState('')
   const [pNote, setPNote] = useState('')
@@ -117,7 +121,44 @@ export default function StockPage() {
       const { data: ords } = activeStoreId ? await oq.eq('store_id',activeStoreId) : await oq
       setAuditOrders(ords||[])
       const { data: sup } = await supabase.from('supply_log').select('*').eq('user_id',targetId).order('date',{ascending:false})
-      setSupply(sup||[])
+      const _sup2=sup||[]
+      setSupply(_sup2)
+      // compute audit summary
+      const _sm2:any={}
+      for(const o2 of (ords||[])){
+        if(!['pending','delivered'].includes(o2.status)) continue
+        for(const it2 of (o2.order_items||[])){
+          if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+          const vl2=it2.variant_label||'__total__'
+          _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+        }
+      }
+      const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
+      for(const _p2 of _prods2){
+        const _pvs2=_p2.variants||[]
+        if(_pvs2.length>0) _pvs2.forEach((_v2:any)=>_pks2.push({id:_p2.id,label:_p2.name,variant:[_v2.size,_v2.color].filter(Boolean).join(' / ')}))
+        else _pks2.push({id:_p2.id,label:_p2.name,variant:''})
+      }
+      const _getSS2=(_pk2:any)=>{
+        const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
+        const _ml2=(_l2:any)=>_l2.product_id===_pk2.id&&(_pk2.variant?_l2.variant_label===_pk2.variant:!_l2.variant_label||_l2.variant_label==='')
+        const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
+        const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
+        const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
+        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_pk2.variant||'__total__'])||0
+        const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
+        const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
+        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_stk2,zoruu:_stk2-Math.max(0,_rst2-_sold2)}
+      }
+      const _getSD2=(_pk2:any)=>{
+        const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
+        const _ml2=(_l2:any)=>_l2.product_id===_pk2.id&&(_pk2.variant?_l2.variant_label===_pk2.variant:!_l2.variant_label||_l2.variant_label==='')
+        const _fd2=(_d2:string)=>{if(!_d2)return'';const[,_m2,_day2]=_d2.split('-');return _m2+'/'+_day2}
+        return[..._sup2.filter(_ms2).map((_s2:any)=>({id:_s2.id,date:_s2.date,type:_s2.type,qty:_s2.quantity,note:_s2.note,del:true,fmtD:_fd2(_s2.date)})),..._ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).map((_l2:any)=>({id:_l2.id,date:_l2.date,type:'restocked',qty:_l2.quantity,note:_l2.note,del:false,fmtD:_fd2(_l2.date)}))].sort((_a2:any,_b2:any)=>_b2.date.localeCompare(_a2.date))
+      }
+      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
+      setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
+      setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0))
       if(!fProdId&&prods&&prods.length>0) setFProdId(prods[0].id)
     }
   },[rProd, ownerId, activeStoreId])
@@ -738,8 +779,8 @@ if (error) {
                 </div>
                 <div className="divide-y divide-gray-100">
                   {supKeys2.map((pk,i)=>{
-                    const s=getSupSummary2(pk)
-                    const det=getSupDetail2(pk)
+                    const s=pk._ss
+                    const det=pk._sd
                     const ekey=pk.id+pk.variant
                     const isExp=supplyExpanded.has(ekey)
                     const fullProd=products.find(p=>p.id===pk.id)
