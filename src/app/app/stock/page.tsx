@@ -541,10 +541,8 @@ if (error) {
         </div>
       )}
 
-      {/* Агуулахад бараа нэмэх | Шинэ бараа — зэрэгцээ */}
       {!isViewer && stockTab==='list' && (
         <div className="grid gap-4 items-start" style={{gridTemplateColumns:'2fr 3fr'}}>
-        {/* ЗҮҮН: 3 хэсэг */}
         <div className="space-y-3">
         {/* 1. Агуулах цэнэглэлт */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -622,7 +620,7 @@ if (error) {
         {/* 2. Бараа татан авалт */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 text-sm mb-2">Бараа татан авалт</h2>
-          <div className="grid gap-1 mb-1.5 text-xs text-gray-400" style={{gridTemplateColumns:'1fr 1fr 1fr'}}>
+          <div className="grid gap-1 mb-1 text-xs text-gray-400" style={{gridTemplateColumns:'1fr 1fr 1fr'}}>
             <div>Барааны нэр</div>
             <div className="text-center">Захиалсан тоо</div>
             <div className="text-center">Хүлээн авсан</div>
@@ -633,8 +631,8 @@ if (error) {
               const pvs=pp&&pp.variants?pp.variants:[]
               const hv=pvs.length>0
               const tQ=pItems.reduce((a,x)=>a+(parseInt(x.qty)||0),0)
-              const sp=parseInt(pShip)||0
-              const spp=tQ>0&&it.qty?Math.round(sp*(parseInt(it.qty)||0)/tQ):0
+              const sh=parseInt(pShip)||0
+              const spp=tQ>0&&it.qty?Math.round(sh*(parseInt(it.qty)||0)/tQ):0
               return(
                 <div key={idx}>
                   <div className="grid gap-1.5 items-center" style={{gridTemplateColumns:hv?'1fr 1fr 1fr 1fr':'1fr 1fr 1fr'}}>
@@ -657,7 +655,7 @@ if (error) {
                       onChange={e=>setPItems(prev=>prev.map((x,i)=>i===idx?{...x,recv:e.target.value}:x))}
                       className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center bg-emerald-50"/>
                   </div>
-                  {spp>0&&<div className="text-xs text-orange-400 mt-0.5">+{spp.toLocaleString()}₮ тээвэр/ш</div>}
+                  {spp>0&&<div className="text-xs text-orange-400 mt-0.5">+{spp.toLocaleString()}₮/ш тээвэр</div>}
                 </div>
               )
             })}
@@ -688,12 +686,12 @@ if (error) {
               if(!uid) return
               setPSave(true)
               const tQ2=vld.reduce((a,it)=>a+(parseInt(it.qty)||0),0)
-              const sh=parseInt(pShip)||0
-              const {data:ord}=await supabase.from('procurement_orders').insert({user_id:uid,store_id:activeStoreId||null,date:pDate,type:'ordered',shipping_cost:sh,note:pNote||null}).select().single()
-              if(ord){for(const it of vld){const qty=parseInt(it.qty)||0;const recv=parseInt(it.recv)||0;const sp2=tQ2>0?Math.round(sh*qty/tQ2):0;const pp=products.find(p=>p.id===it.pid);await supabase.from('procurement_items').insert({order_id:ord.id,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,quantity:qty,unit_cost:sp2});await supabase.from('supply_log').insert({user_id:uid,store_id:activeStoreId||null,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,type:'ordered',quantity:qty,date:pDate,note:pNote||null});if(recv>0)await supabase.from('supply_log').insert({user_id:uid,store_id:activeStoreId||null,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,type:'received',quantity:recv,date:pDate,note:'Хүлээн авсан'})}}
+              const sh2=parseInt(pShip)||0
+              const {data:ord}=await supabase.from('procurement_orders').insert({user_id:uid,store_id:activeStoreId||null,date:pDate,type:'ordered',shipping_cost:sh2,note:pNote||null}).select().single()
+              if(ord){for(const it of vld){const qty=parseInt(it.qty)||0;const recv=parseInt(it.recv)||0;const sp2=tQ2>0?Math.round(sh2*qty/tQ2):0;const pp=products.find(p=>p.id===it.pid);await supabase.from('procurement_items').insert({order_id:ord.id,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,quantity:qty,unit_cost:sp2});await supabase.from('supply_log').insert({user_id:uid,store_id:activeStoreId||null,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,type:'ordered',quantity:qty,date:pDate,note:pNote||null});if(recv>0)await supabase.from('supply_log').insert({user_id:uid,store_id:activeStoreId||null,product_id:it.pid,product_name:pp?pp.name:'',variant_label:it.vl||null,type:'received',quantity:recv,date:pDate,note:'Хүлээн авсан'})}}
               setPItems([{pid:'',vl:'',qty:'',recv:''}]);setPShip('');setPNote('');setPSave(false);showFlash('Татан авалт ✓');load()
             }} disabled={pSave||!pItems.some(it=>it.pid&&it.qty)}
-              className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40 whitespace-nowrap">
+              className="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">
               {pSave?'...':'Хадгалах'}
             </button>
           </div>
@@ -711,106 +709,15 @@ if (error) {
           </div>
         </div>
 
-        </div>{/* end left space-y-3 */}
-
-        {/* БАРУУН: Барааны хөдөлгөөн — Аудит */}
         </div>
-      )}
-
-      {/* Бараа жагсаалт — хяналт tab дотор харагдана */}
-
-      {/* Аудит хэсэг */}
-      {stockTab==='list' && (() => {
-        // Захиалгаас variant бүрийн зарагдсан тоог тооцоолох
-        const soldMap: Record<string, Record<string, number>> = {}
-        for(const o of auditOrders){
-          if(!['pending','delivered'].includes(o.status)) continue
-          for(const it of (o.order_items||[])){
-            const pid = it.product_id
-            const vl = it.variant_label||'__total__'
-            if(!soldMap[pid]) soldMap[pid]={}
-            soldMap[pid][vl] = (soldMap[pid][vl]||0) + it.quantity
-          }
-        }
-        // Цэнэглэсэн тоо restock_log-оос
-        const restockMap: Record<string, Record<string, number>> = {}
-        for(const l of logs){
-          if(l.type!=='in') continue
-          const pid = l.product_id
-          // variant_label шинэ column, эсвэл product_name-с задлах (жишээ: "Битүү · 40/41 / Ягаан")
-          const vl = (l as any).variant_label || 
-            (l.product_name.includes(' · ') ? l.product_name.split(' · ').slice(1).join(' · ') : '__total__')
-          if(!restockMap[pid]) restockMap[pid]={}
-          restockMap[pid][vl] = (restockMap[pid][vl]||0) + l.quantity
-        }
-
-        const rows: any[] = []
-        for(const p of products){
-          const pvs: any[] = (p as any).variants||[]
-          if(pvs.length>0){
-            for(const v of pvs){
-              const vl = [v.size,v.color].filter(Boolean).join(' / ')
-              const restocked = restockMap[p.id]?.[vl]||0
-              const sold = soldMap[p.id]?.[vl]||0
-              const expected = Math.max(0, restocked - sold)
-              const actual = v.stock||0
-              const diff = actual - expected
-              rows.push({name:p.id, label:p.name, variant:vl, restocked, sold, expected, actual, diff})
-            }
-          } else {
-            const restocked = restockMap[p.id]?.['__total__']||0
-            const sold = soldMap[p.id]?.['__total__']||0
-            const expected = Math.max(0, restocked - sold)
-            const actual = p.stock||0
-            const diff = actual - expected
-            rows.push({name:p.id, label:p.name, variant:'', restocked, sold, expected, actual, diff})
-          }
-        }
-
-        const hasIssue = rows.some(r=>r.diff!==0)
-
-        // Supply нэгтгэл
-        type PK2 = {id:string;label:string;variant:string}
-        const prodKeys2: PK2[] = []
-        for(const p of products){
-          const pvs2:any[]=p.variants||[]
-          if(pvs2.length>0) pvs2.forEach((v:any)=>prodKeys2.push({id:p.id,label:p.name,variant:[v.size,v.color].filter(Boolean).join(' / ')}))
-          else prodKeys2.push({id:p.id,label:p.name,variant:''})
-        }
-        function getSupSummary2(pk:PK2){
-          const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
-          const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
-          const ordered=supply.filter((s:any)=>ms(s)&&s.type==='ordered').reduce((a:number,s:any)=>a+s.quantity,0)
-          const received=supply.filter((s:any)=>ms(s)&&s.type==='received').reduce((a:number,s:any)=>a+s.quantity,0)
-          const restocked=logs.filter((l:any)=>l.type==='in'&&ml(l)).reduce((a:number,l:any)=>a+l.quantity,0)
-          const sold=(soldMap[pk.id]?.[pk.variant||'__total__'])||0
-          const stock=pk.variant?(products.find(p=>p.id===pk.id)?.variants||[]).find((v:any)=>[v.size,v.color].filter(Boolean).join(' / ')===pk.variant)?.stock||0:products.find(p=>p.id===pk.id)?.stock||0
-          const expected=Math.max(0,restocked-sold)
-          const zoruu=stock-expected
-          return {ordered,received,restocked,sold,stock,zoruu}
-        }
-        function getSupDetail2(pk:PK2){
-          const ms=(s:any)=>s.product_id===pk.id&&(pk.variant?s.variant_label===pk.variant:!s.variant_label||s.variant_label==='')
-          const ml=(l:any)=>l.product_id===pk.id&&(pk.variant?l.variant_label===pk.variant:!l.variant_label||l.variant_label==='')
-          const fmtD2=(d:string)=>{if(!d)return'';const[,m,day]=d.split('-');return m+'/'+day}
-          return [
-            ...supply.filter(ms).map((s:any)=>({id:s.id,date:s.date,type:s.type,qty:s.quantity,note:s.note,del:true,fmtD:fmtD2(s.date)})),
-            ...logs.filter((l:any)=>l.type==='in'&&ml(l)).map((l:any)=>({id:l.id,date:l.date,type:'restocked',qty:l.quantity,note:l.note,del:false,fmtD:fmtD2(l.date)})),
-          ].sort((a,b)=>b.date.localeCompare(a.date))
-        }
-        const supKeys2=prodKeys2.filter(pk=>{const s=getSupSummary2(pk);return s.ordered>0||s.received>0||s.restocked>0})
-        const tlabel2:{[k:string]:string}={ordered:'Захиалсан',received:'Ирсэн',restocked:'Цэнэглэсэн'}
-        const tcolor2:{[k:string]:string}={ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'}
-
-        return (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="space-y-4">
           {/* Нэгдсэн хяналт хүснэгт */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="font-medium text-gray-800 text-sm">Барааны нэгдсэн хяналт</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Захиалсан → Ирсэн → Цэнэглэсэн → Зарагдсан</p>
-              </div>
+                </div>
               {hasIssue&&<span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>}
             </div>
             {supKeys2.length===0?(
@@ -880,8 +787,10 @@ if (error) {
             )}
           </div>
           </div>
-        )
-      })()}
+        </div>
+        </div>
+      )}
+
 
       {/* Цэнэглэлтийн бүртгэл */}
       {stockTab==='log' && <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
