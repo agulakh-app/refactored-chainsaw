@@ -47,6 +47,14 @@ export default function ReconcilePage() {
 
   useEffect(()=>{ load() },[load])
 
+  // Orders статус өөрчлөгдөхөд автоматаар шинэчлэх
+  useEffect(()=>{
+    const channel = supabase.channel('reconcile-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, ()=>{ load() })
+      .subscribe()
+    return ()=>{ supabase.removeChannel(channel) }
+  },[load])
+
   useEffect(()=>{
     function handleClick(e: MouseEvent){
       if(sourceRef.current&&!sourceRef.current.contains(e.target as Node)) setSourceDropOpen(false)
