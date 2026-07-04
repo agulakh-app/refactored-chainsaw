@@ -336,6 +336,16 @@ if (error) {
         cost: editVariantCosts[i] !== undefined && editVariantCosts[i] !== '' ? Number(editVariantCosts[i]) : (v as any).cost,
       }))
       const newTotal = newVariants.reduce((a, v) => a + v.stock, 0)
+      // Устгагдсан variant-ийн label-уудыг олох
+      const newLabels = new Set(newVariants.map(v => [v.size,v.color].filter(Boolean).join(' / ')))
+      const removedLabels = pvs
+        .map(v => [v.size,v.color].filter(Boolean).join(' / '))
+        .filter(lbl => !newLabels.has(lbl))
+      // Устгагдсан variant-ийн log бичлэгийг цэвэрлэх
+      for (const lbl of removedLabels) {
+        await supabase.from('restock_log').delete().eq('product_id', editProd.id).eq('variant_label', lbl)
+        await supabase.from('supply_log').delete().eq('product_id', editProd.id).eq('variant_label', lbl)
+      }
       await supabase.from('products').update({ variants: newVariants, stock: newTotal }).eq('id', editProd.id)
     } else {
       await supabase.from('products').update({
