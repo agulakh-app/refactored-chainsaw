@@ -112,7 +112,8 @@ export default function StockPage() {
         : Promise.resolve({ data: null })
     ])
     setProducts(prods||[])
-    setLogs(ls||[])
+    const _prodIds=new Set((prods||[]).map((p:any)=>p.id))
+    setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)))
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
@@ -121,7 +122,9 @@ export default function StockPage() {
       const oq = supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).in('status',['pending','delivered'])
       const { data: ords } = activeStoreId ? await oq.eq('store_id',activeStoreId) : await oq
       setAuditOrders(ords||[])
-      const { data: sup } = await supabase.from('supply_log').select('*').eq('user_id',targetId).order('date',{ascending:false})
+      const _existingIds=(prods||[]).map((p:any)=>p.id)
+      const supQ=supabase.from('supply_log').select('*').eq('user_id',targetId).order('date',{ascending:false})
+      const { data: sup } = _existingIds.length>0 ? await supQ.in('product_id',_existingIds) : await supQ.limit(0)
       const _sup2=sup||[]
       setSupply(_sup2)
       // compute audit summary
