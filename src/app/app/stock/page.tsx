@@ -152,7 +152,8 @@ export default function StockPage() {
         const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_pk2.variant||'__total__'])||0
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
-        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_stk2,zoruu:_stk2-Math.max(0,_rst2-_sold2)}
+        const _expectedStk=Math.max(0,_rst2-_sold2)
+        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_stk2,expected:_expectedStk,zoruu:_stk2-_expectedStk}
       }
       const _getSD2=(_pk2:any)=>{
         const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
@@ -813,7 +814,7 @@ if (error) {
                           <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
                           <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
-                          <div className="text-right text-xs font-bold text-gray-800">{s.stock}ш</div>
+                          <div className="text-right text-xs font-bold text-gray-800">{s.expected}ш</div>
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
