@@ -102,8 +102,8 @@ export default function StockPage() {
     if (!targetId) return
     const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
       activeStoreId
-        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
-        : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
+        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('archived',True).order('name')
+        : supabase.from('products').select('*').eq('user_id',targetId).neq('archived',True).order('name'),
       activeStoreId
         ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
         : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
@@ -304,12 +304,12 @@ if (error) {
   }
 
   async function deleteProduct(id: string, name: string) {
-    setConfirmModal({msg: name+' устгах уу?', onOk: async()=>{
-      // Бараатай холбоотой бүх лог устга
-      await supabase.from('restock_log').delete().eq('product_id', id)
+    setConfirmModal({msg: name+' устгах уу?\n\nЗахиалгын түүхэнд хадгалагдана.', onOk: async()=>{
+      // archived=true болгоно — захиалгын түүхэнд хадгалагдах боловч жагсаалтад харагдахгүй
+      await supabase.from('products').update({archived: true}).eq('id', id)
       await supabase.from('supply_log').delete().eq('product_id', id)
-      await supabase.from('products').delete().eq('id', id)
-      showFlash(name+' устгагдлаа'); load()
+      await supabase.from('restock_log').delete().eq('product_id', id).eq('note', 'Захиалга').not('type', 'eq', 'out')
+      showFlash(name+' архивлагдлаа'); load()
     }})
   }
 
