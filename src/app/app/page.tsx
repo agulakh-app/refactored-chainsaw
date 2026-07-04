@@ -111,6 +111,15 @@ export default function DashPage() {
 
   useEffect(()=>{load()},[load])
 
+  useEffect(()=>{
+    const ch = supabase.channel('orders-products-watch')
+      .on('postgres_changes',{event:'INSERT',schema:'public',table:'products'},()=>load())
+      .on('postgres_changes',{event:'DELETE',schema:'public',table:'products'},()=>load())
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'products'},()=>load())
+      .subscribe()
+    return ()=>{supabase.removeChannel(ch)}
+  },[load])
+
   function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])}
   function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx))}
   function setItem(idx:number,key:string,val:string|boolean){
