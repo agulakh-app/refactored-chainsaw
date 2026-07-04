@@ -42,6 +42,7 @@ export default function DashPage() {
   const [oAddr,setOAddr]=useState('')
   const [oDelv,setODelv]=useState('')
   const [oPaid,setOPaid]=useState(false)
+  const [oPaidLocked,setOPaidLocked]=useState(false)
   const [oStore,setOStore]=useState('')
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
   const [variantEnabled,setVariantEnabled]=useState(false)
@@ -164,6 +165,7 @@ export default function DashPage() {
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
     setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
+    setOPaid(false); setOPaidLocked(false)
     showFlash('Захиалга бүртгэгдлээ ✓');load()
   }
 
@@ -416,11 +418,11 @@ export default function DashPage() {
                 <div className="flex items-center justify-between mt-2">
                   <button onClick={addItem} className="text-xs text-emerald-600 hover:underline">＋ Бараа нэмэх</button>
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <div onClick={()=>setOPaid(!oPaid)}
-                      className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
+                    <div onClick={()=>{if(!oPaidLocked){const n=!oPaid;setOPaid(n);setOPaidLocked(n)}}}
+                      className={`w-5 h-5 rounded flex items-center justify-center border-2 transition-all ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'} ${oPaidLocked?'opacity-60 cursor-not-allowed':'cursor-pointer'}`}>
                       {oPaid&&<span className="text-white text-xs font-bold">✓</span>}
                     </div>
-                    <span className="text-xs text-gray-500">Төлбөр төлөгдсөн</span>
+                    <span className={`text-xs ${oPaidLocked?'text-emerald-600 font-medium':'text-gray-500'}`}>Төлбөр төлөгдсөн</span>
                   </label>
                 </div>
               </div>
@@ -442,9 +444,10 @@ export default function DashPage() {
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Төлсөн</label>
-                <label className="flex items-center gap-2 cursor-pointer h-[38px] px-3 rounded-lg border border-gray-200 bg-white w-full"
+                <label className={`flex items-center gap-2 h-[38px] px-3 rounded-lg border w-full transition-all ${oPaidLocked?'border-emerald-200 bg-emerald-50 cursor-not-allowed':'border-gray-200 bg-white cursor-pointer'}`}
                   onClick={()=>{
-                    const next=!oPaid; setOPaid(next)
+                    if(oPaidLocked) return
+                    const next=!oPaid; setOPaid(next); setOPaidLocked(next)
                     if(next) setOItems(items=>items.map(it=>({...it,price:'0'})))
                     else setOItems(items=>items.map(it=>{
                       const p=products.find(x=>x.id===it.product_id)
@@ -454,7 +457,7 @@ export default function DashPage() {
                   <div className={`w-4 h-4 rounded flex items-center justify-center border-2 transition-all flex-shrink-0 ${oPaid?'bg-emerald-500 border-emerald-500':'border-gray-300 bg-white'}`}>
                     {oPaid&&<span className="text-white text-[10px] font-bold">✓</span>}
                   </div>
-                  <span className="text-xs text-gray-600 whitespace-nowrap">Төлбөр төлөгдсөн</span>
+                  <span className={`text-xs whitespace-nowrap ${oPaidLocked?'text-emerald-600 font-medium':'text-gray-600'}`}>Төлбөр төлөгдсөн</span>
                 </label>
               </div>
               <div>
