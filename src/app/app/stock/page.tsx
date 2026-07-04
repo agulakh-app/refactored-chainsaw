@@ -301,6 +301,9 @@ if (error) {
 
   async function deleteProduct(id: string, name: string) {
     setConfirmModal({msg: name+' устгах уу?', onOk: async()=>{
+      // Бараатай холбоотой бүх лог устга
+      await supabase.from('restock_log').delete().eq('product_id', id)
+      await supabase.from('supply_log').delete().eq('product_id', id)
       await supabase.from('products').delete().eq('id', id)
       showFlash(name+' устгагдлаа'); load()
     }})
