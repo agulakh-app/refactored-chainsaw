@@ -93,7 +93,7 @@ export default function DashPage() {
       setODelv(v=>(!v||v==='0')?String(prof.default_delivery_fee):v)
     }
     const[{data:prods},{data:ords},{data:sts}]=await Promise.all([
-      (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('archived',True).order('name') : supabase.from('products').select('*').eq('user_id',targetId).neq('archived',True).order('name')),
+      (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
       (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])

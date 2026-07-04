@@ -102,8 +102,8 @@ export default function StockPage() {
     if (!targetId) return
     const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
       activeStoreId
-        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('archived',True).order('name')
-        : supabase.from('products').select('*').eq('user_id',targetId).neq('archived',True).order('name'),
+        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
+        : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
       activeStoreId
         ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
         : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),

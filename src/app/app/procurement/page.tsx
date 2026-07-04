@@ -42,8 +42,8 @@ export default function ProcurementPage() {
     const uid = ownerId || user?.id
     if (!uid) return
     const sq = activeStoreId
-      ? supabase.from('products').select('*').eq('user_id', uid).eq('store_id', activeStoreId).neq('archived', true)
-      : supabase.from('products').select('*').eq('user_id', uid).neq('archived', true)
+      ? supabase.from('products').select('*').eq('user_id', uid).eq('store_id', activeStoreId)
+      : supabase.from('products').select('*').eq('user_id', uid)
     const [{ data: prods }, { data: sup }, { data: rlogs }, { data: ords }] = await Promise.all([
       sq,
       supabase.from('supply_log').select('*').eq('user_id', uid).order('date',{ascending:false}),
