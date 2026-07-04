@@ -526,7 +526,7 @@ export default function DashPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm text-left">Захиалгын бүртгэл</h2>
         </div>
-        <div className="grid grid-cols-2 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
+        <div className="grid grid-cols-3 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэрээр хайх..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
           <div className="flex items-center gap-1 w-full">
