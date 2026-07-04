@@ -210,13 +210,13 @@ export default function ReconcilePage() {
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="grid text-xs text-gray-400 font-medium px-3 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'60px 100px 110px 140px 110px 1fr 55px'}}>
+            style={{gridTemplateColumns:'repeat(5, 1fr) 2fr 50px'}}>
             <div>Огноо</div>
             <div className="text-right">Тооцоолсон</div>
             <div className="text-right">Тушаасан</div>
-            <div className="pl-3">Эх үүсвэр</div>
+            <div>Эх үүсвэр</div>
             <div className="text-right">Зөрүү</div>
-            <div className="pl-2">Тэмдэглэл</div>
+            <div>Тэмдэглэл</div>
             <div></div>
           </div>
 
@@ -233,13 +233,13 @@ export default function ReconcilePage() {
                   <div key={r.id}>
                     {!isEdit?(
                       <div className="grid items-center px-3 py-2.5 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'60px 100px 110px 140px 110px 1fr 55px'}}>
+                        style={{gridTemplateColumns:'repeat(5, 1fr) 2fr 50px'}}>
                         <div className="text-xs font-medium text-gray-700">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </div>
                         <div className="text-right text-xs text-gray-500">{fmt(r.system_amount)}₮</div>
                         <div className="text-right text-xs font-medium text-gray-800">{fmt(r.received_amount)}₮</div>
-                        <div className="text-xs text-gray-700 truncate pl-3">{r.courier}</div>
+                        <div className="text-xs text-gray-700 truncate">{r.courier}</div>
                         <div className="text-right">
                           {d===0?(
                             <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Таарсан</span>
