@@ -209,56 +209,58 @@ export default function ReconcilePage() {
 
         {/* Баруун: Жагсаалт */}
         <div className="flex-1 bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <div className="grid text-xs text-gray-400 font-medium px-3 py-2.5 bg-gray-50 border-b border-gray-100"
-            style={{gridTemplateColumns:'80px 1fr 1fr 1fr 1fr 2fr 50px'}}>
-            <div>Огноо</div>
-            <div className="text-right">Тооцоолсон</div>
-            <div className="text-right">Тушаасан</div>
-            <div>Эх үүсвэр</div>
-            <div className="text-right">Зөрүү</div>
-            <div>Тэмдэглэл</div>
-            <div></div>
-          </div>
-
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-gray-400 font-medium">
+                <th className="text-left px-3 py-2.5 whitespace-nowrap">Огноо</th>
+                <th className="text-right px-3 py-2.5 whitespace-nowrap">Тооцоолсон</th>
+                <th className="text-right px-3 py-2.5 whitespace-nowrap">Тушаасан</th>
+                <th className="text-left px-3 py-2.5 whitespace-nowrap">Эх үүсвэр</th>
+                <th className="text-right px-3 py-2.5 whitespace-nowrap">Зөрүү</th>
+                <th className="text-left px-3 py-2.5 w-full">Тэмдэглэл</th>
+                <th className="px-3 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody>
           {recs.length===0?(
-            <div className="py-12 text-center">
-              <p className="text-gray-400 text-sm">Тооцоо бүртгэл байхгүй</p>
-            </div>
+            <tr><td colSpan={7} className="py-12 text-center text-gray-400">Тооцоо бүртгэл байхгүй</td></tr>
           ):(
-            <div className="divide-y divide-gray-100">
+            <>
               {visibleRecs.map(r=>{
                 const d = r.received_amount - r.system_amount
                 const isEdit = editId===r.id
                 return(
-                  <div key={r.id}>
+                  <tr key={r.id} className="border-b border-gray-100 last:border-0">
                     {!isEdit?(
-                      <div className="grid items-center px-3 py-2.5 hover:bg-gray-50/50"
-                        style={{gridTemplateColumns:'80px 1fr 1fr 1fr 1fr 2fr 50px'}}>
-                        <div className="text-xs font-medium text-gray-700">
+                      <>
+                        <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
-                        </div>
-                        <div className="text-right text-xs text-gray-500">{fmt(r.system_amount)}₮</div>
-                        <div className="text-right text-xs font-medium text-gray-800">{fmt(r.received_amount)}₮</div>
-                        <div className="text-xs text-gray-700 truncate">{r.courier}</div>
-                        <div className="text-right">
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-500 whitespace-nowrap">{fmt(r.system_amount)}₮</td>
+                        <td className="px-3 py-2.5 text-right font-medium text-gray-800 whitespace-nowrap">{fmt(r.received_amount)}₮</td>
+                        <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{r.courier}</td>
+                        <td className="px-3 py-2.5 text-right whitespace-nowrap">
                           {d===0?(
-                            <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Таарсан</span>
+                            <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">Таарсан</span>
                           ):(
-                            <span className={`text-xs font-bold ${d>0?'text-blue-600':'text-red-500'}`}>
+                            <span className={`font-bold ${d>0?'text-blue-600':'text-red-500'}`}>
                               {d>0?'+':''}{fmt(d)}₮
                             </span>
                           )}
-                        </div>
-                        <div className="pl-2 text-xs text-gray-400 truncate">{r.note||'—'}</div>
-                        <div className="flex gap-1 justify-end">
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-400 max-w-0"><div className="truncate">{r.note||'—'}</div></td>
+                        <td className="px-3 py-2.5">
+                          <div className="flex gap-1 justify-end whitespace-nowrap">
                           <button onClick={()=>{ setEditId(r.id); setEditData({...r,received_amount:String(r.received_amount)}) }}
-                            className="text-xs text-gray-400 hover:text-gray-700 px-1.5 py-1 rounded hover:bg-gray-100">Засах</button>
+                            className="text-gray-400 hover:text-gray-700 px-1.5 py-1 rounded hover:bg-gray-100">Засах</button>
                           <button onClick={()=>deleteRec(r.id)}
-                            className="text-xs text-gray-300 hover:text-red-400 px-1.5 py-1 rounded hover:bg-red-50">✕</button>
-                        </div>
-                      </div>
+                            className="text-gray-300 hover:text-red-400 px-1.5 py-1 rounded hover:bg-red-50">✕</button>
+                          </div>
+                        </td>
+                      </>
                     ):(
-                      <div className="px-4 py-3 bg-gray-50/50 space-y-2">
+                      <td colSpan={7} className="px-4 py-3 bg-gray-50/50">
+                        <div className="space-y-2">
                         <div className="grid gap-2" style={{gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr'}}>
                           <div>
                             <label className="block text-xs text-gray-400 mb-1">Эхлэх</label>
@@ -291,20 +293,23 @@ export default function ReconcilePage() {
                           <button onClick={()=>saveEdit(r.id)} className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">Хадгалах</button>
                         </div>
                       </div>
+                      </td>
                     )}
-                  </div>
+                  </tr>
                 )
               })}
               {recs.length>5&&(
-                <div className="px-4 py-2.5 text-center border-t border-gray-100">
+                <tr><td colSpan={7} className="px-4 py-2.5 text-center border-t border-gray-100">
                   <button onClick={()=>setShowAll(!showAll)}
                     className="text-xs text-emerald-600 hover:underline">
                     {showAll?'Хураах':`Дэлгэх (${recs.length-5} үлдсэн)`}
                   </button>
-                </div>
+                </td></tr>
               )}
-            </div>
+            </>
           )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
