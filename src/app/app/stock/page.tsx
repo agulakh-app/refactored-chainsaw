@@ -128,10 +128,10 @@ export default function StockPage() {
       const { data: sup } = _existingIds.length>0 ? await supQ.in('product_id',_existingIds) : await supQ.limit(0)
       const _sup2=sup||[]
       setSupply(_sup2)
-      // compute audit summary
+      // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
       const _sm2:any={}
       for(const o2 of (ords||[])){
-        if(!['pending','delivered'].includes(o2.status)) continue
+        if(o2.status!=='delivered') continue
         for(const it2 of (o2.order_items||[])){
           if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
           const vl2=it2.variant_label||'__total__'
