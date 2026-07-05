@@ -625,12 +625,15 @@ if (error) {
                       {products
                         .filter(p=>!rProdSearch||p.name.toLowerCase().includes(rProdSearch.toLowerCase()))
                         .map(p=>(
-                          <button key={p.id} type="button"
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex justify-between items-center ${p.id===rProd?'bg-emerald-50 text-emerald-700':''}`}
-                            onMouseDown={()=>{setRProd(p.id);setRVariantIdx(-1);setRProdSearch('');setRProdOpen(false)}}>
-                            <span>{p.name}</span>
-                            <span className="text-xs text-gray-400">{p.stock}ш</span>
-                          </button>
+                          <div key={p.id} className={`flex items-center px-3 py-2 text-sm hover:bg-emerald-50 ${p.id===rProd?'bg-emerald-50 text-emerald-700':''}`}>
+                            <button type="button" className="flex-1 text-left flex justify-between items-center"
+                              onMouseDown={()=>{setRProd(p.id);setRVariantIdx(-1);setRProdSearch('');setRProdOpen(false)}}>
+                              <span>{p.name}</span>
+                              <span className="text-xs text-gray-400 mr-2">{p.stock}ш</span>
+                            </button>
+                            <button type="button" onMouseDown={async(e)=>{e.stopPropagation();if(!confirm(p.name+' устгах уу?'))return;await supabase.from('products').update({archived:true}).eq('id',p.id);await supabase.from('supply_log').delete().eq('product_id',p.id);await supabase.from('restock_log').delete().eq('product_id',p.id);if(rProd===p.id)setRProd('');load()}}
+                              className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-300 hover:text-red-400 flex-shrink-0 text-xs">✕</button>
+                          </div>
                         ))}
                     </div>
                   )}
