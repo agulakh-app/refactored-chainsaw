@@ -525,11 +525,14 @@ if (error) {
                 const m=editDetModal
                 if(!m.qty||Number(m.qty)<=0){showFlash('Тоо 0-ээс их байх ёстой');return}
                 let err=null
+                const {data:{user}}=await supabase.auth.getUser()
+                const uid=ownerId||user?.id
+                const updateData={quantity:Number(m.qty),date:m.date,note:m.note||''}
                 if(m.del){
-                  const {error}=await supabase.from('supply_log').update({quantity:Number(m.qty),date:m.date,note:m.note||null}).eq('id',m.id)
+                  const {error}=await supabase.from('supply_log').update(updateData).eq('id',m.id).eq('user_id',uid)
                   err=error
                 } else {
-                  const {error}=await supabase.from('restock_log').update({quantity:Number(m.qty),date:m.date,note:m.note||null}).eq('id',m.id)
+                  const {error}=await supabase.from('restock_log').update(updateData).eq('id',m.id).eq('user_id',uid)
                   err=error
                 }
                 if(err){showFlash('Алдаа: '+err.message);return}
@@ -883,7 +886,7 @@ if (error) {
                           <div className="border-t border-gray-100 bg-gray-50/30">
                             {det.map((d:any,j:number)=>{
                               const typeName=d.type==='ordered'?'Захиалсан':d.type==='received'?'Ирсэн':'Цэнэглэсэн'
-                              const noteText=(d.note&&d.note!==typeName&&d.note!=='Хүлээн авсан'&&d.note!=='Захиалсан'&&d.note!=='Цэнэглэсэн')?d.note:''
+                              const noteText=(d.note&&d.note!==typeName&&d.note!=='Хүлээн авсан'&&d.note!=='Захиалсан'&&d.note!=='Цэнэглэсэн'&&d.note!=='Цэнэглэлт'&&d.note!=='Шинэ бараа'&&d.note!=='Захиалга')?d.note:''
                               return(
                               <div key={j} className="grid items-center gap-2 px-6 py-2 border-b border-gray-100 last:border-0 text-xs"
                                 style={{gridTemplateColumns:'40px 70px 50px 1fr auto'}}>
