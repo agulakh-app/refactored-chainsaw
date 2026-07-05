@@ -45,6 +45,7 @@ export default function DashPage() {
   const [oPaidLocked,setOPaidLocked]=useState(false)
   const [oStore,setOStore]=useState('')
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
+  const [oItemSearch,setOItemSearch]=useState<string[]>([])
   const [variantEnabled,setVariantEnabled]=useState(false)
   const [openDropdown,setOpenDropdown]=useState<string|null>(null)
   const [dropdownPos,setDropdownPos]=useState<{top:number,left:number}>({top:0,left:0})
@@ -120,8 +121,8 @@ export default function DashPage() {
     return ()=>{supabase.removeChannel(ch)}
   },[load])
 
-  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])}
-  function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx))}
+  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}]);setOItemSearch(s=>[...s,''])}
+  function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx));setOItemSearch(s=>s.filter((_,j)=>j!==idx))}
   function setItem(idx:number,key:string,val:string|boolean){
     setOItems(items=>items.map((it,i)=>{
       if(i!==idx) return it
@@ -174,6 +175,7 @@ export default function DashPage() {
     }
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
     setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
+    setOItemSearch([])
     setOPaid(false); setOPaidLocked(false)
     showFlash('Захиалга бүртгэгдлээ ✓');load()
   }
@@ -392,12 +394,31 @@ export default function DashPage() {
                   {oItems.map((it,idx)=>{
                     const selProd=products.find(p=>p.id===it.product_id)
                     const variants:any[]=(selProd as any)?.variants||[]
+                    const srch=oItemSearch[idx]||''
+                    const filtered=products.filter(p=>!srch||p.name.toLowerCase().includes(srch.toLowerCase()))
                     return(
                     <div key={idx} className="space-y-1.5">
                       <div className="flex gap-2 items-center">
-                        <select className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                          {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                        </select>
+                        <div className="flex-1 relative">
+                          <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                            placeholder="Бараа хайх..."
+                            value={srch||selProd?.name||''}
+                            onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
+                            onFocus={e=>e.target.select()}
+                          />
+                          {srch&&(
+                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto shadow-lg">
+                              {filtered.map(p=>(
+                                <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex justify-between"
+                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n})}}>
+                                  <span>{p.name}</span>
+                                  <span className="text-xs text-gray-400">{p.stock}ш</span>
+                                </button>
+                              ))}
+                              {filtered.length===0&&<div className="px-3 py-2 text-xs text-gray-400">Олдсонгүй</div>}
+                            </div>
+                          )}
+                        </div>
                         {oItems.length>1&&<button onClick={()=>removeItem(idx)} className="w-8 h-8 flex-shrink-0 flex items-center justify-center bg-red-50 text-red-500 rounded-lg text-xs">✕</button>}
                       </div>
                       <div className="grid grid-cols-2 gap-2">
@@ -493,12 +514,31 @@ export default function DashPage() {
                   {oItems.map((it,idx)=>{
                     const selProd=products.find(p=>p.id===it.product_id)
                     const variants:any[]=(selProd as any)?.variants||[]
+                    const srch=oItemSearch[idx]||''
+                    const filtered=products.filter(p=>!srch||p.name.toLowerCase().includes(srch.toLowerCase()))
                     return(
                     <div key={idx} className="space-y-1.5">
                       <div className="grid grid-cols-[1fr_46px_72px_20px] gap-1.5 items-center">
-                        <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white truncate" value={it.product_id} onChange={e=>setItem(idx,'product_id',e.target.value)}>
-                          {products.map(p=><option key={p.id} value={p.id}>{p.name} ({p.stock}ш)</option>)}
-                        </select>
+                        <div className="relative">
+                          <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white"
+                            placeholder="Бараа хайх..."
+                            value={srch||selProd?.name||''}
+                            onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
+                            onFocus={e=>e.target.select()}
+                          />
+                          {srch&&(
+                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto shadow-lg">
+                              {filtered.map(p=>(
+                                <button key={p.id} type="button" className="w-full text-left px-3 py-1.5 text-sm hover:bg-emerald-50 flex justify-between"
+                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n})}}>
+                                  <span>{p.name}</span>
+                                  <span className="text-xs text-gray-400">{p.stock}ш</span>
+                                </button>
+                              ))}
+                              {filtered.length===0&&<div className="px-3 py-2 text-xs text-gray-400">Олдсонгүй</div>}
+                            </div>
+                          )}
+                        </div>
                         <input type="number" className="w-full px-1 py-1.5 rounded-lg border border-gray-200 text-sm text-center" min="1" value={it.qty} onChange={e=>setItem(idx,'qty',e.target.value)}/>
                         <input type="number" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm" value={it.price} onChange={e=>setItem(idx,'price',e.target.value)} placeholder="0"/>
                         {oItems.length>1?<button onClick={()=>removeItem(idx)} className="w-5 h-5 flex items-center justify-center text-red-400 rounded text-xs">✕</button>:<div/>}
