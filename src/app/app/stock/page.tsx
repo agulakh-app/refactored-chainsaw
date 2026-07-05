@@ -756,13 +756,15 @@ if (error) {
           </div>
         </div>
 
-        {/* 3. Шинэ бараа */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <h2 className="font-medium text-gray-800 text-sm mb-3">Шинэ бараа</h2>
           <div className="flex gap-2">
-            <input className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
-              placeholder="Барааны нэр" value={newN} onChange={e=>setNewN(e.target.value)}
-              onKeyDown={async e=>{if(e.key==='Enter'&&newN.trim()){const {data:{user}}=await supabase.auth.getUser();const uid=ownerId||user?.id;if(uid){await supabase.from('products').insert({user_id:uid,store_id:activeStoreId||null,name:newN.trim(),stock:0});setNewN('');showFlash(newN+' нэмэгдлээ ✓');load()}}}}/>
+            <div className="relative flex-1">
+              <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm pr-7"
+                placeholder="Барааны нэр" value={newN} onChange={e=>setNewN(e.target.value)}
+                onKeyDown={async e=>{if(e.key==='Enter'&&newN.trim()){const {data:{user}}=await supabase.auth.getUser();const uid=ownerId||user?.id;if(uid){await supabase.from('products').insert({user_id:uid,store_id:activeStoreId||null,name:newN.trim(),stock:0});setNewN('');showFlash(newN+' нэмэгдлээ ✓');load()}}}}/>
+              {newN&&<button onClick={()=>setNewN('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-xs">✕</button>}
+            </div>
             <button onClick={async()=>{if(!newN.trim())return;const {data:{user}}=await supabase.auth.getUser();const uid=ownerId||user?.id;if(uid){await supabase.from('products').insert({user_id:uid,store_id:activeStoreId||null,name:newN.trim(),stock:0});setNewN('');showFlash(newN+' нэмэгдлээ ✓');load()}}}
               disabled={!newN.trim()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">Нэмэх</button>
           </div>
