@@ -523,11 +523,16 @@ if (error) {
                 className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
               <button onClick={async()=>{
                 const m=editDetModal
+                if(!m.qty||Number(m.qty)<=0){showFlash('Тоо 0-ээс их байх ёстой');return}
+                let err=null
                 if(m.del){
-                  await supabase.from('supply_log').update({quantity:m.qty,date:m.date,note:m.note||null}).eq('id',m.id)
+                  const {error}=await supabase.from('supply_log').update({quantity:Number(m.qty),date:m.date,note:m.note||null}).eq('id',m.id)
+                  err=error
                 } else {
-                  await supabase.from('restock_log').update({quantity:m.qty,date:m.date,note:m.note||null}).eq('id',m.id)
+                  const {error}=await supabase.from('restock_log').update({quantity:Number(m.qty),date:m.date,note:m.note||null}).eq('id',m.id)
+                  err=error
                 }
+                if(err){showFlash('Алдаа: '+err.message);return}
                 setEditDetModal(null); showFlash('Засварлагдлаа ✓'); load()
               }} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
             </div>
