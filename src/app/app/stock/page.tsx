@@ -30,6 +30,7 @@ export default function StockPage() {
   const [supply, setSupply] = useState<any[]>([])
   const [supKeys2, setSupKeys2] = useState<any[]>([])
   const [hasIssue, setHasIssue] = useState(false)
+  const [editDetModal, setEditDetModal] = useState<any>(null)
   const tlabel2 = {ordered:'Захиалсан',received:'Хүлээн авсан',restocked:'Цэнэглэсэн'} as any
   const tcolor2 = {ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'} as any
   const [pItems, setPItems] = useState([{pid:'',vl:'',qty:'',recv:''}])
@@ -491,6 +492,49 @@ if (error) {
         </div>
       )}
 
+      {editDetModal&&(
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="font-medium text-gray-800 text-sm mb-4">
+              {editDetModal.type==='ordered'?'Захиалсан':editDetModal.type==='received'?'Ирсэн':'Цэнэглэсэн'} бүртгэл засах
+            </h3>
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                  value={editDetModal.date}
+                  onChange={e=>setEditDetModal((m:any)=>({...m,date:e.target.value}))}/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
+                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                  value={editDetModal.qty}
+                  onChange={e=>setEditDetModal((m:any)=>({...m,qty:Number(e.target.value)}))}/>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
+                <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm"
+                  value={editDetModal.note||''}
+                  onChange={e=>setEditDetModal((m:any)=>({...m,note:e.target.value}))}/>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={()=>setEditDetModal(null)}
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
+              <button onClick={async()=>{
+                const m=editDetModal
+                if(m.del){
+                  await supabase.from('supply_log').update({quantity:m.qty,date:m.date,note:m.note||null}).eq('id',m.id)
+                } else {
+                  await supabase.from('restock_log').update({quantity:m.qty,date:m.date,note:m.note||null}).eq('id',m.id)
+                }
+                setEditDetModal(null); showFlash('Засварлагдлаа ✓'); load()
+              }} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit product modal — stock, зарах үнэ, өртөг */}
       {!isViewer && editProd && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
@@ -838,7 +882,9 @@ if (error) {
                                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${tcolor2[d.type]}`}>{tlabel2[d.type]}</span>
                                 <span className="text-xs font-bold text-gray-700 w-10 text-right flex-shrink-0">+{d.qty}ш</span>
                                 <span className="text-xs text-gray-400 italic flex-1">{d.note||''}</span>
-                                {d.del&&<button onClick={async(e:any)=>{e.stopPropagation();await supabase.from('supply_log').delete().eq('id',d.id);load()}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                                {!isViewer&&<button onClick={(e:any)=>{e.stopPropagation();setEditDetModal({...d})}} className="text-gray-300 hover:text-blue-400 text-xs mr-1">Засах</button>}
+                                {d.del&&<button onClick={async(e:any)=>{e.stopPropagation();setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?',onOk:async()=>{await supabase.from('supply_log').delete().eq('id',d.id);load()}})}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                                {!d.del&&<button onClick={async(e:any)=>{e.stopPropagation();setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?',onOk:async()=>{await supabase.from('restock_log').delete().eq('id',d.id);load()}})}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
                               </div>
                             ))}
                           </div>
