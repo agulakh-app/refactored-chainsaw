@@ -154,7 +154,7 @@ export default function StockPage() {
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=Math.max(0,_rst2-_sold2)
-        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_stk2,expected:_expectedStk,zoruu:_stk2-_expectedStk}
+        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
         const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
