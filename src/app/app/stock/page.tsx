@@ -631,7 +631,7 @@ if (error) {
                               <span>{p.name}</span>
                               <span className="text-xs text-gray-400 mr-2">{p.stock}ш</span>
                             </button>
-                            <button type="button" onMouseDown={async(e)=>{e.stopPropagation();if(!confirm(p.name+' устгах уу?'))return;await supabase.from('products').update({archived:true}).eq('id',p.id);await supabase.from('supply_log').delete().eq('product_id',p.id);await supabase.from('restock_log').delete().eq('product_id',p.id);if(rProd===p.id)setRProd('');load()}}
+                            <button type="button" onMouseDown={(e)=>{e.stopPropagation();setRProdOpen(false);setConfirmModal({msg:p.name+' устгах уу?',onOk:async()=>{await supabase.from('supply_log').delete().eq('product_id',p.id);await supabase.from('restock_log').delete().eq('product_id',p.id);await supabase.from('products').delete().eq('id',p.id);if(rProd===p.id)setRProd('');load()}})}}
                               className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-300 hover:text-red-400 flex-shrink-0 text-xs">✕</button>
                           </div>
                         ))}
