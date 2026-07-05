@@ -876,17 +876,22 @@ if (error) {
                         </div>
                         {isExp&&(
                           <div className="border-t border-gray-100 bg-gray-50/30">
-                            {det.map((d:any,j:number)=>(
-                              <div key={j} className="flex items-center gap-3 px-6 py-2 border-b border-gray-100 last:border-0">
-                                <span className="text-xs text-gray-400 w-10 flex-shrink-0">{d.fmtD}</span>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${tcolor2[d.type]}`}>{tlabel2[d.type]}</span>
-                                <span className="text-xs font-bold text-gray-700 w-10 text-right flex-shrink-0">+{d.qty}ш</span>
-                                <span className="text-xs text-gray-400 italic flex-1">{d.note||''}</span>
-                                {!isViewer&&<button onClick={(e:any)=>{e.stopPropagation();setEditDetModal({...d})}} className="text-gray-300 hover:text-blue-400 text-xs mr-1">Засах</button>}
-                                {d.del&&<button onClick={async(e:any)=>{e.stopPropagation();setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?',onOk:async()=>{await supabase.from('supply_log').delete().eq('id',d.id);load()}})}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
-                                {!d.del&&<button onClick={async(e:any)=>{e.stopPropagation();setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?',onOk:async()=>{await supabase.from('restock_log').delete().eq('id',d.id);load()}})}} className="text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                            {det.map((d:any,j:number)=>{
+                              const typeName=d.type==='ordered'?'Захиалсан':d.type==='received'?'Ирсэн':'Цэнэглэсэн'
+                              const noteText=(d.note&&d.note!==typeName&&d.note!=='Хүлээн авсан'&&d.note!=='Захиалсан'&&d.note!=='Цэнэглэсэн')?d.note:''
+                              return(
+                              <div key={j} className="grid items-center gap-2 px-6 py-2 border-b border-gray-100 last:border-0 text-xs"
+                                style={{gridTemplateColumns:'40px 70px 50px 1fr auto'}}>
+                                <span className="text-gray-400">{d.fmtD}</span>
+                                <span className="text-gray-600">{typeName}</span>
+                                <span className="font-bold text-gray-700 text-right">{d.qty}ш</span>
+                                <span className="text-gray-400 italic truncate">{noteText}</span>
+                                <div className="flex gap-1 items-center">
+                                  {!isViewer&&<button onClick={(e:any)=>{e.stopPropagation();setEditDetModal({...d,note:noteText})}} className="text-gray-300 hover:text-blue-400">Засах</button>}
+                                  {<button onClick={(e:any)=>{e.stopPropagation();setConfirmModal({msg:'Энэ бүртгэлийг устгах уу?',onOk:async()=>{await supabase.from(d.del?'supply_log':'restock_log').delete().eq('id',d.id);load()}})}} className="text-gray-300 hover:text-red-400">✕</button>}
+                                </div>
                               </div>
-                            ))}
+                            )})}
                           </div>
                         )}
                       </div>
