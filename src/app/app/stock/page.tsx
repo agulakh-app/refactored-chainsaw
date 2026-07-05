@@ -763,7 +763,7 @@ if (error) {
               <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm pr-7"
                 placeholder="Барааны нэр" value={newN} onChange={e=>setNewN(e.target.value)}
                 onKeyDown={async e=>{if(e.key==='Enter'&&newN.trim()){const {data:{user}}=await supabase.auth.getUser();const uid=ownerId||user?.id;if(uid){await supabase.from('products').insert({user_id:uid,store_id:activeStoreId||null,name:newN.trim(),stock:0});setNewN('');showFlash(newN+' нэмэгдлээ ✓');load()}}}}/>
-              {newN&&<button onClick={()=>setNewN('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 text-xs">✕</button>}
+              {newN&&<button type="button" onClick={()=>setNewN('')} className="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 text-xs leading-none">✕</button>}
             </div>
             <button onClick={async()=>{if(!newN.trim())return;const {data:{user}}=await supabase.auth.getUser();const uid=ownerId||user?.id;if(uid){await supabase.from('products').insert({user_id:uid,store_id:activeStoreId||null,name:newN.trim(),stock:0});setNewN('');showFlash(newN+' нэмэгдлээ ✓');load()}}}
               disabled={!newN.trim()} className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-40">Нэмэх</button>
