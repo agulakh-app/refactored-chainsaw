@@ -18,12 +18,12 @@ export async function POST() {
   // Maps
   const soldMap: any = {}
   for (const it of (orderItems||[])) {
-    const k = it.product_id + '|||' + (it.variant_label||'')
+    const k = it.product_id + '|||' + ((it.variant_label&&it.variant_label.trim())||'__total__')
     soldMap[k] = (soldMap[k]||0) + it.quantity
   }
   const rstMap: any = {}
   for (const l of (logs||[])) {
-    const k = l.product_id + '|||' + (l.variant_label||'')
+    const k = l.product_id + '|||' + ((l.variant_label&&l.variant_label.trim())||'__total__')
     rstMap[k] = (rstMap[k]||0) + l.quantity
   }
 
@@ -31,7 +31,7 @@ export async function POST() {
   for (const p of products) {
     const pvs: any[] = p.variants || []
     if (pvs.length === 0) {
-      const k = p.id + '|||'
+      const k = p.id + '|||__total__'
       const correct = Math.max(0, (rstMap[k]||0) - (soldMap[k]||0))
       if (p.stock !== correct) {
         await supabase.from('products').update({ stock: correct }).eq('id', p.id)
@@ -42,7 +42,7 @@ export async function POST() {
       let changed = false
       for (let i = 0; i < nv.length; i++) {
         const lbl = [nv[i].size, nv[i].color].filter(Boolean).join(' / ')
-        const k = p.id + '|||' + lbl
+        const k = p.id + '|||' + (lbl.trim()||'__total__')
         const correct = Math.max(0, (rstMap[k]||0) - (soldMap[k]||0))
         if (nv[i].stock !== correct) { nv[i].stock = correct; changed = true }
       }

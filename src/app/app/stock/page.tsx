@@ -134,7 +134,7 @@ export default function StockPage() {
         if(o2.status!=='delivered') continue
         for(const it2 of (o2.order_items||[])){
           if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-          const vl2=it2.variant_label||'__total__'
+          const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
           _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
         }
       }
@@ -150,7 +150,8 @@ export default function StockPage() {
         const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_pk2.variant||'__total__'])||0
+        const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
+        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=Math.max(0,_rst2-_sold2)
