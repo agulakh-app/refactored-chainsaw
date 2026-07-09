@@ -154,7 +154,7 @@ export default function StockPage() {
         const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
-        const _expectedStk=Math.max(0,_rst2-_sold2)
+        const _expectedStk=_rst2-_sold2
         return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
@@ -165,7 +165,7 @@ export default function StockPage() {
       }
       const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
       setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
-      setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0))
+      setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0||_getSS2(_pk2).expected<0))
       if(!fProdId&&prods&&prods.length>0) setFProdId(prods[0].id)
     }
   },[rProd, ownerId, activeStoreId])
@@ -872,7 +872,7 @@ if (error) {
                           <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
                           <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
-                          <div className="text-right text-xs font-bold text-gray-800">{s.expected}ш</div>
+                          <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>{s.expected}ш</div>
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
