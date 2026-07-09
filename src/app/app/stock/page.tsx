@@ -115,18 +115,25 @@ export default function StockPage() {
     setProducts(prods||[])
     const _prodIds=new Set((prods||[]).map((p:any)=>p.id))
     setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)))
+    const _existingIds=(prods||[]).map((p:any)=>p.id)
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      const oq = supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).in('status',['pending','delivered'])
-      const { data: ords } = activeStoreId ? await oq.eq('store_id',activeStoreId) : await oq
-      setAuditOrders(ords||[])
-      const _existingIds=(prods||[]).map((p:any)=>p.id)
-      const supQ=supabase.from('supply_log').select('*').eq('user_id',targetId).order('date',{ascending:false})
-      const { data: sup } = _existingIds.length>0 ? await supQ.in('product_id',_existingIds) : await supQ.limit(0)
-      const _sup2=sup||[]
+      const [oqRes, supRes] = await Promise.all([
+        (activeStoreId
+          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).in('status',['pending','delivered'])
+          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).in('status',['pending','delivered'])
+        ),
+        (_existingIds.length>0
+          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
+          : Promise.resolve({data:[]})
+        )
+      ])
+      const ords=oqRes.data||[]
+      setAuditOrders(ords)
+      const _sup2=supRes.data||[]
       setSupply(_sup2)
       // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
       const _sm2:any={}
@@ -307,10 +314,10 @@ if (error) {
 
   async function deleteProduct(id: string, name: string) {
     setConfirmModal({msg: name+' устгах уу?\n\nЗахиалгын түүхэнд хадгалагдана.', onOk: async()=>{
-      // archived=true болгоно — захиалгын түүхэнд хадгалагдах боловч жагсаалтад харагдахгүй
-      await supabase.from('products').update({archived: true}).eq('id', id)
+      // Бараатай холбоотой бүх лог устга
       await supabase.from('supply_log').delete().eq('product_id', id)
-      await supabase.from('restock_log').delete().eq('product_id', id).eq('note', 'Захиалга').not('type', 'eq', 'out')
+      await supabase.from('restock_log').delete().eq('product_id', id)
+      await supabase.from('products').delete().eq('id', id)
       showFlash(name+' архивлагдлаа'); load()
     }})
   }
