@@ -99,6 +99,25 @@ export default function DashPage() {
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
+    // Log-оос тооцоолсон үлдэгдэл
+    const _pids=(prods||[]).map((p:any)=>p.id)
+    if(_pids.length>0){
+      const {data:rlogs}=await supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('type','in').in('product_id',_pids)
+      const {data:dords}=await supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered')
+      const dids=(dords||[]).map((o:any)=>o.id)
+      const {data:oitems}=dids.length>0?await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',dids).in('product_id',_pids):{data:[]}
+      const rstMap:any={};for(const l of (rlogs||[])){const k=l.product_id+'|||'+(l.variant_label||'');rstMap[k]=(rstMap[k]||0)+l.quantity}
+      const soldMap:any={};for(const it of (oitems||[])){const k=it.product_id+'|||'+(it.variant_label||'');soldMap[k]=(soldMap[k]||0)+it.quantity}
+      const calcStk=(pid:string,vl?:string)=>{ const k=pid+'|||'+(vl||''); return (rstMap[k]||0)-(soldMap[k]||0) }
+      setProducts((prods||[]).map((p:any)=>{
+        const pvs=p.variants||[]
+        if(pvs.length>0){
+          const nv=pvs.map((v:any)=>{const lbl=[v.size,v.color].filter(Boolean).join(' / ');return{...v,stock:calcStk(p.id,lbl)}})
+          return{...p,variants:nv,stock:nv.reduce((a:number,v:any)=>a+v.stock,0)}
+        }
+        return{...p,stock:calcStk(p.id)}
+      }))
+    }
     setOrders(ords||[])
     setStores(sts||[])
     if(prods&&prods.length>0){
