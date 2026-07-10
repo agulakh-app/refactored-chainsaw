@@ -173,6 +173,22 @@ export default function StockPage() {
       const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
       setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
       setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0||_getSS2(_pk2).expected<0))
+      // Products-д тооцоолсон stock-г шинэчлэх — dropdown-д зөв тоо харагдана
+      setProducts((_prods2).map((p:any)=>{
+        const pvs=p.variants||[]
+        if(pvs.length>0){
+          const nv=pvs.map((v:any)=>{
+            const lbl=[v.size,v.color].filter(Boolean).join(' / ')
+            const pk={id:p.id,variant:lbl}
+            const ss=_getSS2(pk)
+            return {...v,stock:ss.expected}
+          })
+          return {...p,variants:nv,stock:nv.reduce((a:number,v:any)=>a+v.stock,0)}
+        }
+        const pk={id:p.id,variant:''}
+        const ss=_getSS2(pk)
+        return {...p,stock:ss.expected}
+      }))
       if(!fProdId&&prods&&prods.length>0) setFProdId(prods[0].id)
     }
   },[rProd, ownerId, activeStoreId])
@@ -689,7 +705,7 @@ if (error) {
                             <button type="button" className="flex-1 text-left flex justify-between items-center"
                               onMouseDown={()=>{setRProd(p.id);setRVariantIdx(-1);setRProdSearch('');setRProdOpen(false)}}>
                               <span>{p.name}</span>
-                              <span className="text-xs text-gray-400 mr-2">{(()=>{const sk=supKeys2.find(k=>k.id===p.id&&!k.variant);return sk?sk._ss.expected:p.stock})()}ш</span>
+                              <span className="text-xs text-gray-400 mr-2">{p.stock}ш</span>
                             </button>
                             <button type="button" onMouseDown={(e)=>{e.stopPropagation();setRProdOpen(false);setConfirmModal({msg:p.name+' устгах уу?',onOk:async()=>{await supabase.from('supply_log').delete().eq('product_id',p.id);await supabase.from('restock_log').delete().eq('product_id',p.id);await supabase.from('products').delete().eq('id',p.id);if(rProd===p.id)setRProd('');load()}})}}
                               className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-300 hover:text-red-400 flex-shrink-0 text-xs">✕</button>
@@ -719,7 +735,7 @@ if (error) {
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
                     {rVariants.map((v,i)=>(
-                      <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({(()=>{const lbl=[v.size,v.color].filter(Boolean).join(' / ');const sk=supKeys2.find(k=>k.id===rProd&&k.variant===lbl);return sk?sk._ss.expected:v.stock})()}ш)</option>
+                      <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
                     ))}
                   </select>
                 </div>
