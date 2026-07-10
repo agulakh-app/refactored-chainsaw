@@ -112,7 +112,6 @@ export default function StockPage() {
         ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
         : Promise.resolve({ data: null })
     ])
-    setProducts(prods||[])
     const _prodIds=new Set((prods||[]).map((p:any)=>p.id))
     setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)))
     const _existingIds=(prods||[]).map((p:any)=>p.id)
@@ -190,6 +189,8 @@ export default function StockPage() {
         return {...p,stock:ss.expected}
       }))
       if(!fProdId&&prods&&prods.length>0) setFProdId(prods[0].id)
+    } else {
+      setProducts(prods||[])
     }
   },[rProd, ownerId, activeStoreId])
 
