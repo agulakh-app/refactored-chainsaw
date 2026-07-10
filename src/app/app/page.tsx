@@ -46,6 +46,7 @@ export default function DashPage() {
   const [oStore,setOStore]=useState('')
   const [oItems,setOItems]=useState([{product_id:'',product_name:'',qty:'1',price:'',variant_label:''}])
   const [oItemSearch,setOItemSearch]=useState<string[]>([])
+  const [oItemOpen,setOItemOpen]=useState<boolean[]>([])
   const [variantEnabled,setVariantEnabled]=useState(false)
   const [openDropdown,setOpenDropdown]=useState<string|null>(null)
   const [dropdownPos,setDropdownPos]=useState<{top:number,left:number}>({top:0,left:0})
@@ -99,25 +100,6 @@ export default function DashPage() {
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
-    // Log-оос тооцоолсон үлдэгдэл
-    const _pids=(prods||[]).map((p:any)=>p.id)
-    if(_pids.length>0){
-      const {data:rlogs}=await supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('type','in').in('product_id',_pids)
-      const {data:dords}=await supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered')
-      const dids=(dords||[]).map((o:any)=>o.id)
-      const {data:oitems}=dids.length>0?await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',dids).in('product_id',_pids):{data:[]}
-      const rstMap:any={};for(const l of (rlogs||[])){const k=l.product_id+'|||'+(l.variant_label||'');rstMap[k]=(rstMap[k]||0)+l.quantity}
-      const soldMap:any={};for(const it of (oitems||[])){const k=it.product_id+'|||'+(it.variant_label||'');soldMap[k]=(soldMap[k]||0)+it.quantity}
-      const calcStk=(pid:string,vl?:string)=>{ const k=pid+'|||'+(vl||''); return (rstMap[k]||0)-(soldMap[k]||0) }
-      setProducts((prods||[]).map((p:any)=>{
-        const pvs=p.variants||[]
-        if(pvs.length>0){
-          const nv=pvs.map((v:any)=>{const lbl=[v.size,v.color].filter(Boolean).join(' / ');return{...v,stock:calcStk(p.id,lbl)}})
-          return{...p,variants:nv,stock:nv.reduce((a:number,v:any)=>a+v.stock,0)}
-        }
-        return{...p,stock:calcStk(p.id)}
-      }))
-    }
     setOrders(ords||[])
     setStores(sts||[])
     if(prods&&prods.length>0){
@@ -140,8 +122,8 @@ export default function DashPage() {
     return ()=>{supabase.removeChannel(ch)}
   },[load])
 
-  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}]);setOItemSearch(s=>[...s,''])}
-  function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx));setOItemSearch(s=>s.filter((_,j)=>j!==idx))}
+  function addItem(){setOItems(i=>[...i,{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}]);setOItemSearch(s=>[...s,'']);setOItemOpen(o=>[...o,false])}
+  function removeItem(idx:number){setOItems(i=>i.filter((_,j)=>j!==idx));setOItemSearch(s=>s.filter((_,j)=>j!==idx));setOItemOpen(o=>o.filter((_,j)=>j!==idx))}
   function setItem(idx:number,key:string,val:string|boolean){
     setOItems(items=>items.map((it,i)=>{
       if(i!==idx) return it
@@ -195,6 +177,7 @@ export default function DashPage() {
     setOPhone('');setOAddr('');setODelv(String(defaultDelivery))
     setOItems([{product_id:products[0]?.id||'',product_name:products[0]?.name||'',qty:'1',price:String(products[0]?.unit_price||''),variant_label:''}])
     setOItemSearch([])
+    setOItemOpen([])
     setOPaid(false); setOPaidLocked(false)
     showFlash('Захиалга бүртгэгдлээ ✓');load()
   }
@@ -423,13 +406,14 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={e=>e.target.select()}
+                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
-                          {srch&&(
-                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto shadow-lg">
+                          {(srch||oItemOpen[idx])&&(
+                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
                               {filtered.map(p=>(
                                 <button key={p.id} type="button" className="w-full text-left px-3 py-2 text-sm hover:bg-emerald-50 flex justify-between"
-                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n})}}>
+                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n})}}>
                                   <span>{p.name}</span>
                                   <span className="text-xs text-gray-400">{p.stock}ш</span>
                                 </button>
@@ -543,13 +527,14 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={e=>e.target.select()}
+                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
-                          {srch&&(
-                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-40 overflow-y-auto shadow-lg">
+                          {(srch||oItemOpen[idx])&&(
+                            <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
                               {filtered.map(p=>(
                                 <button key={p.id} type="button" className="w-full text-left px-3 py-1.5 text-sm hover:bg-emerald-50 flex justify-between"
-                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n})}}>
+                                  onMouseDown={()=>{setItem(idx,'product_id',p.id);setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n})}}>
                                   <span>{p.name}</span>
                                   <span className="text-xs text-gray-400">{p.stock}ш</span>
                                 </button>
