@@ -38,6 +38,7 @@ export default function DashPage() {
   const [editStatus,setEditStatus]=useState('')
   const [editDelv,setEditDelv]=useState('')
   const [editPaid,setEditPaid]=useState(false)
+  const [editItems,setEditItems]=useState<any[]>([])
   const [oDate,setODate]=useState(TODAY)
   const [oPhone,setOPhone]=useState('')
   const [oAddr,setOAddr]=useState('')
@@ -217,6 +218,10 @@ export default function DashPage() {
     if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
+    // Бараа бүрийн үнэ шинэчлэх
+    for(const it of editItems){
+      await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
+    }
     await supabase.from('orders').update({
       phone:editPhone,
       address:editAddr,
@@ -293,7 +298,7 @@ export default function DashPage() {
             {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
             {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
             <div className="border-t border-gray-100"/>
-            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(!!(o as any).paid);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(!!(o as any).paid);setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
             <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
@@ -353,6 +358,22 @@ export default function DashPage() {
                     <span className={`text-xs ${editPaid?'text-emerald-600 font-medium':'text-gray-500'}`}>{editPaid?'Төлсөн':'Төлөөгүй'}</span>
                   </div></div>
               </div>
+              {editItems.length>0&&(
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Барааны үнэ</label>
+                  <div className="space-y-1.5">
+                    {editItems.map((it,i)=>(
+                      <div key={it.id} className="grid gap-2 items-center" style={{gridTemplateColumns:'1fr 100px'}}>
+                        <span className="text-xs text-gray-600 truncate">{it.product_name}{it.variant_label?' · '+it.variant_label:''} ×{it.quantity}</span>
+                        <input type="text" inputMode="numeric"
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right"
+                          value={it.price?Number(it.price).toLocaleString():''}
+                          onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
