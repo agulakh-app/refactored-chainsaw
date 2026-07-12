@@ -336,13 +336,19 @@ export default function DashPage() {
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
             <h3 className="font-medium text-gray-800 mb-4">Захиалга засварлах</h3>
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
                   <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
                 <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
                   <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
                     <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)}/>
                   </div></div>
+              </div>
+              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
+                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
+                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
                 <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
                   <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
                     <option value="pending">Хүлээгдэж байна</option>
@@ -350,10 +356,6 @@ export default function DashPage() {
                     <option value="cancelled">Цуцлагдсан</option>
                   </select></div>
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
-                <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
