@@ -37,6 +37,7 @@ export default function DashPage() {
   const [editDate,setEditDate]=useState('')
   const [editStatus,setEditStatus]=useState('')
   const [editDelv,setEditDelv]=useState('')
+  const [editPaid,setEditPaid]=useState(false)
   const [oDate,setODate]=useState(TODAY)
   const [oPhone,setOPhone]=useState('')
   const [oAddr,setOAddr]=useState('')
@@ -228,7 +229,7 @@ export default function DashPage() {
     if(targetId&&editDate&&editDate!==editOrder.date&&editStatus!=='cancelled'&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
-    await supabase.from('orders').update({phone:editPhone,address:editAddr,status:editStatus,delivery_fee:Number(editDelv)||0,date:editDate}).eq('id',editOrder.id)
+    await supabase.from('orders').update({phone:editPhone,address:editAddr,status:editStatus,delivery_fee:Number(editDelv)||0,date:editDate,paid:editPaid}).eq('id',editOrder.id)
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
   }
 
@@ -298,7 +299,7 @@ export default function DashPage() {
             {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
             {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
             <div className="border-t border-gray-100"/>
-            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(!!(o as any).paid);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
             <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
@@ -349,13 +350,21 @@ export default function DashPage() {
               <div className="grid grid-cols-2 gap-2">
                 <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
                   <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
-                <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
-                  <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
-                    <option value="pending">Хүлээгдэж байна</option>
-                    <option value="delivered">Хүргэгдсэн</option>
-                    <option value="cancelled">Цуцлагдсан</option>
-                  </select></div>
+                <div><label className="block text-xs text-gray-500 mb-1">Төлбөр</label>
+                  <div onClick={()=>setEditPaid(p=>!p)}
+                    className={`h-[38px] w-full flex items-center gap-2 px-3 rounded-lg border cursor-pointer transition-all ${editPaid?'border-emerald-300 bg-emerald-50':'border-gray-200 bg-white'}`}>
+                    <div className={`w-4 h-4 rounded flex items-center justify-center border-2 flex-shrink-0 ${editPaid?'bg-emerald-500 border-emerald-500':'border-gray-300'}`}>
+                      {editPaid&&<span className="text-white text-[10px] font-bold">✓</span>}
+                    </div>
+                    <span className={`text-xs ${editPaid?'text-emerald-600 font-medium':'text-gray-500'}`}>{editPaid?'Төлсөн':'Төлөөгүй'}</span>
+                  </div></div>
               </div>
+              <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
+                <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
+                  <option value="pending">Хүлээгдэж байна</option>
+                  <option value="delivered">Хүргэгдсэн</option>
+                  <option value="cancelled">Цуцлагдсан</option>
+                </select></div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
