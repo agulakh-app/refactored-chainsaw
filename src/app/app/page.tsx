@@ -213,23 +213,17 @@ export default function DashPage() {
     const{data:{user}}=await supabase.auth.getUser()
     const targetId=ownerId||user?.id
     const items=(editOrder.order_items||[]) as any[]
-    // Статус өөрчлөгдвөл stock болон out-логийг мөн уялдуулна
-    if(editStatus!==editOrder.status){
-      const wasHeld=editOrder.status!=='cancelled'
-      const nowHeld=editStatus!=='cancelled'
-      if(wasHeld&&!nowHeld){
-        await releaseOrderItems(items)
-        if(targetId) await deleteOrderOutLogs(targetId,editOrder.date,items)
-      } else if(!wasHeld&&nowHeld){
-        await consumeOrderItems(items)
-        if(targetId) await insertOrderOutLogs(targetId,(editOrder as any).store_id||null,editDate||editOrder.date,items)
-      }
-    }
-    // Огноо өөрчлөгдвөл out-логийн огноог мөн шинэчилнэ
-    if(targetId&&editDate&&editDate!==editOrder.date&&editStatus!=='cancelled'&&editOrder.status!=='cancelled'){
+    // Огноо өөрчлөгдвөл out-логийн огноог шинэчилнэ
+    if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
-    await supabase.from('orders').update({phone:editPhone,address:editAddr,status:editStatus,delivery_fee:Number(editDelv)||0,date:editDate,paid:editPaid}).eq('id',editOrder.id)
+    await supabase.from('orders').update({
+      phone:editPhone,
+      address:editAddr,
+      delivery_fee:Number(editDelv)||0,
+      date:editDate,
+      paid:editPaid
+    }).eq('id',editOrder.id)
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
   }
 
@@ -359,12 +353,6 @@ export default function DashPage() {
                     <span className={`text-xs ${editPaid?'text-emerald-600 font-medium':'text-gray-500'}`}>{editPaid?'Төлсөн':'Төлөөгүй'}</span>
                   </div></div>
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Статус</label>
-                <select className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={editStatus} onChange={e=>setEditStatus(e.target.value)}>
-                  <option value="pending">Хүлээгдэж байна</option>
-                  <option value="delivered">Хүргэгдсэн</option>
-                  <option value="cancelled">Цуцлагдсан</option>
-                </select></div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
