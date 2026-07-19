@@ -640,8 +640,7 @@ export default function HistoryPage() {
                   <p className="text-xs text-gray-400 mt-0.5">{importPreview.length} захиалга — шалгаад бүртгэнэ үү</p>
                 </div>
               </div>
-              <div className="mt-3 flex items-center gap-2">
-                <label className="text-xs text-gray-500 whitespace-nowrap">Нийтийн огноо:</label>
+              <div className="mt-3 flex items-center gap-3">
                 <input type="date" value={importGlobalDate}
                   onChange={e=>{
                     setImportGlobalDate(e.target.value)
@@ -650,7 +649,15 @@ export default function HistoryPage() {
                     )||null)
                   }}
                   className="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white"/>
-                <span className="text-xs text-gray-400">— огноогүй захиалгуудад хэрэглэгдэнэ</span>
+                <div className="text-xs font-medium text-emerald-600">
+                  {(()=>{
+                    const total = importPreview.reduce((sum:number,r:any)=>{
+                      const gross=(r.items||[]).reduce((a:number,it:any)=>a+(Number(it.price)||0)*(Number(it.qty)||1),0)
+                      return sum+gross-(Number(r.delivery)||0)
+                    },0)
+                    return total>0?`Нийт: ${total.toLocaleString()}₮`:''
+                  })()}
+                </div>
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
