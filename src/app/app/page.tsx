@@ -214,21 +214,19 @@ export default function DashPage() {
     const{data:{user}}=await supabase.auth.getUser()
     const targetId=ownerId||user?.id
     const items=(editOrder.order_items||[]) as any[]
-    // Огноо өөрчлөгдвөл out-логийн огноог шинэчилнэ
     if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
-    // Бараа бүрийн үнэ шинэчлэх
     for(const it of editItems){
       await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
     }
-    await supabase.from('orders').update({
+    const {error}=await supabase.from('orders').update({
       phone:editPhone,
       address:editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
-      paid:editPaid
     }).eq('id',editOrder.id)
+    if(error){showFlash('Алдаа: '+error.message);return}
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
   }
 
