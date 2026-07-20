@@ -222,7 +222,7 @@ export default function DashPage() {
     }
     const {error}=await supabase.from('orders').update({
       phone:editPhone,
-      address:editAddr,
+      address:editPaid?'[PAID]'+(editAddr?(' '+editAddr):''):editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
     }).eq('id',editOrder.id)
@@ -296,7 +296,7 @@ export default function DashPage() {
             {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
             {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
             <div className="border-t border-gray-100"/>
-            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(!!(o as any).paid);setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr((o.address||'').replace('[PAID]','').trim());setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid((o.address||'').startsWith('[PAID]'));setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
             <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
@@ -668,7 +668,7 @@ export default function DashPage() {
                         </div>
                       </td>
                       {/* Хаяг */}
-                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{o.address}</td>
+                      <td className="py-2.5 px-2 align-middle text-xs text-gray-400 leading-relaxed">{(o.address||"").replace("[PAID]","").trim()}</td>
                       {/* Бараа */}
                       <td className="py-2.5 pl-8 pr-0.5 align-middle text-left">
                         {(o.order_items||[]).map((item:any,i:number)=>(
