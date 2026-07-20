@@ -392,7 +392,7 @@ export default function HistoryPage() {
       }).select().single()
       if(!ord) continue
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=row.paid?0:(it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
+        const unitPrice=row.paid?0:(Number(it.price)||it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
@@ -649,7 +649,7 @@ export default function HistoryPage() {
                     )||null)
                   }}
                   className="px-2 py-1 rounded-lg border border-gray-200 text-xs bg-white"/>
-                <div className="text-xs font-medium text-emerald-600">
+                <div className="text-xs font-bold text-emerald-600">
                   {(()=>{
                     const total = importPreview.reduce((sum:number,r:any)=>{
                       const gross=(r.items||[]).reduce((a:number,it:any)=>a+(Number(it.price)||0)*(Number(it.qty)||1),0)
@@ -658,6 +658,12 @@ export default function HistoryPage() {
                     return total>0?`Нийт: ${total.toLocaleString()}₮`:''
                   })()}
                 </div>
+                <button
+                  disabled={importing||importPreview.some((r:any)=>r.errors.length>0)}
+                  onClick={confirmImport}
+                  className="ml-auto px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium disabled:opacity-40">
+                  {importing?'Бүртгэж байна...':'Бүртгэх'}
+                </button>
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
@@ -718,7 +724,7 @@ export default function HistoryPage() {
                             <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
                           </>
                         ):(
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-emerald-600">✅</span>
                             <span className="text-gray-600">{it.product.name}</span>
                             <span className="text-gray-400">×</span>
@@ -738,6 +744,23 @@ export default function HistoryPage() {
                               }}
                             />
                             <span className="text-gray-400 text-[10px]">ш</span>
+                            <input type="text" inputMode="numeric"
+                              className="w-24 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right ml-1"
+                              placeholder="Үнэ ₮"
+                              value={it.price?Number(it.price).toLocaleString():''}
+                              onChange={e=>{
+                                const price=e.target.value.replace(/[^0-9]/g,'')
+                                setImportPreview((prev:any)=>{
+                                  if(!prev) return prev
+                                  const next=[...prev]
+                                  const newItems=[...next[i].items]
+                                  newItems[j]={...newItems[j],price}
+                                  next[i]={...next[i],items:newItems}
+                                  return next
+                                })
+                              }}
+                            />
+                            <span className="text-gray-400 text-[10px]">₮</span>
                           </div>
                         )}
                       </div>
