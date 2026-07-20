@@ -225,6 +225,7 @@ export default function DashPage() {
       address:editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
+      paid:editPaid,
     }).eq('id',editOrder.id)
     if(error){showFlash('Алдаа: '+error.message);return}
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
