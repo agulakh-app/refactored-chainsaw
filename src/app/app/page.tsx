@@ -220,13 +220,11 @@ export default function DashPage() {
     for(const it of editItems){
       await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
     }
-    const newStatus=editPaid?'paid':editOrder.status==='paid'?'pending':editOrder.status
     const {error}=await supabase.from('orders').update({
       phone:editPhone,
       address:editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
-      status:newStatus,
     }).eq('id',editOrder.id)
     if(error){showFlash('Алдаа: '+error.message);return}
     setEditOrder(null);showFlash('Засварлагдлаа ✓');load()
@@ -298,7 +296,7 @@ export default function DashPage() {
             {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
             {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
             <div className="border-t border-gray-100"/>
-            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(o.status==='paid');setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr(o.address);setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid(!!(o as any).paid);setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
             <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
