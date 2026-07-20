@@ -386,7 +386,7 @@ export default function HistoryPage() {
       if(row.errors.length>0) continue
       const { data: ord } = await supabase.from('orders').insert({
         user_id:targetId,date:row.date,day_seq:1,
-        phone:row.phone,address:row.address||'-',
+        phone:row.phone,address:row.paid?'[PAID]'+(row.address?' '+row.address:''):row.address||'-',
         delivery_fee:row.delv,status:row.status,
         store_id:activeStoreId||null
       }).select().single()
@@ -684,7 +684,7 @@ export default function HistoryPage() {
                           }}
                         />
                       )}
-                      {row.address&&<span className="text-xs text-gray-400">{row.address}</span>}
+                      {row.address&&<span className="text-xs text-gray-400">{row.address.replace('[PAID]','').trim()}</span>}
                       <span className="text-xs text-gray-400">{row.date}</span>
                       <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
                         className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
