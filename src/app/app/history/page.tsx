@@ -658,12 +658,6 @@ export default function HistoryPage() {
                     return total>0?`Нийт: ${total.toLocaleString()}₮`:''
                   })()}
                 </div>
-                <button
-                  disabled={importing||importPreview.some((r:any)=>r.errors.length>0)}
-                  onClick={confirmImport}
-                  className="ml-auto px-4 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-medium disabled:opacity-40">
-                  {importing?'Бүртгэж байна...':'Бүртгэх'}
-                </button>
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
@@ -692,6 +686,10 @@ export default function HistoryPage() {
                       )}
                       {row.address&&<span className="text-xs text-gray-400">{row.address}</span>}
                       <span className="text-xs text-gray-400">{row.date}</span>
+                      <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
+                        className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
+                        {row.paid?'Төлсөн':'Төлөөгүй'}
+                      </span>
                     </div>
                   </div>
                   <div className="mt-1.5 space-y-1">
@@ -770,17 +768,8 @@ export default function HistoryPage() {
                     <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
                   ))}
                   {row.errors.length===0&&(
-                    <div className="mt-2 flex items-center gap-3 flex-wrap">
-                      <label className="text-xs text-gray-400">Нийт дүн:</label>
-                      <input type="number"
-                        className="w-24 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
-                        value={row.total}
-                        onChange={e=>{
-                          const v=parseInt(e.target.value)||0
-                          setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,total:v}:r)||null)
-                        }}/>
-                      <span className="text-xs text-gray-400">₮</span>
-                      <label className="text-xs text-gray-400 ml-2">Хүргэлт:</label>
+                    <div className="mt-1.5 flex items-center gap-3">
+                      <label className="text-xs text-gray-400">Хүргэлт:</label>
                       <input type="number"
                         className="w-20 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
                         value={row.delv}
@@ -789,14 +778,6 @@ export default function HistoryPage() {
                           setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
                         }}/>
                       <span className="text-xs text-gray-400">₮</span>
-                      <label className="flex items-center gap-1 text-xs text-gray-500 ml-2 cursor-pointer">
-                        <input type="checkbox" checked={row.paid}
-                          onChange={e=>{
-                            const v=e.target.checked
-                            setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:v,status:v?'delivered':'pending'}:r)||null)
-                          }}/>
-                        Төлсөн
-                      </label>
                     </div>
                   )}
                 </div>
