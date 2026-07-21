@@ -357,25 +357,41 @@ export default function DashPage() {
                     <span className={`text-xs ${editPaid?'text-emerald-600 font-medium':'text-gray-500'}`}>{editPaid?'Төлсөн':'Төлөөгүй'}</span>
                   </div></div>
               </div>
-              {editItems.length>0&&(
-                <div>
-                  <div className="grid gap-2 mb-1" style={{gridTemplateColumns:'1fr 90px'}}>
-                    <span className="text-xs text-gray-400">Бараа нэр</span>
-                    <span className="text-xs text-gray-400 text-right">Үнэ (₮)</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {editItems.map((it,i)=>(
-                      <div key={it.id} className="grid gap-2 items-center" style={{gridTemplateColumns:'1fr 90px'}}>
-                        <span className="text-xs text-gray-700 truncate">{it.product_name}{it.variant_label?' · '+it.variant_label:''} ×{it.quantity}</span>
-                        <input type="text" inputMode="numeric"
-                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right"
-                          value={it.price?Number(it.price).toLocaleString():''}
-                          onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
-                      </div>
-                    ))}
-                  </div>
+              <div>
+                <div className="grid gap-2 mb-1" style={{gridTemplateColumns:'1fr 70px 90px 24px'}}>
+                  <span className="text-xs text-gray-400">Бараа нэр</span>
+                  <span className="text-xs text-gray-400 text-center">Тоо</span>
+                  <span className="text-xs text-gray-400 text-right">Үнэ (₮)</span>
+                  <span></span>
                 </div>
-              )}
+                <div className="space-y-1.5">
+                  {editItems.map((it,i)=>(
+                    <div key={i} className="grid gap-1.5 items-center" style={{gridTemplateColumns:'1fr 70px 90px 24px'}}>
+                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white truncate"
+                        value={it.product_id||''}
+                        onChange={e=>{
+                          const p=products.find(x=>x.id===e.target.value)
+                          setEditItems(prev=>prev.map((x,j)=>j===i?{...x,product_id:e.target.value,product_name:p?.name||x.product_name,price:String(p?.unit_price||x.price)}:x))
+                        }}>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <input type="number" min="1"
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center"
+                        value={it.quantity}
+                        onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,quantity:Math.max(1,Number(e.target.value)||1)}:x))}/>
+                      <input type="text" inputMode="numeric"
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"
+                        value={it.price?Number(it.price).toLocaleString():''}
+                        onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
+                      {editItems.length>1&&<button type="button" onClick={()=>setEditItems(prev=>prev.filter((_,j)=>j!==i))}
+                        className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                      {editItems.length===1&&<span></span>}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={()=>setEditItems(prev=>[...prev,{id:'new_'+Date.now(),product_id:products[0]?.id||'',product_name:products[0]?.name||'',quantity:1,price:String(products[0]?.unit_price||''),variant_label:null}])}
+                  className="mt-1.5 text-xs text-emerald-600 hover:underline">+ Бараа нэмэх</button>
+              </div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
