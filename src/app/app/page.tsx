@@ -331,22 +331,23 @@ export default function DashPage() {
       {/* Edit modal */}
       {!isViewer&&editOrder&&(
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm">
-            <h3 className="font-medium text-gray-800 mb-4">Захиалга засварлах</h3>
+          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="font-medium text-gray-800 mb-4 text-sm">Захиалга засварлах</h3>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
-                <div><label className="block text-xs text-gray-500 mb-1">Утас</label>
-                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
+                <div><label className="block text-xs text-gray-500 mb-1">Утасны дугаар</label>
+                  <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    value={editPhone} onChange={e=>setEditPhone(e.target.value)}/></div>
                 <div><label className="block text-xs text-gray-500 mb-1">Огноо</label>
                   <div className="overflow-hidden rounded-lg border border-gray-200 bg-white h-[38px] flex items-center">
-                    <input type="date" className="w-full px-2 text-sm bg-white appearance-none" style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)}/>
+                    <input type="date" className="w-full px-2 text-sm bg-white appearance-none"
+                      style={{WebkitAppearance:'none'}} value={editDate} onChange={e=>setEditDate(e.target.value)}/>
                   </div></div>
               </div>
-              <div><label className="block text-xs text-gray-500 mb-1">Хаяг</label>
-                <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editAddr} onChange={e=>setEditAddr(e.target.value)}/></div>
               <div className="grid grid-cols-2 gap-2">
                 <div><label className="block text-xs text-gray-500 mb-1">Хүргэлт (₮)</label>
-                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
+                  <input type="number" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                    value={editDelv} onChange={e=>setEditDelv(e.target.value)}/></div>
                 <div><label className="block text-xs text-gray-500 mb-1">Төлбөр</label>
                   <div onClick={()=>setEditPaid(p=>!p)}
                     className={`h-[38px] w-full flex items-center gap-2 px-3 rounded-lg border cursor-pointer transition-all ${editPaid?'border-emerald-300 bg-emerald-50':'border-gray-200 bg-white'}`}>
@@ -358,11 +359,14 @@ export default function DashPage() {
               </div>
               {editItems.length>0&&(
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Барааны үнэ</label>
+                  <div className="grid gap-2 mb-1" style={{gridTemplateColumns:'1fr 90px'}}>
+                    <span className="text-xs text-gray-400">Бараа нэр</span>
+                    <span className="text-xs text-gray-400 text-right">Үнэ (₮)</span>
+                  </div>
                   <div className="space-y-1.5">
                     {editItems.map((it,i)=>(
-                      <div key={it.id} className="grid gap-2 items-center" style={{gridTemplateColumns:'1fr 100px'}}>
-                        <span className="text-xs text-gray-600 truncate">{it.product_name}{it.variant_label?' · '+it.variant_label:''} ×{it.quantity}</span>
+                      <div key={it.id} className="grid gap-2 items-center" style={{gridTemplateColumns:'1fr 90px'}}>
+                        <span className="text-xs text-gray-700 truncate">{it.product_name}{it.variant_label?' · '+it.variant_label:''} ×{it.quantity}</span>
                         <input type="text" inputMode="numeric"
                           className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm text-right"
                           value={it.price?Number(it.price).toLocaleString():''}
@@ -374,16 +378,14 @@ export default function DashPage() {
               )}
             </div>
             <div className="flex gap-2 mt-5">
-              <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm">Болих</button>
+              <button onClick={()=>setEditOrder(null)} className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
               <button onClick={saveEditOrder} className="flex-1 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium">Хадгалах</button>
             </div>
           </div>
         </div>
       )}
 
-
-
-      {/* Order form */}
+            {/* Order form */}
       {!isViewer&&(
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
