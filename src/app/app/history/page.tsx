@@ -356,9 +356,10 @@ export default function HistoryPage() {
         if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
-        // Нийт дүн = бараа бүрийн unit_price × qty
+        const rowPrice=Number((r as any)['_price'])||0
         const autoTotal=matchedItems.reduce((sum:number,it:any)=>sum+(it.product?.unit_price||0)*it.qty,0)
-        preview.push({date,phone,address,items:matchedItems,delv:delv||defaultDelivery,
+        const itemsWithPrice=matchedItems.map((it:any)=>({...it,price:rowPrice?String(rowPrice):String(it.product?.unit_price||'')}))
+        preview.push({date,phone,address,items:itemsWithPrice,delv:delv||defaultDelivery,
           status,errors,rawDate,isDuplicate,hasOwnDate,
           total:autoTotal,paid:isTolson})
       }
@@ -392,7 +393,7 @@ export default function HistoryPage() {
       }).select().single()
       if(!ord) continue
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=row.paid?0:(Number(it.price)||it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
+        const unitPrice=row.paid?0:(Number(it.price)||Number((r as any)['_price'])||it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
@@ -459,15 +460,27 @@ export default function HistoryPage() {
     if(!user){ setImporting(false); return }
     const targetId=ownerId||user.id
     // Tab-аар тусгаарлагдсан мөрүүдийг задлах
+    // Дараалал: Утас | Хаяг | Бараа | Төлбөр | Хүргэлт
     const lines=text.trim().split('\n').filter(l=>l.trim())
     const rows=lines.map(line=>{
-      const cells=line.split('\t')
+      const cells=line.split('\t').map(c=>c.trim())
+      const phone=cells[0]||''
+      const addr=cells[1]||''
+      const bараа=cells[2]||''
+      const tolborRaw=cells[3]||''  // Төлбөр: мөнгө эсвэл "Төлсөн"
+      const hurgeltRaw=cells[4]||'' // Хүргэлт: мөнгө
+      // Мөнгөн дүн цэвэрлэх
+      const cleanNum=(s:string)=>parseInt(s.replace(/[^0-9]/g,''))||0
+      const isTolson=tolborRaw.toLowerCase().includes('төлсөн')||tolborRaw.toLowerCase().includes('paid')||tolborRaw===''&&cells.length<4
+      const tolbor=isTolson?0:cleanNum(tolborRaw)
+      const hurgelt=cleanNum(hurgeltRaw)||(cells.length===4?cleanNum(tolborRaw):0)
       return {
-        'Утасны дугаар': cells[0]?.trim()||'',
-        'Хаяг': cells[1]?.trim()||'',
-        'Бараа': cells[2]?.trim()||'',
-        'Хүргэлт': cells[3]?.trim()||'',
-        'Төлбөр': cells[4]?.trim()||'',
+        'Утасны дугаар': phone,
+        'Хаяг': addr,
+        'Бараа': bараа,
+        'Хүргэлт': String(hurgelt),
+        'Төлбөр': isTolson?'Төлсөн':String(tolbor),
+        '_price': tolbor, // бараа бүрийн үнэ
       }
     })
     await processRows(rows, targetId)
