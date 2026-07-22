@@ -693,7 +693,7 @@ if (error) {
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     placeholder="Нэрээр хайх..."
                     value={rProdSearch||products.find(p=>p.id===rProd)?.name||''}
-                    onFocus={()=>{setRProdOpen(true);setRProdSearch('')}}
+                    onFocus={e=>{e.target.select();setRProdOpen(true);setRProdSearch('')}}
                     onChange={e=>{setRProdSearch(e.target.value);setRProdOpen(true)}}
                     onBlur={()=>setTimeout(()=>setRProdOpen(false),150)}
                   />
