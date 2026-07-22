@@ -217,12 +217,41 @@ export default function DashPage() {
     if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
+    // Шинэ бараа (id нь 'new_' эхэлсэн) → insert, хуучин → update
     for(const it of editItems){
-      await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
+      if(String(it.id).startsWith('new_')){
+        await supabase.from('order_items').insert({
+          order_id:editOrder.id,
+          product_id:it.product_id||null,
+          product_name:it.product_name||'',
+          variant_label:it.variant_label||null,
+          quantity:Number(it.quantity)||1,
+          unit_price:Number(it.price)||0,
+        })
+        // Stock хасах
+        if(editOrder.status!=='cancelled'&&it.product_id){
+          await consumeOrderItems([{product_id:it.product_id,product_name:it.product_name,variant_label:it.variant_label||null,quantity:Number(it.quantity)||1}])
+        }
+      } else {
+        await supabase.from('order_items').update({
+          unit_price:Number(it.price)||0,
+          quantity:Number(it.quantity)||1,
+        }).eq('id',it.id)
+      }
+    }
+    // Устгагдсан бараануудыг олох (editItems-д байхгүй болсон хуучин бараа)
+    const editIds=new Set(editItems.map(it=>String(it.id)).filter(id=>!id.startsWith('new_')))
+    for(const orig of items){
+      if(!editIds.has(orig.id)){
+        await supabase.from('order_items').delete().eq('id',orig.id)
+        if(editOrder.status!=='cancelled'){
+          await releaseOrderItems([{product_id:orig.product_id,product_name:orig.product_name,variant_label:orig.variant_label||null,quantity:orig.quantity}])
+        }
+      }
     }
     const {error}=await supabase.from('orders').update({
       phone:editPhone,
-      address:editPaid?'[PAID]'+(editAddr?(' '+editAddr):''):editAddr,
+      address:editPaid?'[PAID]'+(editAddr?' '+editAddr:''):editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
     }).eq('id',editOrder.id)
