@@ -408,7 +408,7 @@ export default function DashPage() {
                           placeholder="Бараа хайх..."
                           value={isOpen?srch:(selProd?.name||'')}
                           onChange={e=>{const s=e.target.value;setEditItemSearch(prev=>{const n=[...prev];n[i]=s;return n})}}
-                          onFocus={()=>{setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n});setEditItemOpen(prev=>{const n=[...prev];n[i]=true;return n})}}
+                          onFocus={e=>{e.target.select();setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n});setEditItemOpen(prev=>{const n=[...prev];n[i]=true;return n})}}
                           onBlur={()=>setTimeout(()=>{setEditItemOpen(prev=>{const n=[...prev];n[i]=false;return n});setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n})},150)}
                         />
                         {(srch||isOpen)&&(
@@ -499,7 +499,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={e=>{e.target.select();setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(
@@ -620,7 +620,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={e=>{e.target.select();setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(
