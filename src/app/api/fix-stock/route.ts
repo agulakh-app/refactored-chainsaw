@@ -8,7 +8,7 @@ export async function POST() {
   if (!products?.length) return NextResponse.json({ ok: true, fixed: 0 })
 
   // Bulk татах
-  const { data: logs } = await supabase.from('restock_log').select('product_id,variant_label,quantity,type').eq('type','in')
+  const { data: logs } = await supabase.from('restock_log').select('product_id,variant_label,quantity,type').in('type',['in','out'])
   const { data: deliveredOrders } = await supabase.from('orders').select('id').eq('status','delivered')
   const deliveredIds = (deliveredOrders||[]).map((o:any)=>o.id)
   const { data: orderItems } = deliveredIds.length > 0
@@ -24,7 +24,8 @@ export async function POST() {
   const rstMap: any = {}
   for (const l of (logs||[])) {
     const k = l.product_id + '|||' + ((l.variant_label&&l.variant_label.trim())||'__total__')
-    rstMap[k] = (rstMap[k]||0) + l.quantity
+    if(l.type==='in') rstMap[k] = (rstMap[k]||0) + l.quantity
+    else if(l.type==='out') rstMap[k] = (rstMap[k]||0) - l.quantity
   }
 
   let fixed = 0

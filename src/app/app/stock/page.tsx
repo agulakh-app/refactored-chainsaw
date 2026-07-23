@@ -156,11 +156,12 @@ export default function StockPage() {
         const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
+        const _out2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)&&_l2.note!=='Захиалга').reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
         const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
-        const _expectedStk=_rst2-_sold2
+        const _expectedStk=_rst2-_out2-_sold2
         return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
