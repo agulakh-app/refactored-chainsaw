@@ -113,7 +113,7 @@ export default function StockPage() {
         : Promise.resolve({ data: null })
     ])
     const _prodIds=new Set((prods||[]).map((p:any)=>p.id))
-    setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)&&l.type==='in'))
+    setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)&&!(l.type==='out'&&l.note==='Захиалга')))
     const _existingIds=(prods||[]).map((p:any)=>p.id)
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
