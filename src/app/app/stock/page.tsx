@@ -103,10 +103,10 @@ export default function StockPage() {
     if (!targetId) return
     const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
       activeStoreId
-        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
+        ? supabase.from('products').select('*').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('name')
         : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
       activeStoreId
-        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('created_at',{ascending:false})
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('date',{ascending:false}).order('created_at',{ascending:false})
         : supabase.from('restock_log').select('*').eq('user_id',targetId).order('date',{ascending:false}).order('created_at',{ascending:false}),
       activeStoreId
         ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
@@ -122,11 +122,11 @@ export default function StockPage() {
     if(targetId){
       const [oqRes, supRes] = await Promise.all([
         (activeStoreId
-          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered')
+          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).eq('status','delivered')
           : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('status','delivered')
         ),
         (_existingIds.length>0
-          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
+          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('date',{ascending:false})
           : Promise.resolve({data:[]})
         )
       ])
