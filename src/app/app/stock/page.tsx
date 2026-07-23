@@ -120,30 +120,15 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      const [oqRes, supRes] = await Promise.all([
-        (activeStoreId
-          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).eq('status','delivered')
-          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('status','delivered')
-        ),
-        (_existingIds.length>0
-          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('date',{ascending:false})
-          : Promise.resolve({data:[]})
-        )
-      ])
-      const ords=oqRes.data||[]
-      setAuditOrders(ords)
+      const supRes = _existingIds.length>0
+          ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
+          : {data:[]}
+      setAuditOrders([])
       const _sup2=supRes.data||[]
       setSupply(_sup2)
-      // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
-      const _sm2:any={}
-      for(const o2 of (ords||[])){
-        if(o2.status!=='delivered') continue  // зөвхөн delivered = зарагдсан
-        for(const it2 of (o2.order_items||[])){
-          if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-          const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-          _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
-        }
-      }
+      // Зарагдсан = restock_log-ийн out, note='Захиалга' бичлэгүүдээс тооцно
+      // RLS-ийн улмаас order_items татагдахгүй тул restock_log ашиглана
+      const _sm2:any={} // хоосон — _sold2-г _ls2-аас тооцдог
       const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
       for(const _p2 of _prods2){
         const _pvs2=_p2.variants||[]
@@ -156,11 +141,8 @@ export default function StockPage() {
         const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
+        const _sold2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)&&_l2.note==='Захиалга').reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _out2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)&&_l2.note!=='Захиалга').reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
-        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
-        const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
-        const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=_rst2-_out2-_sold2
         return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
