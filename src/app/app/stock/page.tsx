@@ -241,20 +241,8 @@ export default function StockPage() {
       return
     }
     const isNeg = qty < 0
-
     const pvs: Variant[] = p.variants || []
     let variantLabel = variantLabel2
-
-    if (variantEnabled && pvs.length > 0) {
-      const v = pvs[rVariantIdx]
-      const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
-      const newVariants = pvs.map((vv, i) => i === rVariantIdx ? {...vv, stock: newVStock} : vv)
-      const newTotalStock = newVariants.reduce((a, vv) => a + vv.stock, 0)
-      await supabase.from('products').update({ variants: newVariants, stock: newTotalStock }).eq('id', rProd)
-    } else {
-      const newStock = isNeg ? Math.max(0, p.stock - absQty) : p.stock + absQty
-      await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
-    }
 
     const {error: rlErr} = await supabase.from('restock_log').insert({
       user_id: targetId, product_id: rProd,
@@ -455,7 +443,13 @@ if (error) {
 
   return (
     <div className="space-y-4">
-      {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {flash && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-gray-900 text-white text-sm px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 max-w-xs text-center">
+            <span>{flash}</span>
+          </div>
+        </div>
+      )}
 
       {/* Tab товчнууд */}
       <div className="flex gap-2 border-b border-gray-100 pb-0">
