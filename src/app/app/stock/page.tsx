@@ -122,8 +122,8 @@ export default function StockPage() {
     if(targetId){
       const [oqRes, supRes] = await Promise.all([
         (activeStoreId
-          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).in('status',['pending','delivered'])
-          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).in('status',['pending','delivered'])
+          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered')
+          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('status','delivered')
         ),
         (_existingIds.length>0
           ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
@@ -137,7 +137,7 @@ export default function StockPage() {
       // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
       const _sm2:any={}
       for(const o2 of (ords||[])){
-        if(o2.status!=='delivered') continue
+        if(o2.status!=='delivered') continue  // зөвхөн delivered = зарагдсан
         for(const it2 of (o2.order_items||[])){
           if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
           const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
@@ -170,7 +170,7 @@ export default function StockPage() {
         const _fd2=(_d2:string)=>{if(!_d2)return'';const[,_m2,_day2]=_d2.split('-');return _m2+'/'+_day2}
         return[..._sup2.filter(_ms2).map((_s2:any)=>({id:_s2.id,date:_s2.date,type:_s2.type,qty:_s2.quantity,note:_s2.note,del:true,fmtD:_fd2(_s2.date)})),..._ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).map((_l2:any)=>({id:_l2.id,date:_l2.date,type:'restocked',qty:_l2.quantity,note:_l2.note,del:false,fmtD:_fd2(_l2.date)}))].sort((_a2:any,_b2:any)=>_b2.date.localeCompare(_a2.date))
       }
-      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
+      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.restocked>0||_s2.ordered>0||_s2.received>0||_s2.sold>0})
       setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
       setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0||_getSS2(_pk2).expected<0))
       // Products-д тооцоолсон stock-г шинэчлэх — dropdown-д зөв тоо харагдана
