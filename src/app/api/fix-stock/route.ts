@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export const maxDuration = 60
 
 const FROM_DATE = '2024-09-10'
 
 export async function POST() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
   const { data: products } = await supabase.from('products').select('id,stock,variants,name')
   if (!products?.length) return NextResponse.json({ ok: true, fixed: 0 })
 
-  // 2024-09-10-аас хойшхи restock_log
   const { data: logs } = await supabase.from('restock_log')
     .select('product_id,variant_label,quantity,type,note')
     .gte('date', FROM_DATE)
 
-  // Тооцоолол: in - out(Захиалга) - out(гараар)
   const rstMap: any = {}
   for (const l of (logs||[])) {
     const k = l.product_id + '|||' + ((l.variant_label&&l.variant_label.trim())||'')
