@@ -213,11 +213,12 @@ export default function StockPage() {
     async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
+    if (!rProd) { showFlash('Бараа сонгоно уу'); return }
     const p = products.find(x=>x.id===rProd)
-    if (!p) return
+    if (!p) { showFlash('Бараа олдсонгүй'); return }
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
-    if (!targetId) return
+    if (!targetId) { showFlash('Нэвтрэх шаардлагатай'); return }
     const absQty = Math.abs(qty)
     const pvs2: Variant[] = p.variants || []
     let variantLabel2 = ''
@@ -255,13 +256,14 @@ export default function StockPage() {
       await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
     }
 
-    await supabase.from('restock_log').insert({
+    const {error: rlErr} = await supabase.from('restock_log').insert({
       user_id: targetId, product_id: rProd,
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
       variant_label: variantLabel||null,
       quantity: absQty, type: isNeg ? 'out' : 'in',
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
     })
+    if (rlErr) { showFlash('Алдаа: '+rlErr.message); return }
 
     setRQty('1'); setRNote(''); setRVariantIdx(-1)
     showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
