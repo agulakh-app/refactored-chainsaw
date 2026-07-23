@@ -106,8 +106,8 @@ export default function StockPage() {
         ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
         : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
       activeStoreId
-        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
-        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('created_at',{ascending:false})
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).order('date',{ascending:false}).order('created_at',{ascending:false}),
       activeStoreId
         ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
         : Promise.resolve({ data: null })
@@ -1006,9 +1006,18 @@ if (error) {
                         </div>
                       )}
                       <div>
-                        <div className="text-sm text-gray-700">{r.product_name}</div>
+                        <div className="text-sm text-gray-700 flex items-center gap-1.5">
+                          {r.product_name}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.type==='in'?'bg-emerald-50 text-emerald-600':r.type==='out'&&r.note==='Захиалга'?'bg-orange-50 text-orange-500':'bg-red-50 text-red-500'}`}>
+                            {r.type==='in'?'Цэнэглэлт':r.note==='Захиалга'?'Захиалга':'Хасалт'}
+                          </span>
+                        </div>
                         <div className="text-xs text-gray-400 mt-0.5">
-                          {r.note&&r.note!=='Цэнэглэлт'&&r.note!=='Гараар хасалт'?r.note:''}
+                          {(()=>{
+                            const n=r.note||''
+                            const skip=['Цэнэглэлт','Гараар хасалт','Шинэ бараа','']
+                            return skip.includes(n)?'':n
+                          })()}
                           {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
                         </div>
                       </div>
