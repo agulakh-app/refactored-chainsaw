@@ -126,9 +126,20 @@ export default function StockPage() {
         : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').limit(5000)
       const {data: delivOrds} = await ordQ
       const delivIds = (delivOrds||[]).map((o:any)=>o.id)
-      const {data: allItems} = delivIds.length>0
-        ? await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',delivIds).limit(10000)
-        : {data:[]}
+      // 500-аас дээш ID байвал batch хийж татна
+      const _sm2:any={}
+      if(delivIds.length>0){
+        const batchSize=500
+        for(let i=0;i<delivIds.length;i+=batchSize){
+          const batch=delivIds.slice(i,i+batchSize)
+          const {data:batchItems}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',batch).limit(10000)
+          for(const it2 of (batchItems||[])){
+            if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+            const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
+            _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+          }
+        }
+      }
       const _sm2:any={}
       for(const it2 of (allItems||[])){
         if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
