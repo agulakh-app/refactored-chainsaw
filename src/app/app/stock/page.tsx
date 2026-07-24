@@ -103,17 +103,17 @@ export default function StockPage() {
     if (!targetId) return
     const [{ data: prods },{ data: ls },{ data: storeData }] = await Promise.all([
       activeStoreId
-        ? supabase.from('products').select('*').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('name')
+        ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
         : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
       activeStoreId
-        ? supabase.from('restock_log').select('*').eq('user_id',targetId).or(`store_id.eq.${activeStoreId},store_id.is.null`).order('date',{ascending:false}).order('created_at',{ascending:false})
-        : supabase.from('restock_log').select('*').eq('user_id',targetId).order('date',{ascending:false}).order('created_at',{ascending:false}),
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
       activeStoreId
         ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
         : Promise.resolve({ data: null })
     ])
     const _prodIds=new Set((prods||[]).map((p:any)=>p.id))
-    setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)&&!(l.type==='out'&&l.note==='Захиалга')))
+    setLogs((ls||[]).filter((l:any)=>_prodIds.has(l.product_id)))
     const _existingIds=(prods||[]).map((p:any)=>p.id)
     setVariantEnabled(storeData?.variant_enabled || false)
     if (prods&&prods.length>0&&!rProd) setRProd(prods[0].id)
@@ -122,8 +122,8 @@ export default function StockPage() {
     if(targetId){
       const [oqRes, supRes] = await Promise.all([
         (activeStoreId
-          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered')
-          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('status','delivered')
+          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).in('status',['pending','delivered'])
+          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).in('status',['pending','delivered'])
         ),
         (_existingIds.length>0
           ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
@@ -132,16 +132,18 @@ export default function StockPage() {
       ])
       const ords=oqRes.data||[]
       setAuditOrders(ords)
-      // delivered захиалгаас soldMap тооцоол
-      const _sm2:any={}
-      for(const o of ords){
-        for(const it of (o.order_items||[])){
-          const k=it.product_id+'|||'+(it.variant_label||'')
-          _sm2[k]=(_sm2[k]||0)+it.quantity
-        }
-      }
       const _sup2=supRes.data||[]
       setSupply(_sup2)
+      // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
+      const _sm2:any={}
+      for(const o2 of (ords||[])){
+        if(o2.status!=='delivered') continue
+        for(const it2 of (o2.order_items||[])){
+          if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+          const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
+          _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+        }
+      }
       const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
       for(const _p2 of _prods2){
         const _pvs2=_p2.variants||[]
@@ -154,9 +156,11 @@ export default function StockPage() {
         const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _sold2=(_sm2[_pk2.id+'|||'+(_pk2.variant||'')])||0
-        const _out2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)&&_l2.note!=='Захиалга').reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _expectedStk=_rst2-_out2-_sold2
+        const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
+        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
+        const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
+        const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
+        const _expectedStk=_rst2-_sold2
         return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
@@ -165,7 +169,7 @@ export default function StockPage() {
         const _fd2=(_d2:string)=>{if(!_d2)return'';const[,_m2,_day2]=_d2.split('-');return _m2+'/'+_day2}
         return[..._sup2.filter(_ms2).map((_s2:any)=>({id:_s2.id,date:_s2.date,type:_s2.type,qty:_s2.quantity,note:_s2.note,del:true,fmtD:_fd2(_s2.date)})),..._ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).map((_l2:any)=>({id:_l2.id,date:_l2.date,type:'restocked',qty:_l2.quantity,note:_l2.note,del:false,fmtD:_fd2(_l2.date)}))].sort((_a2:any,_b2:any)=>_b2.date.localeCompare(_a2.date))
       }
-      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.restocked>0||_s2.ordered>0||_s2.received>0||_s2.sold>0})
+      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
       setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
       setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0||_getSS2(_pk2).expected<0))
       // Products-д тооцоолсон stock-г шинэчлэх — dropdown-д зөв тоо харагдана
@@ -213,12 +217,11 @@ export default function StockPage() {
     async function addRestock() {
     const qty = Number(rQty)
     if (qty===0) { showFlash('Тоо оруулна уу'); return }
-    if (!rProd) { showFlash('Бараа сонгоно уу'); return }
     const p = products.find(x=>x.id===rProd)
-    if (!p) { showFlash('Бараа олдсонгүй'); return }
+    if (!p) return
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
-    if (!targetId) { showFlash('Нэвтрэх шаардлагатай'); return }
+    if (!targetId) return
     const absQty = Math.abs(qty)
     const pvs2: Variant[] = p.variants || []
     let variantLabel2 = ''
@@ -241,17 +244,28 @@ export default function StockPage() {
       return
     }
     const isNeg = qty < 0
+
     const pvs: Variant[] = p.variants || []
     let variantLabel = variantLabel2
 
-    const {error: rlErr} = await supabase.from('restock_log').insert({
+    if (variantEnabled && pvs.length > 0) {
+      const v = pvs[rVariantIdx]
+      const newVStock = isNeg ? Math.max(0, v.stock - absQty) : v.stock + absQty
+      const newVariants = pvs.map((vv, i) => i === rVariantIdx ? {...vv, stock: newVStock} : vv)
+      const newTotalStock = newVariants.reduce((a, vv) => a + vv.stock, 0)
+      await supabase.from('products').update({ variants: newVariants, stock: newTotalStock }).eq('id', rProd)
+    } else {
+      const newStock = isNeg ? Math.max(0, p.stock - absQty) : p.stock + absQty
+      await supabase.from('products').update({ stock: newStock }).eq('id', rProd)
+    }
+
+    await supabase.from('restock_log').insert({
       user_id: targetId, product_id: rProd,
       product_name: p.name + (variantLabel ? ' · ' + variantLabel : ''),
       variant_label: variantLabel||null,
       quantity: absQty, type: isNeg ? 'out' : 'in',
       note: rNote||(isNeg?'Гараар хасалт':'Цэнэглэлт'), date: rDate, store_id: activeStoreId||null,
     })
-    if (rlErr) { showFlash('Алдаа: '+rlErr.message); return }
 
     setRQty('1'); setRNote(''); setRVariantIdx(-1)
     showFlash(p.name+(variantLabel?' · '+variantLabel:'')+(isNeg?`: −${absQty}ш хасагдлаа`:`+${absQty}ш нэмэгдлээ`)+' ✓')
@@ -443,13 +457,7 @@ if (error) {
 
   return (
     <div className="space-y-4">
-      {flash && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-gray-900 text-white text-sm px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-2 max-w-xs text-center">
-            <span>{flash}</span>
-          </div>
-        </div>
-      )}
+      {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
 
       {/* Tab товчнууд */}
       <div className="flex gap-2 border-b border-gray-100 pb-0">
@@ -685,7 +693,7 @@ if (error) {
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     placeholder="Нэрээр хайх..."
                     value={rProdSearch||products.find(p=>p.id===rProd)?.name||''}
-                    onFocus={e=>{e.target.select();setRProdOpen(true);setRProdSearch('')}}
+                    onFocus={()=>{setRProdOpen(true);setRProdSearch('')}}
                     onChange={e=>{setRProdSearch(e.target.value);setRProdOpen(true)}}
                     onBlur={()=>setTimeout(()=>setRProdOpen(false),150)}
                   />
@@ -997,18 +1005,9 @@ if (error) {
                         </div>
                       )}
                       <div>
-                        <div className="text-sm text-gray-700 flex items-center gap-1.5">
-                          {r.product_name}
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.type==='in'?'bg-emerald-50 text-emerald-600':r.type==='out'&&r.note==='Захиалга'?'bg-orange-50 text-orange-500':'bg-red-50 text-red-500'}`}>
-                            {r.type==='in'?'Цэнэглэлт':r.note==='Захиалга'?'Захиалга':'Хасалт'}
-                          </span>
-                        </div>
+                        <div className="text-sm text-gray-700">{r.product_name}</div>
                         <div className="text-xs text-gray-400 mt-0.5">
-                          {(()=>{
-                            const n=r.note||''
-                            const skip=['Цэнэглэлт','Гараар хасалт','Шинэ бараа','']
-                            return skip.includes(n)?'':n
-                          })()}
+                          {r.note&&r.note!=='Цэнэглэлт'&&r.note!=='Гараар хасалт'?r.note:''}
                           {(r as any).cost_per_unit&&<span className="ml-2 text-orange-500">өртөг: {Number((r as any).cost_per_unit).toLocaleString()}₮/ш</span>}
                         </div>
                       </div>

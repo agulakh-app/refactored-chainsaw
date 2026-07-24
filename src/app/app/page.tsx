@@ -39,8 +39,6 @@ export default function DashPage() {
   const [editDelv,setEditDelv]=useState('')
   const [editPaid,setEditPaid]=useState(false)
   const [editItems,setEditItems]=useState<any[]>([])
-  const [editItemSearch,setEditItemSearch]=useState<string[]>([])
-  const [editItemOpen,setEditItemOpen]=useState<boolean[]>([])
   const [oDate,setODate]=useState(TODAY)
   const [oPhone,setOPhone]=useState('')
   const [oAddr,setOAddr]=useState('')
@@ -219,41 +217,12 @@ export default function DashPage() {
     if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
       await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
     }
-    // Шинэ бараа (id нь 'new_' эхэлсэн) → insert, хуучин → update
     for(const it of editItems){
-      if(String(it.id).startsWith('new_')){
-        await supabase.from('order_items').insert({
-          order_id:editOrder.id,
-          product_id:it.product_id||null,
-          product_name:it.product_name||'',
-          variant_label:it.variant_label||null,
-          quantity:Number(it.quantity)||1,
-          unit_price:editPaid?0:(Number(it.price)||0),
-        })
-        // Stock хасах
-        if(editOrder.status!=='cancelled'&&it.product_id){
-          await consumeOrderItems([{product_id:it.product_id,product_name:it.product_name,variant_label:it.variant_label||null,quantity:Number(it.quantity)||1}])
-        }
-      } else {
-        await supabase.from('order_items').update({
-          unit_price:Number(it.price)||0,
-          quantity:Number(it.quantity)||1,
-        }).eq('id',it.id)
-      }
-    }
-    // Устгагдсан бараануудыг олох (editItems-д байхгүй болсон хуучин бараа)
-    const editIds=new Set(editItems.map(it=>String(it.id)).filter(id=>!id.startsWith('new_')))
-    for(const orig of items){
-      if(!editIds.has(orig.id)){
-        await supabase.from('order_items').delete().eq('id',orig.id)
-        if(editOrder.status!=='cancelled'){
-          await releaseOrderItems([{product_id:orig.product_id,product_name:orig.product_name,variant_label:orig.variant_label||null,quantity:orig.quantity}])
-        }
-      }
+      await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
     }
     const {error}=await supabase.from('orders').update({
       phone:editPhone,
-      address:editPaid?'[PAID]'+(editAddr?' '+editAddr:''):editAddr,
+      address:editPaid?'[PAID]'+(editAddr?(' '+editAddr):''):editAddr,
       delivery_fee:Number(editDelv)||0,
       date:editDate,
     }).eq('id',editOrder.id)
@@ -327,7 +296,7 @@ export default function DashPage() {
             {o.status==='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'pending');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-amber-600 hover:bg-amber-50">Буцаах</button>}
             {o.status!=='cancelled'&&<button onClick={()=>{setOrderStatus(o.id,'cancelled');setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-500 hover:bg-gray-50">Цуцлах</button>}
             <div className="border-t border-gray-100"/>
-            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr((o.address||'').replace('[PAID]','').trim());setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid((o.address||'').startsWith('[PAID]'));setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setEditItemSearch((o.order_items||[]).map(()=>''));setEditItemOpen((o.order_items||[]).map(()=>false));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
+            <button onClick={()=>{setEditOrder(o);setEditPhone(o.phone);setEditAddr((o.address||'').replace('[PAID]','').trim());setEditDate(o.date||TODAY);setEditStatus(o.status);setEditDelv(String(o.delivery_fee||''));setEditPaid((o.address||'').startsWith('[PAID]'));setEditItems((o.order_items||[]).map((it:any)=>({...it,price:String(it.unit_price)})));setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-gray-600 hover:bg-gray-50">Засах</button>
             <button onClick={()=>{deleteOrder(o);setOpenDropdown(null)}} className="w-full text-left px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 border-t border-gray-100">Устгах</button>
           </div>
         )
@@ -396,38 +365,16 @@ export default function DashPage() {
                   <span></span>
                 </div>
                 <div className="space-y-1.5">
-                  {editItems.map((it,i)=>{
-                    const srch=editItemSearch[i]||''
-                    const isOpen=editItemOpen[i]||false
-                    const selProd=products.find(p=>p.id===it.product_id)
-                    const filtered=products.filter(p=>!srch||p.name.toLowerCase().includes(srch.toLowerCase()))
-                    return(
-                    <div key={i} className="grid gap-1.5 items-center" style={{gridTemplateColumns:'1fr 60px 80px 20px'}}>
-                      <div className="relative">
-                        <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
-                          placeholder="Бараа хайх..."
-                          value={isOpen?srch:(selProd?.name||'')}
-                          onChange={e=>{const s=e.target.value;setEditItemSearch(prev=>{const n=[...prev];n[i]=s;return n})}}
-                          onFocus={e=>{e.target.select();setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n});setEditItemOpen(prev=>{const n=[...prev];n[i]=true;return n})}}
-                          onBlur={()=>setTimeout(()=>{setEditItemOpen(prev=>{const n=[...prev];n[i]=false;return n});setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n})},150)}
-                        />
-                        {(srch||isOpen)&&(
-                          <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-0.5 max-h-40 overflow-y-auto shadow-lg">
-                            {filtered.map(p=>(
-                              <button key={p.id} type="button" className="w-full text-left px-2 py-1.5 text-xs hover:bg-emerald-50 flex justify-between"
-                                onMouseDown={()=>{
-                                  setEditItems(prev=>prev.map((x,j)=>j===i?{...x,product_id:p.id,product_name:p.name,price:editPaid?'0':String(p.unit_price||'')}:x))
-                                  setEditItemSearch(prev=>{const n=[...prev];n[i]='';return n})
-                                  setEditItemOpen(prev=>{const n=[...prev];n[i]=false;return n})
-                                }}>
-                                <span>{p.name}</span>
-                                <span className="text-gray-400">{p.stock}ш</span>
-                              </button>
-                            ))}
-                            {filtered.length===0&&<div className="px-2 py-1.5 text-xs text-gray-400">Олдсонгүй</div>}
-                          </div>
-                        )}
-                      </div>
+                  {editItems.map((it,i)=>(
+                    <div key={i} className="grid gap-1.5 items-center" style={{gridTemplateColumns:'1fr 70px 90px 24px'}}>
+                      <select className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-white truncate"
+                        value={it.product_id||''}
+                        onChange={e=>{
+                          const p=products.find(x=>x.id===e.target.value)
+                          setEditItems(prev=>prev.map((x,j)=>j===i?{...x,product_id:e.target.value,product_name:p?.name||x.product_name,price:String(p?.unit_price||x.price)}:x))
+                        }}>
+                        {products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
                       <input type="number" min="1"
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-center"
                         value={it.quantity}
@@ -436,18 +383,14 @@ export default function DashPage() {
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs text-right"
                         value={it.price?Number(it.price).toLocaleString():''}
                         onChange={e=>setEditItems(prev=>prev.map((x,j)=>j===i?{...x,price:e.target.value.replace(/[^0-9]/g,'')}:x))}/>
-                      {editItems.length>1
-                        ?<button type="button" onClick={()=>{setEditItems(p=>p.filter((_,j)=>j!==i));setEditItemSearch(p=>p.filter((_,j)=>j!==i));setEditItemOpen(p=>p.filter((_,j)=>j!==i))}}
-                            className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400 text-xs">✕</button>
-                        :<span></span>}
+                      {editItems.length>1&&<button type="button" onClick={()=>setEditItems(prev=>prev.filter((_,j)=>j!==i))}
+                        className="w-5 h-5 flex items-center justify-center text-gray-300 hover:text-red-400 text-xs">✕</button>}
+                      {editItems.length===1&&<span></span>}
                     </div>
-                  )})}
+                  ))}
                 </div>
-                <button type="button" onClick={()=>{
-                  setEditItems(prev=>[...prev,{id:'new_'+Date.now(),product_id:products[0]?.id||'',product_name:products[0]?.name||'',quantity:1,price:editPaid?'0':String(products[0]?.unit_price||''),variant_label:null}])
-                  setEditItemSearch(prev=>[...prev,''])
-                  setEditItemOpen(prev=>[...prev,false])
-                }} className="mt-1.5 text-xs text-emerald-600 hover:underline">+ Бараа нэмэх</button>
+                <button type="button" onClick={()=>setEditItems(prev=>[...prev,{id:'new_'+Date.now(),product_id:products[0]?.id||'',product_name:products[0]?.name||'',quantity:1,price:String(products[0]?.unit_price||''),variant_label:null}])}
+                  className="mt-1.5 text-xs text-emerald-600 hover:underline">+ Бараа нэмэх</button>
               </div>
             </div>
             <div className="flex gap-2 mt-5">
@@ -499,7 +442,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={e=>{e.target.select();setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(
@@ -620,7 +563,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={e=>{e.target.select();setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(
