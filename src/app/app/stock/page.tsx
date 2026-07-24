@@ -120,12 +120,19 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      // 1. delivered order ID-г татна
-      const {data:delivOrds} = activeStoreId
-        ? await supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').limit(5000)
-        : await supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').limit(5000)
-      const allDelivIds=(delivOrds||[]).map((o:any)=>o.id)
-      // 2. product_id batch-аар order_items татна, delivered ID-аар шүүнэ
+      // Pagination-аар бүх delivered order ID татна
+      const allDelivIds:string[]=[]
+      let page=0
+      while(true){
+        const {data:pageOrds} = activeStoreId
+          ? await supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').range(page*1000,(page+1)*1000-1)
+          : await supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').range(page*1000,(page+1)*1000-1)
+        if(!pageOrds||pageOrds.length===0) break
+        allDelivIds.push(...pageOrds.map((o:any)=>o.id))
+        if(pageOrds.length<1000) break
+        page++
+      }
+      // product_id болон order_id batch-аар order_items татна
       const _sm2:any={}
       if(_existingIds.length>0 && allDelivIds.length>0){
         const pidBatch=200, oidBatch=500
@@ -142,7 +149,7 @@ export default function StockPage() {
           }
         }
       }
-      console.log('DEBUG delivOrds:',allDelivIds.length,'Зайлагч:',JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
+      console.log('DEBUG total delivIds:',allDelivIds.length,'Зайлагч:',JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
