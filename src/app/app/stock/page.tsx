@@ -120,22 +120,27 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      // order_items-г orders-р дамжуулахгүйгээр шууд татна
-      const oiQ = activeStoreId
-        ? supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status,store_id)').eq('orders.user_id',targetId).eq('orders.store_id',activeStoreId).eq('orders.status','delivered').limit(10000)
-        : supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status)').eq('orders.user_id',targetId).eq('orders.status','delivered').limit(10000)
-      const {data:allItems} = await oiQ
+      // order_items-г product_id-аар шүүж татна — row тоо багасна
       const _sm2:any={}
-      for(const it2 of (allItems||[])){
-        if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-        const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-        _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+      if(_existingIds.length>0){
+        const batchSize=200
+        for(let i=0;i<_existingIds.length;i+=batchSize){
+          const pidBatch=_existingIds.slice(i,i+batchSize)
+          const {data:oiData}= activeStoreId
+            ? await supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status,store_id)').in('product_id',pidBatch).eq('orders.status','delivered').eq('orders.store_id',activeStoreId).limit(5000)
+            : await supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status)').in('product_id',pidBatch).eq('orders.status','delivered').limit(5000)
+          for(const it2 of (oiData||[])){
+            if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+            const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
+            _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+          }
+        }
       }
-      console.log('DEBUG allItems count:', allItems?.length, 'Зайлагч:', JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
+      console.log('DEBUG Зайлагч:', JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
-      setAuditOrders(allItems?.map((it:any)=>it)||[])
+      setAuditOrders([])
       const _sup2=supData||[]
       setSupply(_sup2)
       // _sm2 аль хэдийн тооцоологдсон
