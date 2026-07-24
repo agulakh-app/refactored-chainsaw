@@ -149,7 +149,6 @@ export default function StockPage() {
           }
         }
       }
-      console.log('DEBUG total delivIds:',allDelivIds.length,'Зайлагч:',JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
