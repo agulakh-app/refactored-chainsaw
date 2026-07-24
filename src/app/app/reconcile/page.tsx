@@ -37,7 +37,7 @@ export default function ReconcilePage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if(!targetId) return
-    const q = supabase.from('orders').select('*, order_items(*)').eq('user_id', targetId).eq('status','delivered')
+    const q = supabase.from('orders').select('*, order_items(*)').eq('user_id', targetId).eq('status','delivered').limit(5000)
     const { data: ords } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
     setOrders(ords||[])
     const { data: rs } = await supabase.from('delivery_reconciliations')

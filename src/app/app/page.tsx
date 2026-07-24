@@ -98,7 +98,7 @@ export default function DashPage() {
     }
     const[{data:prods},{data:ords},{data:sts}]=await Promise.all([
       (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
-      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
+      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(5000) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(5000)),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])

@@ -106,8 +106,8 @@ export default function StockPage() {
         ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name')
         : supabase.from('products').select('*').eq('user_id',targetId).order('name'),
       activeStoreId
-        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false})
-        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}),
+        ? supabase.from('restock_log').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}).limit(5000)
+        : supabase.from('restock_log').select('*').eq('user_id',targetId).neq('note','Захиалга').order('date',{ascending:false}).order('created_at',{ascending:false}).limit(5000),
       activeStoreId
         ? supabase.from('stores').select('variant_enabled').eq('id',activeStoreId).single()
         : Promise.resolve({ data: null })
@@ -126,7 +126,7 @@ export default function StockPage() {
           : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).in('status',['pending','delivered']).limit(5000)
         ),
         (_existingIds.length>0
-          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false})
+          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
           : Promise.resolve({data:[]})
         )
       ])
