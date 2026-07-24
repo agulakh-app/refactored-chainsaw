@@ -144,6 +144,8 @@ export default function StockPage() {
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
       setAuditOrders(delivOrds||[])
+      console.log('DEBUG delivIds count:', delivIds.length)
+      console.log('DEBUG _sm2 Зайлагч:', JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
       const _sup2=supData||[]
       setSupply(_sup2)
       // _sm2 аль хэдийн тооцоологдсон
