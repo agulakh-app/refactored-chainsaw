@@ -140,12 +140,6 @@ export default function StockPage() {
           }
         }
       }
-      const _sm2:any={}
-      for(const it2 of (allItems||[])){
-        if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-        const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-        _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
-      }
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
