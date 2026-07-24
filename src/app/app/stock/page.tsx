@@ -872,8 +872,8 @@ if (error) {
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
                   <div className="text-right">Цэнэглэсэн</div>
-                  <div className="text-right">Зарагдсан</div>
                   <div className="text-right text-red-400">Хасалт</div>
+                  <div className="text-right">Зарагдсан</div>
                   <div className="text-right">Үлдэгдэл</div>
                   <div className="text-right">Зөрүү</div>
                   <div></div>
@@ -897,8 +897,8 @@ if (error) {
                           <div className="text-right text-xs font-medium text-blue-600">{s.ordered>0?s.ordered+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
-                          <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-red-400">{s.manualOut>0?'-'+s.manualOut+'ш':'—'}</div>
+                          <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
                           <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>{s.expected}ш</div>
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
