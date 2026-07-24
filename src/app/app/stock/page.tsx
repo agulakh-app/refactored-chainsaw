@@ -135,27 +135,13 @@ export default function StockPage() {
         const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
         _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
       }
-      const [oqRes, supRes] = await Promise.all([
-        ),
-        (_existingIds.length>0
-          ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
-          : Promise.resolve({data:[]})
-        )
-      ])
-      const ords=oqRes.data||[]
-      setAuditOrders(ords)
-      const _sup2=supRes.data||[]
+      const {data: supData} = _existingIds.length>0
+        ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
+        : {data:[]}
+      setAuditOrders(delivOrds||[])
+      const _sup2=supData||[]
       setSupply(_sup2)
-      // compute audit summary — зөвхөн delivered захиалгыг зарагдсан гэж тооцно
-      const _sm2:any={}
-      for(const o2 of (ords||[])){
-        if(o2.status!=='delivered') continue
-        for(const it2 of (o2.order_items||[])){
-          if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-          const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-          _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
-        }
-      }
+      // _sm2 аль хэдийн тооцоологдсон
       const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
       for(const _p2 of _prods2){
         const _pvs2=_p2.variants||[]
