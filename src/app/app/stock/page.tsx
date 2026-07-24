@@ -867,12 +867,12 @@ if (error) {
             ):(
               <div>
                 <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-                  style={{gridTemplateColumns:'1.6fr 65px 65px 80px 65px 65px 65px 65px 40px 20px'}}>
+                  style={{gridTemplateColumns:'1.5fr 55px 55px 70px 60px 70px 70px 55px 36px 20px'}}>
                   <div>Барааны нэр</div>
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
                   <div className="text-right">Цэнэглэсэн</div>
-                  <div className="text-right text-red-400">Хасалт</div>
+                  <div className="text-right text-red-500">Хасалт</div>
                   <div className="text-right">Зарагдсан</div>
                   <div className="text-right">Үлдэгдэл</div>
                   <div className="text-right">Зөрүү</div>
@@ -889,15 +889,15 @@ if (error) {
                     return(
                       <div key={i} className={s.zoruu!==0?'bg-red-50/20':''}>
                         <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                          style={{gridTemplateColumns:'1.6fr 65px 65px 80px 65px 65px 65px 65px 40px 20px'}}>
+                          style={{gridTemplateColumns:'1.5fr 55px 55px 70px 60px 70px 70px 55px 36px 20px'}}>
                           <div className="cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
                             {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
                           </div>
                           <div className="text-right text-xs font-medium text-blue-600">{s.ordered>0?s.ordered+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-emerald-600">{s.received>0?s.received+'ш':'—'}</div>
-                          <div className="text-right text-xs font-medium text-orange-500">{s.restocked>0?s.restocked+'ш':'—'}</div>
-                          <div className="text-right text-xs font-medium text-red-400">{s.manualOut>0?'-'+s.manualOut+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-emerald-600">{s.restocked>0?s.restocked+'ш':'—'}</div>
+                          <div className="text-right text-xs font-medium text-red-500">{s.manualOut>0?'-'+s.manualOut+'ш':'—'}</div>
                           <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
                           <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>{s.expected}ш</div>
                           <div className="text-right text-xs font-bold">
