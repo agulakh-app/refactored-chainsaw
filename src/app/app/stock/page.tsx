@@ -158,7 +158,8 @@ export default function StockPage() {
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _manualOut2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
-        const _sold2=(_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0
+        // variant_label=null захиалгыг бүх variant-д тооцно
+        const _sold2=((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)+((_pk2.variant&&_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=_rst2-_sold2-_manualOut2
