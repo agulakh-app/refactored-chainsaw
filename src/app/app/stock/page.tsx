@@ -120,32 +120,22 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      // orders болон order_items-г тусад нь татах — nested select-д 1000 limit хамаарна
-      const ordQ = activeStoreId
-        ? supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').limit(5000)
-        : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').limit(5000)
-      const {data: delivOrds} = await ordQ
-      const delivIds = (delivOrds||[]).map((o:any)=>o.id)
-      // 500-аас дээш ID байвал batch хийж татна
+      // order_items-г orders-р дамжуулахгүйгээр шууд татна
+      const oiQ = activeStoreId
+        ? supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status,store_id)').eq('orders.user_id',targetId).eq('orders.store_id',activeStoreId).eq('orders.status','delivered').limit(10000)
+        : supabase.from('order_items').select('product_id,variant_label,quantity,orders!inner(status)').eq('orders.user_id',targetId).eq('orders.status','delivered').limit(10000)
+      const {data:allItems} = await oiQ
       const _sm2:any={}
-      if(delivIds.length>0){
-        const batchSize=500
-        for(let i=0;i<delivIds.length;i+=batchSize){
-          const batch=delivIds.slice(i,i+batchSize)
-          const {data:batchItems}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',batch).limit(10000)
-          for(const it2 of (batchItems||[])){
-            if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-            const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-            _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
-          }
-        }
+      for(const it2 of (allItems||[])){
+        if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+        const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
+        _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
       }
+      console.log('DEBUG allItems count:', allItems?.length, 'Зайлагч:', JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
-      setAuditOrders(delivOrds||[])
-      console.log('DEBUG delivIds count:', delivIds.length)
-      console.log('DEBUG _sm2 Зайлагч:', JSON.stringify(_sm2['7701dcec-e5ad-420c-a59f-9372fe2a81d4']))
+      setAuditOrders(allItems?.map((it:any)=>it)||[])
       const _sup2=supData||[]
       setSupply(_sup2)
       // _sm2 аль хэдийн тооцоологдсон
