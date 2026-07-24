@@ -120,10 +120,22 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
+      // orders болон order_items-г тусад нь татах — nested select-д 1000 limit хамаарна
+      const ordQ = activeStoreId
+        ? supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').limit(5000)
+        : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').limit(5000)
+      const {data: delivOrds} = await ordQ
+      const delivIds = (delivOrds||[]).map((o:any)=>o.id)
+      const {data: allItems} = delivIds.length>0
+        ? await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',delivIds).limit(10000)
+        : {data:[]}
+      const _sm2:any={}
+      for(const it2 of (allItems||[])){
+        if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
+        const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
+        _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
+      }
       const [oqRes, supRes] = await Promise.all([
-        (activeStoreId
-          ? supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).eq('store_id',activeStoreId).in('status',['pending','delivered']).limit(5000)
-          : supabase.from('orders').select('id,status,order_items(product_id,variant_label,quantity)').eq('user_id',targetId).in('status',['pending','delivered']).limit(5000)
         ),
         (_existingIds.length>0
           ? supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
@@ -158,8 +170,9 @@ export default function StockPage() {
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _manualOut2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
-        // variant_label=null захиалгыг бүх variant-д тооцно
-        const _sold2=((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)+((_pk2.variant&&_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
+        const _sold2=_pk2.variant
+          ?((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)+((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
+          :((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=_rst2-_sold2-_manualOut2
