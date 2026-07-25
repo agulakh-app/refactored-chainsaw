@@ -464,7 +464,7 @@ export default function DashPage() {
                         <div className="flex-1 relative">
                           <input className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                             placeholder="Бараа хайх..."
-                            value={srch||selProd?.name||''}
+                            value={srch!==''?srch:(oItemOpen[idx]?'':selProd?.name||'')}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
                             onFocus={()=>{setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
@@ -585,7 +585,7 @@ export default function DashPage() {
                         <div className="relative">
                           <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-sm bg-white"
                             placeholder="Бараа хайх..."
-                            value={srch||selProd?.name||''}
+                            value={srch!==''?srch:(oItemOpen[idx]?'':selProd?.name||'')}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
                             onFocus={()=>{setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}

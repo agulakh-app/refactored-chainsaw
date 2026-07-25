@@ -54,6 +54,7 @@ export default function StockPage() {
   // Цэнэглэлт
   const [rProd, setRProd] = useState('')
   const [rProdSearch, setRProdSearch] = useState('')
+  const [rProdFocused, setRProdFocused] = useState(false)
   const [rProdOpen, setRProdOpen] = useState(false)
   const [rVariantIdx, setRVariantIdx] = useState<number>(-1)
   const [rQty, setRQty] = useState('1')
@@ -707,8 +708,9 @@ if (error) {
                   <input
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     placeholder="Нэрээр хайх..."
-                    value={rProdSearch||products.find(p=>p.id===rProd)?.name||''}
-                    onFocus={()=>{setRProdOpen(true);setRProdSearch('')}}
+                    value={rProdFocused?rProdSearch:(products.find(p=>p.id===rProd)?.name||'')}
+                    onFocus={()=>{setRProdFocused(true);setRProdSearch('');setRProdOpen(true)}}
+                    onBlur={()=>{setTimeout(()=>{setRProdFocused(false);setRProdOpen(false)},150)}}
                     onChange={e=>{setRProdSearch(e.target.value);setRProdOpen(true)}}
                     onBlur={()=>setTimeout(()=>setRProdOpen(false),150)}
                   />
