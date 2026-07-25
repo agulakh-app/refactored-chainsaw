@@ -104,6 +104,54 @@ export default function DashPage() {
     setProducts(prods||[])
     setOrders(ords||[])
     setStores(sts||[])
+    // Log-оос тооцоолсон stock
+    if(prods&&prods.length>0){
+      const pids=(prods||[]).map((p:any)=>p.id)
+      // restock_log татах
+      const {data:rlogs}=await (activeStoreId
+        ? supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('store_id',activeStoreId).eq('type','in')
+        : supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('type','in'))
+      // delivered order_items татах — pagination
+      const allDelivIds:string[]=[]
+      let pg=0
+      while(true){
+        const {data:dords}=await (activeStoreId
+          ? supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').range(pg*1000,(pg+1)*1000-1)
+          : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').range(pg*1000,(pg+1)*1000-1))
+        if(!dords||dords.length===0) break
+        allDelivIds.push(...dords.map((o:any)=>o.id))
+        if(dords.length<1000) break
+        pg++
+      }
+      const soldMap:any={}
+      if(allDelivIds.length>0){
+        for(let i=0;i<pids.length;i+=200){
+          const pb=pids.slice(i,i+200)
+          for(let j=0;j<allDelivIds.length;j+=500){
+            const ob=allDelivIds.slice(j,j+500)
+            const {data:oi}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('product_id',pb).in('order_id',ob).limit(5000)
+            for(const it of (oi||[])){
+              const k=it.product_id+'|||'+(it.variant_label||'')
+              soldMap[k]=(soldMap[k]||0)+it.quantity
+            }
+          }
+        }
+      }
+      const rstMap:any={}
+      for(const l of (rlogs||[])){
+        const k=l.product_id+'|||'+(l.variant_label||'')
+        rstMap[k]=(rstMap[k]||0)+l.quantity
+      }
+      const calcStock=(pid:string,vl:string='')=>(rstMap[pid+'|||'+vl]||0)-(soldMap[pid+'|||'+vl]||0)
+      setProducts((prods||[]).map((p:any)=>{
+        const pvs=p.variants||[]
+        if(pvs.length>0){
+          const nv=pvs.map((v:any)=>{const lbl=[v.size,v.color].filter(Boolean).join(' / ');return{...v,stock:calcStock(p.id,lbl)}})
+          return{...p,variants:nv,stock:nv.reduce((a:number,v:any)=>a+v.stock,0)}
+        }
+        return{...p,stock:calcStock(p.id)}
+      }))
+    }
     if(prods&&prods.length>0){
       setOItems(i=>i.map((it,idx)=>idx===0&&!it.product_id?{...it,product_id:prods[0].id,product_name:prods[0].name,price:String(prods[0].unit_price)}:it))
     }
