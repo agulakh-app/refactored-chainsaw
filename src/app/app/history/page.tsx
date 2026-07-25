@@ -677,7 +677,7 @@ export default function HistoryPage() {
               {importPreview.map((row:any, i:number)=>(
                 <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap flex-1">
                       {row.phone?(
                         <span className="font-medium text-sm text-gray-800">{row.phone}</span>
                       ):(
@@ -698,12 +698,11 @@ export default function HistoryPage() {
                         />
                       )}
                       {row.address&&<span className="text-xs text-gray-400">{row.address.replace('[PAID]','').trim()}</span>}
-                      <span className="text-xs text-gray-400">{row.date}</span>
-                      <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
-                        className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
-                        {row.paid?'Төлсөн':'Төлөөгүй'}
-                      </span>
                     </div>
+                    <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
+                      className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none flex-shrink-0 ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
+                      {row.paid?'Төлсөн':'Төлөөгүй'}
+                    </span>
                   </div>
                   <div className="mt-1.5 space-y-1">
                     {row.items.map((it:any, j:number)=>(
