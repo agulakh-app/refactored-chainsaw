@@ -156,6 +156,23 @@ export default function StockPage() {
       setAuditOrders([])
       const _sup2=supData||[]
       setSupply(_sup2)
+      // pending захиалгын map
+      const _pm2:any={}
+      const {data:pendOrds}=await (activeStoreId
+        ? supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','pending').limit(2000)
+        : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','pending').limit(2000))
+      if((pendOrds||[]).length>0){
+        const poids=(pendOrds||[]).map((o:any)=>o.id)
+        for(let j=0;j<poids.length;j+=500){
+          const ob=poids.slice(j,j+500)
+          const {data:poi}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',ob).limit(5000)
+          for(const it of (poi||[])){
+            if(!_pm2[it.product_id]) _pm2[it.product_id]={}
+            const vl=(it.variant_label&&it.variant_label.trim())||'__total__'
+            _pm2[it.product_id][vl]=(_pm2[it.product_id][vl]||0)+it.quantity
+          }
+        }
+      }
       // _sm2 аль хэдийн тооцоологдсон
       const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
       for(const _p2 of _prods2){
@@ -174,10 +191,13 @@ export default function StockPage() {
         const _sold2=_pk2.variant
           ?((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)+((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
           :((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
+        const _pending2=_pk2.variant
+          ?((_pm2[_pk2.id]&&_pm2[_pk2.id][_vkey])||0)+((_pm2[_pk2.id]&&_pm2[_pk2.id]['__total__'])||0)
+          :((_pm2[_pk2.id]&&_pm2[_pk2.id]['__total__'])||0)
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=_rst2-_sold2-_manualOut2
-        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,manualOut:_manualOut2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
+        return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,manualOut:_manualOut2,pending:_pending2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
         const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
@@ -874,7 +894,7 @@ if (error) {
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="font-medium text-gray-800 text-sm">Барааны нэгдсэн хяналт</h2>
+                <h2 className="font-medium text-gray-800 text-sm">Барааны хөдөлгөөн</h2>
                 </div>
               {hasIssue&&<span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>}
             </div>
@@ -915,7 +935,10 @@ if (error) {
                           <div className="text-right text-xs font-medium text-emerald-600">{s.restocked>0?s.restocked+'ш':'—'}</div>
                           <div className="text-right text-xs font-medium text-red-500">{s.manualOut>0?'-'+s.manualOut+'ш':'—'}</div>
                           <div className="text-right text-xs text-gray-600">{s.sold>0?s.sold+'ш':'—'}</div>
-                          <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>{s.expected}ш</div>
+                          <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>
+                            {s.expected}ш
+                            {s.pending>0&&<span className="text-orange-400 font-normal ml-1">(+{s.pending})</span>}
+                          </div>
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
