@@ -695,10 +695,13 @@ export default function DashPage() {
           <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэрээр хайх..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
           {productFilter&&(()=>{
             const pf=productFilter.toLowerCase()
-            const totalSold=filtered.filter(o=>o.status==='delivered').reduce((sum,o)=>{
-              return sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0)
-            },0)
-            return totalSold>0?<div className="text-xs text-emerald-600 font-medium mt-1 px-1">Нийт зарагдсан: {totalSold}ш</div>:null
+            const pending=filtered.filter(o=>o.status==='pending').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
+            const delivered=filtered.filter(o=>o.status==='delivered').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
+            if(!pending&&!delivered) return null
+            return <div className="flex gap-3 mt-1 px-1">
+              {pending>0&&<span className="text-xs text-orange-500 font-medium">Хүлээгдэж: {pending}ш</span>}
+              {delivered>0&&<span className="text-xs text-emerald-600 font-medium">Хүргэгдсэн: {delivered}ш</span>}
+            </div>
           })()}
           <div className="flex items-center gap-1 w-full">
             <input type="date" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
