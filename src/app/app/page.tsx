@@ -213,12 +213,36 @@ export default function DashPage() {
     if(!editOrder) return
     const{data:{user}}=await supabase.auth.getUser()
     const targetId=ownerId||user?.id
-    const items=(editOrder.order_items||[]) as any[]
+    const origItems=(editOrder.order_items||[]) as any[]
+    // Огноо өөрчлөгдвөл out-логийн огноог шинэчилнэ
     if(targetId&&editDate&&editDate!==editOrder.date&&editOrder.status!=='cancelled'){
-      await updateOrderOutLogsDate(targetId,items,editOrder.date,editDate)
+      await updateOrderOutLogsDate(targetId,origItems,editOrder.date,editDate)
     }
+    // Байгаа бараа шинэчлэх
     for(const it of editItems){
-      await supabase.from('order_items').update({unit_price:Number(it.price)||0}).eq('id',it.id)
+      if(String(it.id).startsWith('new_')){
+        // Шинэ бараа insert
+        await supabase.from('order_items').insert({
+          order_id:editOrder.id,
+          product_id:it.product_id,
+          product_name:it.product_name||products.find((p:any)=>p.id===it.product_id)?.name||'',
+          quantity:Number(it.quantity)||1,
+          unit_price:Number(it.price)||0,
+          variant_label:it.variant_label||null,
+        })
+      } else {
+        await supabase.from('order_items').update({
+          unit_price:Number(it.price)||0,
+          quantity:Number(it.quantity)||1,
+        }).eq('id',it.id)
+      }
+    }
+    // Устгасан бараа delete
+    const editIds=editItems.filter(it=>!String(it.id).startsWith('new_')).map(it=>it.id)
+    for(const orig of origItems){
+      if(!editIds.includes(orig.id)){
+        await supabase.from('order_items').delete().eq('id',orig.id)
+      }
     }
     const {error}=await supabase.from('orders').update({
       phone:editPhone,
@@ -279,7 +303,7 @@ export default function DashPage() {
 
   return (
     <div className="space-y-4">
-      {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {flash&&<div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"><div className="bg-gray-900 text-white text-sm px-6 py-3 rounded-2xl shadow-2xl animate-bounce-once">{flash}</div></div>}
 
       {/* Portal dropdown */}
       {openDropdown&&(()=>{
@@ -442,7 +466,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={()=>{setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(
@@ -563,7 +587,7 @@ export default function DashPage() {
                             placeholder="Бараа хайх..."
                             value={srch||selProd?.name||''}
                             onChange={e=>{const s=e.target.value;setOItemSearch(prev=>{const n=[...prev];n[idx]=s;return n})}}
-                            onFocus={()=>{setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
+                            onFocus={()=>{setOItemSearch(prev=>{const n=[...prev];n[idx]='';return n});setOItemOpen(prev=>{const n=[...prev];n[idx]=true;return n})}}
                             onBlur={()=>setTimeout(()=>setOItemOpen(prev=>{const n=[...prev];n[idx]=false;return n}),150)}
                           />
                           {(srch||oItemOpen[idx])&&(

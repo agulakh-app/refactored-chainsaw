@@ -472,7 +472,7 @@ if (error) {
 
   return (
     <div className="space-y-4">
-      {flash && <div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {flash && <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"><div className="bg-gray-900 text-white text-sm px-6 py-3 rounded-2xl shadow-2xl">{flash}</div></div>}
 
       {/* Tab товчнууд */}
       <div className="flex gap-2 border-b border-gray-100 pb-0">

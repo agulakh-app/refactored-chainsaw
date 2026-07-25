@@ -282,7 +282,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-4">
-      {flash&&<div className="fixed top-4 right-4 bg-gray-900 text-white text-sm px-4 py-2 rounded-lg z-50">{flash}</div>}
+      {flash&&<div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none"><div className="bg-gray-900 text-white text-sm px-6 py-3 rounded-2xl shadow-2xl animate-bounce-once">{flash}</div></div>}
 
       {/* Period tabs */}
       <div className="flex gap-1 p-1 bg-gray-100 rounded-xl w-fit">
