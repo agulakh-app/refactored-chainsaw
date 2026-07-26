@@ -341,7 +341,7 @@ export default function DashPage() {
   }
 
   const filtered=orders.filter(o=>{
-    if(phoneFilter&&!o.phone.includes(phoneFilter)) return false
+    if(phoneFilter&&!o.phone.trim().replace(/\s+/g,' ').includes(phoneFilter.trim())) return false
     if(statusFilter!=='all'&&o.status!==statusFilter) return false
     if(dateFilter&&o.date!==dateFilter) return false
     if(productFilter){
