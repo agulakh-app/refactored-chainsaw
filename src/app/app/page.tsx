@@ -100,13 +100,24 @@ export default function DashPage() {
       setDefaultDelivery(prof.default_delivery_fee)
       setODelv(v=>(!v||v==='0')?String(prof.default_delivery_fee):v)
     }
-    const[{data:prods},{data:ords},{data:sts}]=await Promise.all([
+    const[{data:prods},{data:sts}]=await Promise.all([
       (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
-      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
-    setOrders(ords||[])
+    // Бүх захиалгыг pagination-аар татна
+    const allOrds:any[]=[]
+    let pg2=0
+    while(true){
+      const {data:pageOrds}=await (activeStoreId
+        ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}).range(pg2*1000,(pg2+1)*1000-1)
+        : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).range(pg2*1000,(pg2+1)*1000-1))
+      if(!pageOrds||pageOrds.length===0) break
+      allOrds.push(...pageOrds)
+      if(pageOrds.length<1000) break
+      pg2++
+    }
+    setOrders(allOrds)
     setStores(sts||[])
     // Log-оос тооцоолсон stock
     if(prods&&prods.length>0){
