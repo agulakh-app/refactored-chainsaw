@@ -732,7 +732,6 @@ if (error) {
                     onFocus={()=>{setRProdFocused(true);setRProdSearch('');setRProdOpen(true)}}
                     onBlur={()=>{setTimeout(()=>{setRProdFocused(false);setRProdOpen(false)},150)}}
                     onChange={e=>{setRProdSearch(e.target.value);setRProdOpen(true)}}
-                    onBlur={()=>setTimeout(()=>setRProdOpen(false),150)}
                   />
                   {rProdOpen&&(
                     <div className="absolute top-full left-0 right-0 z-50 bg-white border border-gray-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
