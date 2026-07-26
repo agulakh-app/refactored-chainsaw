@@ -34,6 +34,8 @@ export default function DashPage() {
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
   const [allOrdersLoaded,setAllOrdersLoaded]=useState(false)
+  const [ordPage,setOrdPage]=useState(0)
+  const PAGE_SIZE=100
   const [stores,setStores]=useState<any[]>([])
   const [flash,setFlash]=useState('')
   const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void}|null>(null)
@@ -112,7 +114,7 @@ export default function DashPage() {
     }
     const[{data:prods},{data:ords},{data:sts}]=await Promise.all([
       (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
-      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(200) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(200)),
+      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
@@ -706,9 +708,9 @@ export default function DashPage() {
         </div>
         <div className="px-3 py-3 border-b border-gray-100 bg-gray-50">
           <div className="grid grid-cols-4 gap-2">
-            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>{setPhoneFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
+            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>{setPhoneFilter(e.target.value);setOrdPage(0)}}/>
             <div>
-              <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэр..." value={productFilter} onChange={e=>{setProductFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
+              <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэр..." value={productFilter} onChange={e=>{setProductFilter(e.target.value);setOrdPage(0)}}/>
               {productFilter&&(()=>{
                 const pf=productFilter.toLowerCase()
                 const pending=filtered.filter(o=>o.status==='pending').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
@@ -721,10 +723,10 @@ export default function DashPage() {
               })()}
             </div>
             <div className="flex items-center gap-1">
-              <input type="date" className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>{setDateFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
+              <input type="date" className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>{setDateFilter(e.target.value);setOrdPage(0)}}/>
               {dateFilter&&<button onClick={()=>setDateFilter('')} className="text-gray-400 text-xs px-1">✕</button>}
             </div>
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);if(e.target.value!=='all') loadAllOrders()}}>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);setOrdPage(0)}}>
               <option value="all">Бүх төлөв</option>
               <option value="pending">Хүлээгдэж байна</option>
               <option value="delivered">Хүргэгдсэн</option>
@@ -733,7 +735,12 @@ export default function DashPage() {
           </div>
         </div>
 
-        {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
+        {(()=>{
+          const allDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a))
+          const pageDates=allDates.slice(ordPage*PAGE_SIZE, (ordPage+1)*PAGE_SIZE)
+          const totalPages=Math.ceil(allDates.length/PAGE_SIZE)
+          return <>
+          {pageDates.map(date=>{
           const grp=groups[date]
           const dayGross=grp.reduce((a,o)=>(o.order_items||[]).reduce((s:number,i:any)=>s+i.quantity*i.unit_price,a),0)
           const dayDelv=grp.reduce((a,o)=>a+(o.delivery_fee||0),0)
@@ -841,7 +848,16 @@ export default function DashPage() {
               </div>
             </div>
           )
-        })}
+          })}
+          {totalPages>1&&<div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50">
+            <button onClick={()=>setOrdPage(p=>Math.max(0,p-1))} disabled={ordPage===0}
+              className="px-4 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40">← Өмнөх</button>
+            <span className="text-xs text-gray-400">{ordPage+1} / {totalPages} ({filtered.length} захиалга)</span>
+            <button onClick={()=>setOrdPage(p=>Math.min(totalPages-1,p+1))} disabled={ordPage===totalPages-1}
+              className="px-4 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-600 disabled:opacity-40">Дараах →</button>
+          </div>}
+          </>
+        })()}
         {filtered.length===0&&<p className="text-center text-gray-400 text-sm py-10">Захиалга олдсонгүй</p>}
       </div>
     </div>
