@@ -1,4 +1,17 @@
 'use client'
+
+  // Хайлт хийхэд бүх захиалга татах
+  const loadAllOrders = useCallback(async()=>{
+    if(allOrdersLoaded) return
+    const{data:{user}}=await supabase.auth.getUser()
+    const targetId=ownerId||user?.id
+    if(!targetId) return
+    const{data:ords}=await (activeStoreId
+      ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false})
+      : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}))
+    if(ords) { setOrders(ords); setAllOrdersLoaded(true) }
+  },[ownerId,activeStoreId,allOrdersLoaded])
+
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +33,7 @@ export default function DashPage() {
   const isViewer = guestRole === 'viewer'
   const [products,setProducts]=useState<Product[]>([])
   const [orders,setOrders]=useState<Order[]>([])
+  const [allOrdersLoaded,setAllOrdersLoaded]=useState(false)
   const [stores,setStores]=useState<any[]>([])
   const [flash,setFlash]=useState('')
   const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void}|null>(null)
@@ -98,7 +112,7 @@ export default function DashPage() {
     }
     const[{data:prods},{data:ords},{data:sts}]=await Promise.all([
       (activeStoreId ? supabase.from('products').select('*').eq('user_id',targetId).eq('store_id',activeStoreId).order('name') : supabase.from('products').select('*').eq('user_id',targetId).order('name')),
-      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(5000) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(5000)),
+      (activeStoreId ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(200) : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).limit(200)),
       supabase.from('stores').select('*').eq('user_id',targetId).order('created_at'),
     ])
     setProducts(prods||[])
@@ -692,9 +706,9 @@ export default function DashPage() {
         </div>
         <div className="px-3 py-3 border-b border-gray-100 bg-gray-50">
           <div className="grid grid-cols-4 gap-2">
-            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>{setPhoneFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
             <div>
-              <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэр..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
+              <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэр..." value={productFilter} onChange={e=>{setProductFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
               {productFilter&&(()=>{
                 const pf=productFilter.toLowerCase()
                 const pending=filtered.filter(o=>o.status==='pending').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
@@ -707,10 +721,10 @@ export default function DashPage() {
               })()}
             </div>
             <div className="flex items-center gap-1">
-              <input type="date" className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+              <input type="date" className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>{setDateFilter(e.target.value);if(e.target.value) loadAllOrders()}}/>
               {dateFilter&&<button onClick={()=>setDateFilter('')} className="text-gray-400 text-xs px-1">✕</button>}
             </div>
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>{setStatusFilter(e.target.value);if(e.target.value!=='all') loadAllOrders()}}>
               <option value="all">Бүх төлөв</option>
               <option value="pending">Хүлээгдэж байна</option>
               <option value="delivered">Хүргэгдсэн</option>
