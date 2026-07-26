@@ -837,7 +837,7 @@ if (error) {
             <button onClick={()=>setPItems(prev=>[...prev,{pid:'',vl:'',qty:'',recv:''}])}
               className="text-xs text-emerald-600 hover:underline">+ Нэмэх</button>
           </div>
-          <div className="grid gap-2 items-end" style={{gridTemplateColumns:'1fr 1fr 110px auto'}}>
+          <div className="grid gap-2 items-end" style={{gridTemplateColumns:'1fr 2fr 110px auto'}}>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Тээвэр (₮)</label>
               <input type="number" placeholder="0" value={pShip} onChange={e=>setPShip(e.target.value)}
