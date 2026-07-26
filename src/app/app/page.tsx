@@ -690,29 +690,33 @@ export default function DashPage() {
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-medium text-gray-800 text-sm text-left">Захиалгын бүртгэл</h2>
         </div>
-        <div className="grid grid-cols-3 gap-2 px-3 py-3 border-b border-gray-100 bg-gray-50">
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
-          <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэрээр хайх..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
-          {productFilter&&(()=>{
-            const pf=productFilter.toLowerCase()
-            const pending=filtered.filter(o=>o.status==='pending').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
-            const delivered=filtered.filter(o=>o.status==='delivered').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
-            if(!pending&&!delivered) return null
-            return <div className="flex gap-3 mt-1 px-1">
-              {pending>0&&<span className="text-xs text-orange-500 font-medium">Хүлээгдэж: {pending}ш</span>}
-              {delivered>0&&<span className="text-xs text-emerald-600 font-medium">Хүргэгдсэн: {delivered}ш</span>}
+        <div className="px-3 py-3 border-b border-gray-100 bg-gray-50">
+          <div className="grid grid-cols-4 gap-2">
+            <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Утасны дугаар..." value={phoneFilter} onChange={e=>setPhoneFilter(e.target.value)}/>
+            <div>
+              <input className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" placeholder="Барааны нэр..." value={productFilter} onChange={e=>setProductFilter(e.target.value)}/>
+              {productFilter&&(()=>{
+                const pf=productFilter.toLowerCase()
+                const pending=filtered.filter(o=>o.status==='pending').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
+                const delivered=filtered.filter(o=>o.status==='delivered').reduce((sum,o)=>sum+(o.order_items||[]).filter((it:any)=>((it.product_name||'')+(it.variant_label?' '+it.variant_label:'')).toLowerCase().includes(pf)).reduce((a:number,it:any)=>a+it.quantity,0),0)
+                if(!pending&&!delivered) return null
+                return <div className="flex gap-2 mt-0.5 px-1">
+                  {pending>0&&<span className="text-xs text-orange-500">Хүлээгдэж: {pending}ш</span>}
+                  {delivered>0&&<span className="text-xs text-emerald-600">Хүргэгдсэн: {delivered}ш</span>}
+                </div>
+              })()}
             </div>
-          })()}
-          <div className="flex items-center gap-1 w-full">
-            <input type="date" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
-            {dateFilter&&<button onClick={()=>setDateFilter('')} className="text-gray-400 text-xs px-2 py-2">✕</button>}
-          </div>
-          {stores.length>0?(
-            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={storeFilter} onChange={e=>setStoreFilter(e.target.value)}>
-              <option value="all">Бүх дэлгүүр</option>
-              {stores.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+            <div className="flex items-center gap-1">
+              <input type="date" className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white" value={dateFilter} onChange={e=>setDateFilter(e.target.value)}/>
+              {dateFilter&&<button onClick={()=>setDateFilter('')} className="text-gray-400 text-xs px-1">✕</button>}
+            </div>
+            <select className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white w-full" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+              <option value="all">Бүх төлөв</option>
+              <option value="pending">Хүлээгдэж байна</option>
+              <option value="delivered">Хүргэгдсэн</option>
+              <option value="cancelled">Цуцлагдсан</option>
             </select>
-          ):<div/>}
+          </div>
         </div>
 
         {Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>{
