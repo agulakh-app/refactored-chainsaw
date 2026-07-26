@@ -1,17 +1,5 @@
 'use client'
 
-  // Хайлт хийхэд бүх захиалга татах
-  const loadAllOrders = useCallback(async()=>{
-    if(allOrdersLoaded) return
-    const{data:{user}}=await supabase.auth.getUser()
-    const targetId=ownerId||user?.id
-    if(!targetId) return
-    const{data:ords}=await (activeStoreId
-      ? supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).eq('store_id',activeStoreId).order('date',{ascending:false}).order('day_seq',{ascending:false})
-      : supabase.from('orders').select('*, order_items(*)').eq('user_id',targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}))
-    if(ords) { setOrders(ords); setAllOrdersLoaded(true) }
-  },[ownerId,activeStoreId,allOrdersLoaded])
-
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
