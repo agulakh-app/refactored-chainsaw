@@ -922,7 +922,7 @@ if (error) {
             ):(
               <div>
                 <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-                  style={{gridTemplateColumns:'1.4fr 52px 52px 65px 58px 65px 65px 62px 52px 48px 20px'}}>
+                  style={{gridTemplateColumns:'1.5fr 50px 50px 62px 55px 62px 62px 60px 50px 46px 18px'}}>
                   <div>Барааны нэр</div>
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
@@ -945,7 +945,7 @@ if (error) {
                     return(
                       <div key={i} className={s.zoruu!==0?'bg-red-50/20':''}>
                         <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
-                          style={{gridTemplateColumns:'1.4fr 52px 52px 65px 58px 65px 65px 62px 52px 48px 20px'}}>
+                          style={{gridTemplateColumns:'1.5fr 50px 50px 62px 55px 62px 62px 60px 50px 46px 18px'}}>
                           <div className="cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
                             {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
@@ -961,7 +961,7 @@ if (error) {
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
                           <div className="flex items-center gap-2 justify-end">
-                            {!isViewer&&!pk.variant&&fullProd&&(
+                            {!isViewer&&fullProd&&(!pk.variant||supKeys2.filter(k=>k.id===pk.id)[0]===pk)&&(
                               <>
                                 <button onClick={()=>openEditProd(fullProd)} className="text-xs text-gray-400 hover:text-gray-700">Засах</button>
                                 <button onClick={async()=>{
