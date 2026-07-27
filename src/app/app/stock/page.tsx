@@ -906,8 +906,12 @@ if (error) {
                 <div className="flex items-center gap-3">
                   <h2 className="font-medium text-gray-800 text-sm">Барааны хөдөлгөөн</h2>
                   <button onClick={()=>setShowHidden(h=>!h)}
-                    className={`text-xs px-2 py-0.5 rounded-full border ${showHidden?'border-orange-300 text-orange-500 bg-orange-50':'border-gray-200 text-gray-400'}`}>
-                    {showHidden?'👁 Нуусан харагдаж байна':'🙈 Нуусан'}
+                    className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${showHidden?'border-gray-300 text-gray-600 bg-gray-100':'border-gray-200 text-gray-400'}`}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Нуусан
                   </button>
                 </div>
                 </div>
@@ -956,7 +960,7 @@ if (error) {
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
-                          <div className="text-right flex gap-2 justify-end items-center">
+                          <div className="flex items-center gap-2 justify-end">
                             {!isViewer&&!pk.variant&&fullProd&&(
                               <>
                                 <button onClick={()=>openEditProd(fullProd)} className="text-xs text-gray-400 hover:text-gray-700">Засах</button>
@@ -965,8 +969,11 @@ if (error) {
                                   await supabase.from('products').update({hidden:!isHidden}).eq('id',fullProd.id)
                                   showFlash(isHidden?'Харагдана ✓':'Нуугдлаа ✓')
                                   load()
-                                }} className="text-xs text-gray-300 hover:text-orange-400">
-                                  {(fullProd as any).hidden?'👁':'🙈'}
+                                }} className={`text-gray-300 hover:text-gray-500 transition-colors ${(fullProd as any).hidden?'opacity-30':''}`} title={((fullProd as any).hidden)?'Харуулах':'Нуух'}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
                                 </button>
                               </>
                             )}
