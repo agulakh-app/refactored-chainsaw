@@ -30,6 +30,7 @@ export default function StockPage() {
   const [supply, setSupply] = useState<any[]>([])
   const [supKeys2, setSupKeys2] = useState<any[]>([])
   const [hasIssue, setHasIssue] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [editDetModal, setEditDetModal] = useState<any>(null)
   const tlabel2 = {ordered:'Захиалсан',received:'Хүлээн авсан',restocked:'Цэнэглэсэн'} as any
   const tcolor2 = {ordered:'text-blue-600 bg-blue-50',received:'text-emerald-700 bg-emerald-50',restocked:'text-orange-600 bg-orange-50'} as any
@@ -205,7 +206,11 @@ export default function StockPage() {
         const _fd2=(_d2:string)=>{if(!_d2)return'';const[,_m2,_day2]=_d2.split('-');return _m2+'/'+_day2}
         return[..._sup2.filter(_ms2).map((_s2:any)=>({id:_s2.id,date:_s2.date,type:_s2.type,qty:_s2.quantity,note:_s2.note,del:true,fmtD:_fd2(_s2.date)})),..._ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).map((_l2:any)=>({id:_l2.id,date:_l2.date,type:'restocked',qty:_l2.quantity,note:_l2.note,del:false,fmtD:_fd2(_l2.date)}))].sort((_a2:any,_b2:any)=>_b2.date.localeCompare(_a2.date))
       }
-      const _filteredKeys=_pks2.filter(_pk2=>{const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0})
+      const _filteredKeys=_pks2.filter(_pk2=>{
+        const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
+        if(!showHidden&&(_prod2 as any)?.hidden) return false
+        const _s2=_getSS2(_pk2);return _s2.ordered>0||_s2.received>0||_s2.restocked>0
+      })
       setSupKeys2(_filteredKeys.map(_pk2=>({..._pk2,_ss:_getSS2(_pk2),_sd:_getSD2(_pk2)})))
       setHasIssue(_filteredKeys.some(_pk2=>_getSS2(_pk2).zoruu!==0||_getSS2(_pk2).expected<0))
       // Products-д тооцоолсон stock-г шинэчлэх — dropdown-д зөв тоо харагдана
@@ -559,18 +564,20 @@ if (error) {
             <h3 className="font-medium text-gray-800 text-sm mb-4">
               {editDetModal.type==='ordered'?'Захиалсан':editDetModal.type==='received'?'Ирсэн':'Цэнэглэсэн'} бүртгэл засах
             </h3>
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Огноо</label>
-                <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white"
-                  value={editDetModal.date}
-                  onChange={e=>setEditDetModal((m:any)=>({...m,date:e.target.value}))}/>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">Тоо</label>
-                <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
-                  value={editDetModal.qty}
-                  onChange={e=>setEditDetModal((m:any)=>({...m,qty:Number(e.target.value)}))}/>
+            <div className="space-y-2 mb-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Огноо</label>
+                  <input type="date" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+                    value={editDetModal.date}
+                    onChange={e=>setEditDetModal((m:any)=>({...m,date:e.target.value}))}/>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Тоо</label>
+                  <input type="number" className="w-full px-2 py-2 rounded-lg border border-gray-200 text-sm text-center"
+                    value={editDetModal.qty}
+                    onChange={e=>setEditDetModal((m:any)=>({...m,qty:Number(e.target.value)}))}/>
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-gray-500 mb-1">Тэмдэглэл</label>
@@ -896,7 +903,13 @@ if (error) {
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="font-medium text-gray-800 text-sm">Барааны хөдөлгөөн</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="font-medium text-gray-800 text-sm">Барааны хөдөлгөөн</h2>
+                  <button onClick={()=>setShowHidden(h=>!h)}
+                    className={`text-xs px-2 py-0.5 rounded-full border ${showHidden?'border-orange-300 text-orange-500 bg-orange-50':'border-gray-200 text-gray-400'}`}>
+                    {showHidden?'👁 Нуусан харагдаж байна':'🙈 Нуусан'}
+                  </button>
+                </div>
                 </div>
               {hasIssue&&<span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">⚠️ Зөрүү илэрсэн</span>}
             </div>
@@ -943,9 +956,19 @@ if (error) {
                           <div className="text-right text-xs font-bold">
                             {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex gap-2 justify-end items-center">
                             {!isViewer&&!pk.variant&&fullProd&&(
-                              <button onClick={()=>openEditProd(fullProd)} className="text-xs text-gray-400 hover:text-gray-700">Засах</button>
+                              <>
+                                <button onClick={()=>openEditProd(fullProd)} className="text-xs text-gray-400 hover:text-gray-700">Засах</button>
+                                <button onClick={async()=>{
+                                  const isHidden=(fullProd as any).hidden
+                                  await supabase.from('products').update({hidden:!isHidden}).eq('id',fullProd.id)
+                                  showFlash(isHidden?'Харагдана ✓':'Нуугдлаа ✓')
+                                  load()
+                                }} className="text-xs text-gray-300 hover:text-orange-400">
+                                  {(fullProd as any).hidden?'👁':'🙈'}
+                                </button>
+                              </>
                             )}
                           </div>
                           <div className="text-xs text-gray-300 text-right cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>{isExp?'▲':'▼'}</div>
