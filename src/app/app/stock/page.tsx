@@ -934,7 +934,7 @@ if (error) {
                     const fullProd=products.find(p=>p.id===pk.id)
                     return(
                       <div key={i} className={s.zoruu!==0?'bg-red-50/20':''}>
-                        <div className="grid items-center px-4 py-2.5 hover:bg-gray-50/50"
+                        <div className={`grid items-center px-4 py-2.5 hover:bg-gray-50/50${s.expected<=0?' opacity-40':''}`}
                           style={{gridTemplateColumns:'1.5fr 50px 50px 62px 55px 62px 62px 60px 50px 46px 18px'}}>
                           <div className="cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
