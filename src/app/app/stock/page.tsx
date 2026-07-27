@@ -742,7 +742,7 @@ if (error) {
                             <button type="button" className="flex-1 text-left flex justify-between items-center"
                               onMouseDown={()=>{setRProd(p.id);setRVariantIdx(-1);setRProdSearch('');setRProdOpen(false)}}>
                               <span>{p.name}</span>
-                              <span className="text-xs text-gray-400 mr-2">{p.stock}ш</span>
+                              <span className="text-xs text-gray-400 mr-2">{(()=>{const sk=supKeys2.find(k=>k.id===p.id&&k.variant==='');return sk?sk._ss.expected+'ш':''})()}</span>
                             </button>
                             <button type="button" onMouseDown={(e)=>{e.stopPropagation();setRProdOpen(false);setConfirmModal({msg:p.name+' устгах уу?',onOk:async()=>{await supabase.from('supply_log').delete().eq('product_id',p.id);await supabase.from('restock_log').delete().eq('product_id',p.id);await supabase.from('products').delete().eq('id',p.id);if(rProd===p.id)setRProd('');load()}})}}
                               className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-100 text-gray-300 hover:text-red-400 flex-shrink-0 text-xs">✕</button>
@@ -771,9 +771,12 @@ if (error) {
                   <select className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
                     value={rVariantIdx} onChange={e=>setRVariantIdx(Number(e.target.value))}>
                     <option value={-1}>— Сонгох —</option>
-                    {rVariants.map((v,i)=>(
-                      <option key={i} value={i}>{[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)</option>
-                    ))}
+                    {rVariants.map((v,i)=>{
+                      const lbl=[v.size,v.color].filter(Boolean).join(' / ')
+                      const sk=supKeys2.find(k=>k.id===rProd&&k.variant===lbl)
+                      const calcStock=sk?sk._ss.expected:v.stock
+                      return <option key={i} value={i}>{lbl} ({calcStock}ш)</option>
+                    })}
                   </select>
                 </div>
               )}
