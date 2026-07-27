@@ -563,7 +563,7 @@ export default function DashPage() {
                           <option value="">— Хэмжээ / Өнгө сонгох —</option>
                           {variants.map((v:any,vi:number)=>(
                             <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
-                              {[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш){v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
+                              {[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
                             </option>
                           ))}
                         </select>
@@ -681,7 +681,7 @@ export default function DashPage() {
                           <option value="">— Хэмжээ / Өнгө сонгох —</option>
                           {variants.map((v:any,vi:number)=>(
                             <option key={vi} value={[v.size,v.color].filter(Boolean).join(' / ')}>
-                              {[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш){v.price?' — '+Number(v.price).toLocaleString()+'₮':''}
+                              {[v.size,v.color].filter(Boolean).join(' / ')} ({v.stock}ш)
                             </option>
                           ))}
                         </select>
