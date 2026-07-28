@@ -188,12 +188,9 @@ export default function StockPage() {
         const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _manualOut2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
         const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
-        const _sold2=_pk2.variant
-          ?((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)+((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
-          :((_sm2[_pk2.id]&&_sm2[_pk2.id]['__total__'])||0)
-        const _pending2=_pk2.variant
-          ?((_pm2[_pk2.id]&&_pm2[_pk2.id][_vkey])||0)+((_pm2[_pk2.id]&&_pm2[_pk2.id]['__total__'])||0)
-          :((_pm2[_pk2.id]&&_pm2[_pk2.id]['__total__'])||0)
+        // variant-тай бараанд: тухайн variant-ийн тоо л авна (давхардахгүй)
+        const _sold2=((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)
+        const _pending2=((_pm2[_pk2.id]&&_pm2[_pk2.id][_vkey])||0)
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
         const _expectedStk=_rst2-_sold2-_manualOut2
@@ -912,7 +909,7 @@ if (error) {
             ):(
               <div>
                 <div className="grid text-xs text-gray-400 font-medium px-4 py-2 bg-gray-50 border-b border-gray-100"
-                  style={{gridTemplateColumns:'1.5fr 50px 50px 62px 55px 62px 62px 60px 50px 46px 18px'}}>
+                  style={{gridTemplateColumns:'1.5fr 52px 52px 68px 58px 68px 68px 64px 52px 20px'}}>
                   <div>Барааны нэр</div>
                   <div className="text-right">Захиалсан</div>
                   <div className="text-right">Ирсэн</div>
@@ -921,7 +918,6 @@ if (error) {
                   <div className="text-right">Зарагдсан</div>
                   <div className="text-right">Үлдэгдэл</div>
                   <div className="text-right text-orange-400">Хүлээгдэж</div>
-                  <div className="text-right">Зөрүү</div>
                   <div></div>
                   <div></div>
                 </div>
@@ -933,9 +929,9 @@ if (error) {
                     const isExp=supplyExpanded.has(ekey)
                     const fullProd=products.find(p=>p.id===pk.id)
                     return(
-                      <div key={i} className={s.zoruu!==0?'bg-red-50/20':''}>
+                      <div key={i} className=''>
                         <div className={`grid items-center px-4 py-2.5 hover:bg-gray-50/50${s.expected<=0?' opacity-40':''}`}
-                          style={{gridTemplateColumns:'1.5fr 50px 50px 62px 55px 62px 62px 60px 50px 46px 18px'}}>
+                          style={{gridTemplateColumns:'1.5fr 52px 52px 68px 58px 68px 68px 64px 52px 20px'}}>
                           <div className="cursor-pointer" onClick={()=>{const n=new Set(supplyExpanded);n.has(ekey)?n.delete(ekey):n.add(ekey);setSupplyExpanded(n)}}>
                             <span className="text-sm font-medium text-gray-700">{pk.label}</span>
                             {pk.variant&&<span className="text-xs text-gray-400 ml-1.5">{pk.variant}</span>}
@@ -948,7 +944,7 @@ if (error) {
                           <div className={`text-right text-xs font-bold ${s.expected<0?'text-red-500':'text-gray-800'}`}>{s.expected}ш</div>
                           <div className="text-right text-xs font-medium text-orange-400">{s.pending>0?s.pending+'ш':'—'}</div>
                           <div className="text-right text-xs font-bold">
-                            {s.zoruu===0?<span className="text-emerald-500">✓</span>:<span className={s.zoruu>0?'text-blue-500':'text-red-500'}>{s.zoruu>0?'+':''}{s.zoruu}ш</span>}
+
                           </div>
                           <div className="flex items-center gap-2 justify-end">
                             {!isViewer&&!pk.variant&&fullProd&&(
