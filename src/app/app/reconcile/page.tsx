@@ -114,7 +114,7 @@ export default function ReconcilePage() {
 
   async function saveEdit(id: string) {
     const recv = Number(String(editData.received_amount||'').replace(/[^0-9]/g,''))
-    const sys = Number(editData.system_amount||0)
+    const sys = calcSystemAmt(editData.date_from, editData.date_to)
     const d = recv - sys
     const status = d===0?'matched':d>0?'surplus':'shortage'
     await supabase.from('delivery_reconciliations').update({
@@ -247,7 +247,8 @@ export default function ReconcilePage() {
           ):(
             <>
               {visibleRecs.map(r=>{
-                const d = r.received_amount - r.system_amount
+                const liveSys = calcSystemAmt(r.date_from, r.date_to)
+                const d = r.received_amount - liveSys
                 const isEdit = editId===r.id
                 return(
                   <tr key={r.id} className="border-b border-gray-100 last:border-0">
@@ -256,7 +257,7 @@ export default function ReconcilePage() {
                         <td className="px-3 py-2.5 font-medium text-gray-700 whitespace-nowrap">
                           {fmtD(r.date_from)}{r.date_from!==r.date_to&&<span className="text-gray-400">–{fmtD(r.date_to)}</span>}
                         </td>
-                        <td className="px-3 py-2.5 text-right text-gray-500 whitespace-nowrap">{fmt(r.system_amount)}₮</td>
+                        <td className="px-3 py-2.5 text-right text-gray-500 whitespace-nowrap">{fmt(liveSys)}₮</td>
                         <td className="px-3 py-2.5 text-right font-medium text-gray-800 whitespace-nowrap">{fmt(r.received_amount)}₮</td>
                         <td className="px-3 py-2.5 text-gray-700 whitespace-nowrap">{r.courier}</td>
                         <td className="px-3 py-2.5 text-right whitespace-nowrap">
@@ -293,6 +294,12 @@ export default function ReconcilePage() {
                               value={editData.date_to} onChange={e=>setEditData((p:any)=>({...p,date_to:e.target.value}))}/>
                           </div>
                           <div>
+                            <label className="block text-xs text-gray-400 mb-1">Систем дүн (шинэчлэгдсэн)</label>
+                            <div className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs bg-gray-100 text-gray-500">
+                              {fmt(calcSystemAmt(editData.date_from, editData.date_to))}₮
+                            </div>
+                          </div>
+                          <div>
                             <label className="block text-xs text-gray-400 mb-1">Тушаасан (₮)</label>
                             <input type="text" inputMode="numeric" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
                               value={editData.received_amount} onChange={e=>setEditData((p:any)=>({...p,received_amount:e.target.value}))}/>
@@ -302,11 +309,11 @@ export default function ReconcilePage() {
                             <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
                               value={editData.courier} onChange={e=>setEditData((p:any)=>({...p,courier:e.target.value}))}/>
                           </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
-                            <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
-                              value={editData.note||''} onChange={e=>setEditData((p:any)=>({...p,note:e.target.value}))}/>
-                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-400 mb-1">Тэмдэглэл</label>
+                          <input className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
+                            value={editData.note||''} onChange={e=>setEditData((p:any)=>({...p,note:e.target.value}))}/>
                         </div>
                         <div className="flex gap-2 justify-end">
                           <button onClick={()=>setEditId(null)} className="px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg">Болих</button>
