@@ -37,9 +37,28 @@ export default function ReconcilePage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if(!targetId) return
-    const q = supabase.from('orders').select('*, order_items(*)').eq('user_id', targetId).eq('status','delivered').limit(5000)
-    const { data: ords } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
-    setOrders(ords||[])
+    // 1. Бүх delivered захиалга татна (nested order_items ашиглахгүй — 1000 row limit-аас сэргийлнэ)
+    const allOrds:any[]=[]
+    let pg=0
+    while(true){
+      const q = supabase.from('orders').select('id,date,delivery_fee,status,store_id').eq('user_id',targetId).eq('status','delivered').order('date',{ascending:false}).range(pg*1000,(pg+1)*1000-1)
+      const { data: pageOrds } = activeStoreId ? await q.eq('store_id',activeStoreId) : await q
+      if(!pageOrds||pageOrds.length===0) break
+      allOrds.push(...pageOrds)
+      if(pageOrds.length<1000) break
+      pg++
+    }
+    // 2. order_items-г 500-аар batch татна
+    const allIds=allOrds.map((o:any)=>o.id)
+    const itemMap:any={}
+    for(let i=0;i<allIds.length;i+=500){
+      const {data:items}=await supabase.from('order_items').select('order_id,quantity,unit_price').in('order_id',allIds.slice(i,i+500)).limit(5000)
+      for(const it of (items||[])){
+        if(!itemMap[it.order_id]) itemMap[it.order_id]=[]
+        itemMap[it.order_id].push(it)
+      }
+    }
+    setOrders(allOrds.map((o:any)=>({...o,order_items:itemMap[o.id]||[]})))
     const { data: rs } = await supabase.from('delivery_reconciliations')
       .select('*').eq('user_id', targetId).order('date_from',{ascending:false})
     setRecs(rs||[])
@@ -47,10 +66,11 @@ export default function ReconcilePage() {
 
   useEffect(()=>{ load() },[load])
 
-  // Orders статус өөрчлөгдөхөд автоматаар шинэчлэх
+  // Orders болон order_items өөрчлөгдөхөд автоматаар шинэчлэх
   useEffect(()=>{
     const channel = supabase.channel('reconcile-orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, ()=>{ load() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, ()=>{ load() })
       .subscribe()
     return ()=>{ supabase.removeChannel(channel) }
   },[load])
