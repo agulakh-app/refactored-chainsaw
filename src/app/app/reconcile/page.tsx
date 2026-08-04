@@ -72,7 +72,9 @@ export default function ReconcilePage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, ()=>{ load() })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, ()=>{ load() })
       .subscribe()
-    return ()=>{ supabase.removeChannel(channel) }
+    // Fallback: Realtime publication тохируулагдаагүй тохиолдолд ч мэдээлэл шинэчлэгдэж байхаар 20 сек тутам polling хийнэ
+    const poll = setInterval(()=>{ load() }, 20000)
+    return ()=>{ supabase.removeChannel(channel); clearInterval(poll) }
   },[load])
 
   useEffect(()=>{
