@@ -258,15 +258,44 @@ export default function HistoryPage() {
     XLSX.writeFile(wb,'olula_template.xlsx')
   }
 
+  // Огноог ямар ч хэлбэрээр ирсэн ч (Date объект, Excel serial дугаар, эсвэл текст) зөв YYYY-MM-DD болгож хувиргана
+  function normalizeDateValue(val:any): string {
+    if(val instanceof Date && !isNaN(val.getTime())){
+      const y=val.getFullYear(), m=String(val.getMonth()+1).padStart(2,'0'), d=String(val.getDate()).padStart(2,'0')
+      return `${y}-${m}-${d}`
+    }
+    if(typeof val==='number'){
+      // Excel serial date: 1899-12-30-аас хойшхи өдрийн тоо
+      const ms=Math.round((val-25569)*86400*1000)
+      const dt=new Date(ms)
+      const y=dt.getUTCFullYear(), m=String(dt.getUTCMonth()+1).padStart(2,'0'), d=String(dt.getUTCDate()).padStart(2,'0')
+      return `${y}-${m}-${d}`
+    }
+    return String(val||'').trim()
+  }
+
   // Бараа текст задлах: "ЭР багц, Суга ЭМ 4, Хөл багц 2" → [{name,qty}]
-  function parseItems(text: string): {name:string,qty:number}[] {
+  // prodList дамжуулбал бодит барааны нэртэй тааруулж, "Саван150" мэт нэр дэх тоог ширхэг гэж буруу тайлахаас сэргийлнэ
+  function parseItems(text: string, prodList: any[] = []): {name:string,qty:number}[] {
     if(!text.trim()) return []
+    const norm=(s:string)=>s.toLowerCase().replace(/\s+/g,' ').trim()
     return text.split(',').map(part=>{
       part=part.trim()
+      if(!part) return null
+      // 1. Бүтэн мөр (тоо таслалгүйгээр) барааны бодит нэртэй яг таарч байвал — тоог хэзээ ч бүү тайл
+      if(prodList.find((p:any)=>norm(p.name)===norm(part))) return {name:part, qty:1}
+      // 2. "<Нэр> <тоо>[ш]" — заавал зай тусгаарлагдсан тоо байвал л тоо ширхэг гэж үзнэ
       const m=part.match(/^(.*?)\s+(\d+)\s*ш?$/)
       if(m&&m[1].trim()) return {name:m[1].trim(),qty:parseInt(m[2])}
-      return {name:part.replace(/\d+\s*ш?\s*$/,'').trim()||part,qty:1}
-    }).filter(x=>x.name.length>0)
+      // 3. Зай тусгаарлалгүй төгсгөлийн тоо ("Экс5") — зөвхөн тайлсны дараах нэр бодит бараатай таарвал л тоог ялгана
+      const m2=part.match(/^(.*?)(\d+)\s*ш?$/)
+      if(m2&&m2[1].trim()){
+        const candidateName=m2[1].trim()
+        if(prodList.find((p:any)=>norm(p.name)===norm(candidateName))) return {name:candidateName,qty:parseInt(m2[2])}
+      }
+      // 4. Юу ч таараагүй бол — нэрийг бүхэлд нь хэвээр үлдээж, тоог бүү хас (жишээ нь "Саван150")
+      return {name:part, qty:1}
+    }).filter((x):x is {name:string,qty:number}=>!!x&&x.name.length>0)
   }
 
   // Fuzzy match: том/жижиг үсэг, хоосон зай үл харгалзана
@@ -284,7 +313,7 @@ export default function HistoryPage() {
     const targetId=ownerId||user.id
     try {
       const buf=await file.arrayBuffer()
-      const wb=XLSX.read(new Uint8Array(buf),{type:'array'})
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array', cellDates:true})
       const sheet=wb.Sheets[wb.SheetNames[0]]
       const rows:any[]=sheet?XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true}):[]
       if(rows.length===0){
@@ -315,7 +344,8 @@ export default function HistoryPage() {
         const address=String(r['Хаяг']??r['Address']??r[keys[1]]??'').trim()
         // 3-р багана: Бараа
         const baraaText=String(r['Бараа']??r['Барааны нэр']??r['Product']??r[keys[2]]??'').trim()
-        const rawDate=(r['Огноо (YYYY/MM/DD)']||r['Огноо']||r['Date']||'').toString().trim()
+        const rawDateVal=r['Огноо (YYYY/MM/DD)']??r['Огноо']??r['Date']??''
+        const rawDate=normalizeDateValue(rawDateVal)
         const hasOwnDate=!!rawDate
         const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : importGlobalDate
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -326,7 +356,7 @@ export default function HistoryPage() {
         const rawTolbor=String(r['Төлбөр']||r['Статус']||'').trim()
         const isTolson=rawTolbor.toLowerCase().includes('төлсөн')||rawTolbor.toLowerCase().includes('paid')||rawTolbor.toLowerCase().includes('delivered')
         const status=isTolson?'delivered':'pending'
-        const parsedItems=parseItems(baraaText)
+        const parsedItems=parseItems(baraaText, prodList)
 
         // Давхар import шалгах
         const isDuplicate=dateValid&&phone&&existingSet.has(`${date}__${phone}`)
