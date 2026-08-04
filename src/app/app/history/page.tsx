@@ -51,10 +51,29 @@ export default function HistoryPage() {
     const { data:{ user } } = await supabase.auth.getUser()
     const targetId = ownerId || user?.id
     if (!targetId) return
-    const q = supabase.from('orders').select('*, order_items(*)')
-      .eq('user_id', targetId).order('date',{ascending:false}).order('day_seq',{ascending:false})
-    const { data } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
-    setOrders(data||[])
+    // 1. Бүх захиалгыг pagination-аар татна (Supabase-ийн 1000 мөрний хатуу дээд хязгаараас гарна)
+    const allOrds:any[]=[]
+    let pg=0
+    while(true){
+      const q = supabase.from('orders').select('id,date,day_seq,phone,address,delivery_fee,status,store_id')
+        .eq('user_id', targetId).order('date',{ascending:false}).order('day_seq',{ascending:false}).range(pg*1000,(pg+1)*1000-1)
+      const { data: pageOrds } = activeStoreId ? await q.eq('store_id', activeStoreId) : await q
+      if(!pageOrds||pageOrds.length===0) break
+      allOrds.push(...pageOrds)
+      if(pageOrds.length<1000) break
+      pg++
+    }
+    // 2. order_items-г 500-аар batch татна (nested select мөн 1000 мөрөөр хязгаарлагддаг тул тусад нь татна)
+    const allIds=allOrds.map((o:any)=>o.id)
+    const itemMap:any={}
+    for(let i=0;i<allIds.length;i+=500){
+      const {data:items}=await supabase.from('order_items').select('order_id,product_name,variant_label,quantity,unit_price').in('order_id',allIds.slice(i,i+500)).limit(5000)
+      for(const it of (items||[])){
+        if(!itemMap[it.order_id]) itemMap[it.order_id]=[]
+        itemMap[it.order_id].push(it)
+      }
+    }
+    setOrders(allOrds.map((o:any)=>({...o,order_items:itemMap[o.id]||[]})))
     const { data: sts } = await supabase.from('stores').select('*').eq('user_id', targetId)
     setStores(sts||[])
     const { data: prof } = await supabase.from('profiles').select('default_delivery_fee').eq('id', targetId).single()
@@ -728,6 +747,22 @@ export default function HistoryPage() {
                         />
                       )}
                       {row.address&&<span className="text-xs text-gray-400">{row.address.replace('[PAID]','').trim()}</span>}
+                      <div className="flex items-center gap-1">
+                        <input type="date" value={row.date}
+                          onChange={e=>{
+                            const val=e.target.value
+                            setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>{
+                              if(ri!==i) return r
+                              const validNow=/^\d{4}-\d{2}-\d{2}$/.test(val)
+                              const newErrors=validNow
+                                ? r.errors.filter((er:string)=>!er.startsWith('Огноо буруу формат'))
+                                : r.errors
+                              return {...r,date:val,hasOwnDate:true,errors:newErrors}
+                            })||null)
+                          }}
+                          className={`px-1.5 py-0.5 rounded border text-xs bg-white ${/^\d{4}-\d{2}-\d{2}$/.test(row.date)?'border-gray-200 text-gray-600':'border-red-300 text-red-500'}`}/>
+                        {!row.hasOwnDate&&<span className="text-[10px] text-gray-300" title="Файлд огноо ороогүй тул ерөнхий огноог ашиглаж байна">(ерөнхий)</span>}
+                      </div>
                     </div>
                     <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
                       className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none flex-shrink-0 ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
