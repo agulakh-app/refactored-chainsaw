@@ -535,6 +535,165 @@ export default function HistoryPage() {
     await processRows(rows, targetId)
   }
 
+  // Импортын preview-г огноогоор бүлэглэх — үндсэн захиалгын жагсаалт шиг он/сар/өдрөөр толгойлно
+  const importGroups = (()=>{
+    if(!importPreview) return null
+    const invalid:{row:any,idx:number}[]=[]
+    const validMap:Record<string,{row:any,idx:number}[]>={}
+    importPreview.forEach((row:any, idx:number)=>{
+      if(/^\d{4}-\d{2}-\d{2}$/.test(row.date)){
+        if(!validMap[row.date]) validMap[row.date]=[]
+        validMap[row.date].push({row, idx})
+      } else {
+        invalid.push({row, idx})
+      }
+    })
+    const dates=Object.keys(validMap).sort((a,b)=>b.localeCompare(a))
+    return {invalid, validMap, dates}
+  })()
+
+  // Нэг мөрийг зурах — showDateInline=true үед л мөрийн хажууд огноо засах талбар харагдана (буруу/тодорхойгүй огнооны мөрүүдэд)
+  function renderRow(row:any, i:number, showDateInline:boolean){
+    return (
+      <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            {row.phone?(
+              <span className="font-medium text-sm text-gray-800">{row.phone}</span>
+            ):(
+              <input
+                className="border border-red-200 rounded px-2 py-0.5 text-sm text-gray-700 bg-red-50 w-32"
+                placeholder="Утас..."
+                onChange={e=>{
+                  const val=e.target.value.trim()
+                  setImportPreview((prev:any)=>{
+                    if(!prev) return prev
+                    const next=[...prev]
+                    next[i]={...next[i],phone:val,
+                      errors:next[i].errors.filter((e2:string)=>e2!=='Утасны дугаар хоосон').concat(!val?['Утасны дугаар хоосон']:[])
+                    }
+                    return next
+                  })
+                }}
+              />
+            )}
+            {row.address&&<span className="text-xs text-gray-400">{row.address.replace('[PAID]','').trim()}</span>}
+            {showDateInline&&(
+              <div className="flex items-center gap-1">
+                <input type="date" value={row.date}
+                  onChange={e=>{
+                    const val=e.target.value
+                    setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>{
+                      if(ri!==i) return r
+                      const validNow=/^\d{4}-\d{2}-\d{2}$/.test(val)
+                      const newErrors=validNow
+                        ? r.errors.filter((er:string)=>!er.startsWith('Огноо буруу формат'))
+                        : r.errors
+                      return {...r,date:val,hasOwnDate:true,errors:newErrors}
+                    })||null)
+                  }}
+                  className={`px-1.5 py-0.5 rounded border text-xs bg-white ${/^\d{4}-\d{2}-\d{2}$/.test(row.date)?'border-gray-200 text-gray-600':'border-red-300 text-red-500'}`}/>
+                {!row.hasOwnDate&&<span className="text-[10px] text-gray-300" title="Файлд огноо ороогүй тул ерөнхий огноог ашиглаж байна">(ерөнхий)</span>}
+              </div>
+            )}
+          </div>
+          <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
+            className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none flex-shrink-0 ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
+            {row.paid?'Төлсөн':'Төлөөгүй'}
+          </span>
+        </div>
+        <div className="mt-1.5 space-y-1">
+          {row.items.map((it:any, j:number)=>(
+            <div key={j} className="text-xs flex items-center gap-2">
+              {!it.product?(
+                <>
+                  <span className="text-red-400">🔴</span>
+                  <input
+                    className="border border-red-200 rounded px-2 py-0.5 text-xs text-gray-700 bg-red-50 flex-1 min-w-0"
+                    value={it.name}
+                    placeholder="Барааны нэр засах..."
+                    onChange={e=>{
+                      const newName=e.target.value
+                      setImportPreview((prev:any)=>{
+                        if(!prev) return prev
+                        const next=[...prev]
+                        const newItems=[...next[i].items]
+                        const prod=matchProduct(newName,importProdList)
+                        newItems[j]={...newItems[j],name:newName,product:prod,
+                          error:!prod?`"${newName}" агуулахад олдсонгүй`:null}
+                        next[i]={...next[i],items:newItems,
+                          errors:next[i].errors.filter((e2:string)=>!e2.includes('агуулахад олдсонгүй')&&!e2.includes('Бараа байхгүй'))
+                            .concat(!prod&&newName?[`"${newName}" агуулахад олдсонгүй`]:[])
+                        }
+                        return next
+                      })
+                    }}
+                  />
+                  <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
+                </>
+              ):(
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-emerald-600">✅</span>
+                  <span className="text-gray-600">{it.product.name}</span>
+                  <span className="text-gray-400">×</span>
+                  <input type="number" min="1"
+                    className="w-12 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-center"
+                    value={it.qty}
+                    onChange={e=>{
+                      const qty=Math.max(1,parseInt(e.target.value)||1)
+                      setImportPreview((prev:any)=>{
+                        if(!prev) return prev
+                        const next=[...prev]
+                        const newItems=[...next[i].items]
+                        newItems[j]={...newItems[j],qty}
+                        next[i]={...next[i],items:newItems}
+                        return next
+                      })
+                    }}
+                  />
+                  <span className="text-gray-400 text-[10px]">ш</span>
+                  <input type="text" inputMode="numeric"
+                    className="w-24 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right ml-1"
+                    placeholder="Үнэ ₮"
+                    value={it.price?Number(it.price).toLocaleString():''}
+                    onChange={e=>{
+                      const price=e.target.value.replace(/[^0-9]/g,'')
+                      setImportPreview((prev:any)=>{
+                        if(!prev) return prev
+                        const next=[...prev]
+                        const newItems=[...next[i].items]
+                        newItems[j]={...newItems[j],price}
+                        next[i]={...next[i],items:newItems}
+                        return next
+                      })
+                    }}
+                  />
+                  <span className="text-gray-400 text-[10px]">₮</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string, j:number)=>(
+          <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
+        ))}
+        {row.errors.length===0&&(
+          <div className="mt-1.5 flex items-center gap-3">
+            <label className="text-xs text-gray-400">Хүргэлт:</label>
+            <input type="number"
+              className="w-20 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
+              value={row.delv}
+              onChange={e=>{
+                const v=parseInt(e.target.value)||0
+                setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
+              }}/>
+            <span className="text-xs text-gray-400">₮</span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
 
@@ -723,142 +882,37 @@ export default function HistoryPage() {
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
-              {importPreview.map((row:any, i:number)=>(
-                <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-wrap flex-1">
-                      {row.phone?(
-                        <span className="font-medium text-sm text-gray-800">{row.phone}</span>
-                      ):(
-                        <input
-                          className="border border-red-200 rounded px-2 py-0.5 text-sm text-gray-700 bg-red-50 w-32"
-                          placeholder="Утас..."
-                          onChange={e=>{
-                            const val=e.target.value.trim()
-                            setImportPreview((prev:any)=>{
-                              if(!prev) return prev
-                              const next=[...prev]
-                              next[i]={...next[i],phone:val,
-                                errors:next[i].errors.filter((e2:string)=>e2!=='Утасны дугаар хоосон').concat(!val?['Утасны дугаар хоосон']:[])
-                              }
-                              return next
-                            })
-                          }}
-                        />
-                      )}
-                      {row.address&&<span className="text-xs text-gray-400">{row.address.replace('[PAID]','').trim()}</span>}
-                      <div className="flex items-center gap-1">
-                        <input type="date" value={row.date}
-                          onChange={e=>{
-                            const val=e.target.value
-                            setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>{
-                              if(ri!==i) return r
-                              const validNow=/^\d{4}-\d{2}-\d{2}$/.test(val)
-                              const newErrors=validNow
-                                ? r.errors.filter((er:string)=>!er.startsWith('Огноо буруу формат'))
-                                : r.errors
-                              return {...r,date:val,hasOwnDate:true,errors:newErrors}
-                            })||null)
-                          }}
-                          className={`px-1.5 py-0.5 rounded border text-xs bg-white ${/^\d{4}-\d{2}-\d{2}$/.test(row.date)?'border-gray-200 text-gray-600':'border-red-300 text-red-500'}`}/>
-                        {!row.hasOwnDate&&<span className="text-[10px] text-gray-300" title="Файлд огноо ороогүй тул ерөнхий огноог ашиглаж байна">(ерөнхий)</span>}
-                      </div>
-                    </div>
-                    <span onClick={()=>setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,paid:!r.paid}:r)||null)}
-                      className={`text-xs px-2 py-0.5 rounded-full cursor-pointer select-none flex-shrink-0 ${row.paid?'bg-emerald-100 text-emerald-700':'bg-gray-100 text-gray-400'}`}>
-                      {row.paid?'Төлсөн':'Төлөөгүй'}
-                    </span>
+              {importGroups&&importGroups.invalid.length>0&&(
+                <div>
+                  <div className="px-5 py-2 bg-red-50 text-xs font-medium text-red-500 sticky top-0 z-10">
+                    ⚠️ Огноо тодорхойгүй/буруу — {importGroups.invalid.length}
                   </div>
-                  <div className="mt-1.5 space-y-1">
-                    {row.items.map((it:any, j:number)=>(
-                      <div key={j} className="text-xs flex items-center gap-2">
-                        {!it.product?(
-                          <>
-                            <span className="text-red-400">🔴</span>
-                            <input
-                              className="border border-red-200 rounded px-2 py-0.5 text-xs text-gray-700 bg-red-50 flex-1 min-w-0"
-                              value={it.name}
-                              placeholder="Барааны нэр засах..."
-                              onChange={e=>{
-                                const newName=e.target.value
-                                setImportPreview((prev:any)=>{
-                                  if(!prev) return prev
-                                  const next=[...prev]
-                                  const newItems=[...next[i].items]
-                                  const prod=matchProduct(newName,importProdList)
-                                  newItems[j]={...newItems[j],name:newName,product:prod,
-                                    error:!prod?`"${newName}" агуулахад олдсонгүй`:null}
-                                  next[i]={...next[i],items:newItems,
-                                    errors:next[i].errors.filter((e2:string)=>!e2.includes('агуулахад олдсонгүй')&&!e2.includes('Бараа байхгүй'))
-                                      .concat(!prod&&newName?[`"${newName}" агуулахад олдсонгүй`]:[])
-                                  }
-                                  return next
-                                })
-                              }}
-                            />
-                            <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
-                          </>
-                        ):(
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-emerald-600">✅</span>
-                            <span className="text-gray-600">{it.product.name}</span>
-                            <span className="text-gray-400">×</span>
-                            <input type="number" min="1"
-                              className="w-12 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-center"
-                              value={it.qty}
-                              onChange={e=>{
-                                const qty=Math.max(1,parseInt(e.target.value)||1)
-                                setImportPreview((prev:any)=>{
-                                  if(!prev) return prev
-                                  const next=[...prev]
-                                  const newItems=[...next[i].items]
-                                  newItems[j]={...newItems[j],qty}
-                                  next[i]={...next[i],items:newItems}
-                                  return next
-                                })
-                              }}
-                            />
-                            <span className="text-gray-400 text-[10px]">ш</span>
-                            <input type="text" inputMode="numeric"
-                              className="w-24 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right ml-1"
-                              placeholder="Үнэ ₮"
-                              value={it.price?Number(it.price).toLocaleString():''}
-                              onChange={e=>{
-                                const price=e.target.value.replace(/[^0-9]/g,'')
-                                setImportPreview((prev:any)=>{
-                                  if(!prev) return prev
-                                  const next=[...prev]
-                                  const newItems=[...next[i].items]
-                                  newItems[j]={...newItems[j],price}
-                                  next[i]={...next[i],items:newItems}
-                                  return next
-                                })
-                              }}
-                            />
-                            <span className="text-gray-400 text-[10px]">₮</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {row.errors.filter((e:string)=>!e.includes('агуулахад олдсонгүй')).map((e:string, j:number)=>(
-                    <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
-                  ))}
-                  {row.errors.length===0&&(
-                    <div className="mt-1.5 flex items-center gap-3">
-                      <label className="text-xs text-gray-400">Хүргэлт:</label>
-                      <input type="number"
-                        className="w-20 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
-                        value={row.delv}
-                        onChange={e=>{
-                          const v=parseInt(e.target.value)||0
-                          setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
-                        }}/>
-                      <span className="text-xs text-gray-400">₮</span>
-                    </div>
-                  )}
+                  {importGroups.invalid.map(({row,idx})=>renderRow(row, idx, true))}
                 </div>
-              ))}
+              )}
+              {importGroups&&importGroups.dates.map(date=>{
+                const entries=importGroups.validMap[date]
+                return (
+                  <div key={date}>
+                    <div className="px-5 py-2 bg-gray-50 text-xs font-semibold text-gray-600 sticky top-0 z-10 flex items-center justify-between gap-2">
+                      <span>{fmtD(date)} — {entries.length} захиалга</span>
+                      <input type="date" value={date} title="Энэ бүлгийн бүх мөрийн огноог зэрэг өөрчлөх"
+                        onChange={e=>{
+                          const newDate=e.target.value
+                          if(!newDate) return
+                          setImportPreview((prev:any)=>{
+                            if(!prev) return prev
+                            const next=[...prev]
+                            entries.forEach(({idx})=>{ next[idx]={...next[idx], date:newDate, hasOwnDate:true} })
+                            return next
+                          })
+                        }}
+                        className="px-1.5 py-0.5 rounded border border-gray-200 text-[10px] bg-white text-gray-500"/>
+                    </div>
+                    {entries.map(({row,idx})=>renderRow(row, idx, false))}
+                  </div>
+                )
+              })}
             </div>
             <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center justify-between gap-3">
               <div className="text-xs text-gray-500">
