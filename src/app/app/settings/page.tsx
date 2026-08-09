@@ -65,6 +65,47 @@ export default function SettingsPage() {
     showFlash('Устгагдлаа'); loadAll()
   }
 
+  // Тухайн дэлгүүрийн захиалга/агуулах/тооцооны бүх БҮРТГЭЛИЙГ цэвэрлэнэ.
+  // Бараа (products), дэлгүүрийн тохиргоо, бусад дэлгүүрийн мэдээлэл, viewer эрх — эдгээрт огт хүрэхгүй.
+  const [resetTarget, setResetTarget] = useState<{id:string,name:string}|null>(null)
+  const [resetConfirmText, setResetConfirmText] = useState('')
+  const [resetting, setResetting] = useState(false)
+
+  async function resetStoreData() {
+    if (!resetTarget) return
+    if (resetConfirmText.trim() !== resetTarget.name.trim()) { showFlash('Дэлгүүрийн нэрийг яг таг бичнэ үү'); return }
+    setResetting(true)
+    const { data:{ user } } = await supabase.auth.getUser()
+    const uid = user!.id
+    const storeId = resetTarget.id
+    try {
+      // 1. Захиалга + захиалгын бараанууд
+      const { data: ords } = await supabase.from('orders').select('id').eq('user_id',uid).eq('store_id',storeId)
+      const orderIds = (ords||[]).map((o:any)=>o.id)
+      for (let i=0; i<orderIds.length; i+=500) {
+        await supabase.from('order_items').delete().in('order_id', orderIds.slice(i,i+500))
+      }
+      await supabase.from('orders').delete().eq('user_id',uid).eq('store_id',storeId)
+      // 2. Агуулах цэнэглэлт/захиалга/хүлээн авалтын түүх
+      await supabase.from('restock_log').delete().eq('user_id',uid).eq('store_id',storeId)
+      await supabase.from('supply_log').delete().eq('user_id',uid).eq('store_id',storeId)
+      // 3. Бараа татан авалтын захиалга + мөрүүд
+      const { data: procs } = await supabase.from('procurement_orders').select('id').eq('user_id',uid).eq('store_id',storeId)
+      const procIds = (procs||[]).map((p:any)=>p.id)
+      for (let i=0; i<procIds.length; i+=500) {
+        await supabase.from('procurement_items').delete().in('order_id', procIds.slice(i,i+500))
+      }
+      await supabase.from('procurement_orders').delete().eq('user_id',uid).eq('store_id',storeId)
+      // 4. Хүргэлтийн тооцоо тулгалт
+      await supabase.from('delivery_reconciliations').delete().eq('user_id',uid).eq('store_id',storeId)
+      showFlash(`"${resetTarget.name}" дэлгүүрийн бүх бүртгэл цэвэрлэгдлээ ✓`)
+      setResetTarget(null); setResetConfirmText('')
+    } catch(e:any) {
+      showFlash('Алдаа гарлаа: '+e.message)
+    }
+    setResetting(false)
+  }
+
   async function toggleStoreVariant(id: string, current: boolean) {
     await supabase.from('stores').update({ variant_enabled: !current }).eq('id', id)
     loadAll()
@@ -144,6 +185,8 @@ export default function SettingsPage() {
                     </div>
                     <span className={s.variant_enabled?'text-emerald-600':'text-gray-400'}>Variant</span>
                   </button>
+                  <button onClick={()=>{setResetTarget({id:s.id,name:s.name});setResetConfirmText('')}}
+                    className="text-xs text-orange-400 hover:text-orange-600 px-2 py-1 rounded hover:bg-orange-50">бүртгэл цэвэрлэх</button>
                   <button onClick={()=>deleteStore(s.id)} className="text-xs text-gray-400 hover:text-red-500 px-2 py-1 rounded hover:bg-red-50">устгах</button>
                 </div>
               </div>
@@ -262,6 +305,33 @@ export default function SettingsPage() {
           <p className="text-sm text-gray-400 text-center py-4">Зочин нэмэгдээгүй</p>
         )}
       </div>
+
+      {/* Дэлгүүрийн бүртгэл цэвэрлэх баталгаажуулалт */}
+      {resetTarget&&(
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+            <h3 className="font-semibold text-gray-800 mb-2">⚠️ Бүртгэл цэвэрлэх</h3>
+            <p className="text-sm text-gray-500 mb-1">
+              <b>"{resetTarget.name}"</b> дэлгүүрийн бүх <b>захиалга, агуулах цэнэглэлт, бараа татан авалт, хүргэлтийн тооцоо</b> устана.
+            </p>
+            <p className="text-xs text-gray-400 mb-4">
+              Барааны каталог, бусад дэлгүүрийн мэдээлэл, ерөнхий тохиргоо хэвээр үлдэнэ. Энэ үйлдлийг буцаах боломжгүй.
+            </p>
+            <label className="block text-xs text-gray-500 mb-1">Баталгаажуулахын тулд дэлгүүрийн нэрийг бичнэ үү: <b>{resetTarget.name}</b></label>
+            <input className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-4"
+              value={resetConfirmText} onChange={e=>setResetConfirmText(e.target.value)}
+              placeholder={resetTarget.name}/>
+            <div className="flex gap-2">
+              <button onClick={()=>{setResetTarget(null);setResetConfirmText('')}}
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
+              <button onClick={resetStoreData} disabled={resetting||resetConfirmText.trim()!==resetTarget.name.trim()}
+                className="flex-1 py-2 rounded-xl bg-red-500 text-white text-sm font-medium disabled:opacity-40">
+                {resetting?'Цэвэрлэж байна...':'Цэвэрлэх'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
