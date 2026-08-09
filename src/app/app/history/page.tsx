@@ -240,20 +240,22 @@ export default function HistoryPage() {
     const toExport = storeId
       ? filtered.filter(o=>(o as any).store_id===storeId)
       : filtered
-    const rows=[['Огноо','Утас','Хаяг','Дэлгүүр','Бараа','Variant','Барааны дүн','Хүргэлт','Цэвэр','Статус']]
+    // Импортын форматтай яг тааруулж захиалга бүрийг НЭГ мөр болгоно (нэг захиалганд олон бараа байвал давхар мөр болгож
+    // импортлоход давхар захиалга үүсгэхээс сэргийлнэ)
+    const rows=[['Огноо','Утас','Хаяг','Дэлгүүр','Бараа','Барааны дүн','Хүргэлт','Цэвэр','Статус']]
     toExport.forEach(o=>{
-      const gross=(o.order_items||[]).reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
+      const items=o.order_items||[]
+      const gross=items.reduce((a:number,i:any)=>a+i.quantity*i.unit_price,0)
       const net=gross-(o.delivery_fee||0)
       const oStore=stores.find(s=>s.id===(o as any).store_id)?.name||''
-      ;(o.order_items||[]).forEach((i:any)=>{
-        rows.push([
-          o.date, o.phone, o.address, oStore,
-          i.product_name, i.variant_label||'',
-          String(i.quantity*i.unit_price),
-          String(o.delivery_fee||0),
-          String(net), o.status
-        ])
-      })
+      const baraaText=items.map((i:any)=>`${i.product_name}${i.variant_label?' · '+i.variant_label:''} ${i.quantity}`).join(', ')
+      rows.push([
+        o.date, o.phone, o.address, oStore,
+        baraaText,
+        String(gross),
+        String(o.delivery_fee||0),
+        String(net), o.status
+      ])
     })
     const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n')
     const a=document.createElement('a')
