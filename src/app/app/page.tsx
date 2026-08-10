@@ -202,9 +202,6 @@ export default function DashPage() {
 
   async function submitOrder(){
     if(!oPhone||!oAddr){showFlash('Утас, хаяг оруулна уу');return}
-    const{data:{user}}=await supabase.auth.getUser()
-    const targetId=ownerId||user?.id
-    if(!targetId) return
     for(const it of oItems){
       const p=products.find(x=>x.id===it.product_id)
       if(!p){showFlash('Бараа олдсонгүй');return}
@@ -219,6 +216,36 @@ export default function DashPage() {
         if(p.stock<Number(it.qty)){showFlash(p.name+' хүрэлцэхгүй! '+p.stock+'ш');return}
       }
     }
+    // Утасны дугаарын урт хэвийн бус (жишээ нь 2 дугаар наалдаж хутгалдсан) эсэхийг шалгана
+    const digitsOnly=oPhone.replace(/\D/g,'')
+    if(digitsOnly.length>0&&(digitsOnly.length<7||digitsOnly.length>9)){
+      setConfirmModal({
+        msg:`Утасны дугаар "${oPhone}" хэвийн бус урттай (${digitsOnly.length} орон) байна. Магадгүй 2 өөр дугаар наалдаж бичигдсэн байж болзошгүй. Ийм хэвээр үргэлжлүүлэх үү?`,
+        onOk:()=>checkDuplicateThenSubmit()
+      })
+      return
+    }
+    await checkDuplicateThenSubmit()
+  }
+
+  // Ижил өдөр + ижил утасны дугаартай захиалга аль хэдийн байгаа эсэхийг шалгаж, байвал баталгаажуулалт асууна
+  async function checkDuplicateThenSubmit(){
+    const dateKey=oDate||TODAY
+    const already=orders.some(o=>o.date===dateKey&&String(o.phone).replace(/\s/g,'')===oPhone.replace(/\s/g,''))
+    if(already){
+      setConfirmModal({
+        msg:`"${oPhone}" дугаартай захиалга ${dateKey} өдөрт аль хэдийн бүртгэгдсэн байна. Дахин бүртгэх үү (жишээ нь ижил хүн 2 дахь удаагаа захиалсан)?`,
+        onOk:()=>doSubmitOrder()
+      })
+      return
+    }
+    await doSubmitOrder()
+  }
+
+  async function doSubmitOrder(){
+    const{data:{user}}=await supabase.auth.getUser()
+    const targetId=ownerId||user?.id
+    if(!targetId) return
     const{data:seqData}=await supabase.rpc('get_day_seq',{p_user_id:targetId,p_date:oDate||TODAY})
     const{data:order}=await supabase.from('orders').insert({
       user_id:targetId,date:oDate||TODAY,day_seq:seqData||1,
