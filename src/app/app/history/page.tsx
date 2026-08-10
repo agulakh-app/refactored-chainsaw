@@ -354,37 +354,59 @@ export default function HistoryPage() {
       const { data: existingOrders } = await supabase.from('orders').select('phone,date').eq('user_id',targetId)
       const existingSet=new Set((existingOrders||[]).map((o:any)=>`${o.date}__${o.phone}`))
 
-      const preview:any[]=[]
+      // 1-р үе шат: мөр бүрийг түүхий байдлаар (raw) уншина — огноо, утас, бараа, хүргэлт, төлбөр
+      type RawRow={date:string,phone:string,address:string,delv:number,isTolson:boolean,rowPrice:number,parsedItems:{name:string,qty:number}[],rawDate:string,hasOwnDate:boolean,dateValid:boolean}
+      const rawRows:RawRow[]=[]
       for(const r of rows){
         const keys=Object.keys(r)
-        // Утасны дугаар — number format, Excel shift-г тэсвэрлэх
         const phoneRaw=r['Утасны дугаар']??r['Утас']??r['Phone']??r[keys[0]]??''
         const phone=String(phoneRaw===null||phoneRaw===undefined?'':phoneRaw)
           .trim().replace(/\s/g,'').replace(/\.0$/,'').replace(/[^0-9+]/g,'')
-        // 2-р багана: Хаяг
         const address=String(r['Хаяг']??r['Address']??r[keys[1]]??'').trim()
-        // 3-р багана: Бараа
         const baraaText=String(r['Бараа']??r['Барааны нэр']??r['Product']??r[keys[2]]??'').trim()
         const rawDateVal=r['Огноо (YYYY/MM/DD)']??r['Огноо']??r['Date']??''
         const rawDate=normalizeDateValue(rawDateVal)
         const hasOwnDate=!!rawDate
         const date=rawDate ? rawDate.replace(/[./]/g,'-').slice(0,10) : importGlobalDate
         const dateValid=/^\d{4}-\d{2}-\d{2}$/.test(date)
-        // Хүргэлт багана — тусдаа
         const delvRaw=String(r['Хүргэлт (₮)']||r['Хүргэлт']||r['Delivery']||'').trim()
         const delv=parseInt(delvRaw.replace(/[^\d]/g,''))||0
-        // Төлбөр багана — Төлсөн/paid → delivered, тоо → нийт дүн (мэдээлэлд хадгалах)
         const rawTolbor=String(r['Төлбөр']||r['Статус']||'').trim()
         const isTolson=rawTolbor.toLowerCase().includes('төлсөн')||rawTolbor.toLowerCase().includes('paid')||rawTolbor.toLowerCase().includes('delivered')
-        const status=isTolson?'delivered':'pending'
+        const rowPrice=Number((r as any)['_price'])||0
         const parsedItems=parseItems(baraaText, prodList)
+        rawRows.push({date,phone,address,delv,isTolson,rowPrice,parsedItems,rawDate,hasOwnDate,dateValid})
+      }
 
-        // Давхар import шалгах
+      // 2-р үе шат: ижил (огноо + утас)-тай хэд хэдэн мөр байвал НЭГ захиалга болгож нэгтгэнэ
+      // (жишээ нь экспорт/засварласан файлд нэг захиалгын 2 бараа тус тусдаа мөр болж орсон бол дахин нэгтгэж, тусдаа захиалга үүсэхээс сэргийлнэ)
+      const merged:RawRow[]=[]
+      const keyToIdx:Record<string,number>={}
+      for(const rr of rawRows){
+        const canMerge=rr.dateValid&&!!rr.phone
+        const key=`${rr.date}__${rr.phone}`
+        if(canMerge&&keyToIdx[key]!==undefined){
+          const ex=merged[keyToIdx[key]]
+          ex.parsedItems=[...ex.parsedItems, ...rr.parsedItems]
+          if(!ex.address&&rr.address) ex.address=rr.address
+          if(rr.delv>ex.delv) ex.delv=rr.delv
+          if(rr.isTolson) ex.isTolson=true
+          if(rr.rowPrice&&!ex.rowPrice) ex.rowPrice=rr.rowPrice
+        } else {
+          if(canMerge) keyToIdx[key]=merged.length
+          merged.push({...rr})
+        }
+      }
+
+      // 3-р үе шат: бараа тааруулах, алдаа шалгах, preview бэлдэх
+      const preview:any[]=[]
+      for(const rr of merged){
+        const {date,phone,address,delv,isTolson,rowPrice,parsedItems,rawDate,hasOwnDate,dateValid}=rr
+        const status=isTolson?'delivered':'pending'
         const isDuplicate=dateValid&&phone&&existingSet.has(`${date}__${phone}`)
 
         const matchedItems=parsedItems.map(it=>{
           const prod=matchProduct(it.name,prodList)
-          // Variant шалгалт: олон variant байвал сонгуулах шаардлагатай
           let variantError:string|null=null
           let selectedVariantIdx:number=-1
           if(prod&&Array.isArray(prod.variants)&&prod.variants.length>1){
@@ -407,7 +429,6 @@ export default function HistoryPage() {
         if(isDuplicate) errors.push(`⚠️ Давхар import: ${phone} — ${date} өдрийн захиалга аль хэдийн бүртгэлтэй байна`)
         matchedItems.forEach(it=>{ if(it.error) errors.push(it.error) })
 
-        const rowPrice=Number((r as any)['_price'])||0
         const autoTotal=matchedItems.reduce((sum:number,it:any)=>sum+(it.product?.unit_price||0)*it.qty,0)
         const itemsWithPrice=matchedItems.map((it:any)=>({...it,price:rowPrice?String(rowPrice):String(it.product?.unit_price||'')}))
         preview.push({date,phone,address,items:itemsWithPrice,delv:delv||defaultDelivery,
@@ -444,7 +465,7 @@ export default function HistoryPage() {
       }).select().single()
       if(!ord) continue
       const orderItems=row.items.map((it:any)=>{
-        const unitPrice=row.paid?0:(Number(it.price)||Number((r as any)['_price'])||it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
+        const unitPrice=row.paid?0:(Number(it.price)||it.product?.unit_price||Math.round((row.total||0)/Math.max(1,row.items.length))||0)
         return {
           order_id:ord.id,
           product_name:it.product?.name||it.name,
