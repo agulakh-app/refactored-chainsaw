@@ -232,7 +232,8 @@ export default function DashPage() {
   // Ижил өдөр + ижил утасны дугаартай захиалга аль хэдийн байгаа эсэхийг шалгаж, байвал баталгаажуулалт асууна
   async function checkDuplicateThenSubmit(){
     const dateKey=oDate||TODAY
-    const already=orders.some(o=>o.date===dateKey&&String(o.phone).replace(/\s/g,'')===oPhone.replace(/\s/g,''))
+    const oPhoneDigits=oPhone.replace(/\D/g,'')
+    const already=orders.some(o=>o.date===dateKey&&String(o.phone).replace(/\D/g,'')===oPhoneDigits&&oPhoneDigits.length>0)
     if(already){
       setConfirmModal({
         msg:`"${oPhone}" дугаартай захиалга ${dateKey} өдөрт аль хэдийн бүртгэгдсэн байна. Дахин бүртгэх үү (жишээ нь ижил хүн 2 дахь удаагаа захиалсан)?`,
