@@ -41,6 +41,7 @@ export default function HistoryPage() {
   const [importPreview, setImportPreview] = useState<any[]|null>(null)
   const [importProdList, setImportProdList] = useState<any[]>([])
   const [importGlobalDate, setImportGlobalDate] = useState(new Date().toISOString().slice(0,10))
+  const [forceAllDelivered, setForceAllDelivered] = useState(false)
   const [defaultDelivery, setDefaultDelivery] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -460,7 +461,7 @@ export default function HistoryPage() {
       const { data: ord } = await supabase.from('orders').insert({
         user_id:targetId,date:row.date,day_seq:1,
         phone:row.phone,address:row.paid?'[PAID]'+(row.address?' '+row.address:''):row.address||'-',
-        delivery_fee:row.delv,status:row.status,
+        delivery_fee:row.delv,status:forceAllDelivered?'delivered':row.status,
         store_id:activeStoreId||null
       }).select().single()
       if(!ord) continue
@@ -902,6 +903,14 @@ export default function HistoryPage() {
                     return total>0?`Нийт: ${total.toLocaleString()}₮`:''
                   })()}
                 </div>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-xs text-gray-500">Бүх захиалгыг "Хүргэгдсэн" гэж бүртгэх үү?</span>
+                <button onClick={()=>setForceAllDelivered(true)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${forceAllDelivered?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
+                <button onClick={()=>setForceAllDelivered(false)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${!forceAllDelivered?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
+                <span className="text-[10px] text-gray-300">{forceAllDelivered?'(бүгд Хүргэгдсэн болно)':'(Төлбөр баганаас автоматаар тодорхойлно)'}</span>
               </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">

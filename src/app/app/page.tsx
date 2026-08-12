@@ -26,7 +26,7 @@ export default function DashPage() {
   const PAGE_SIZE=100
   const [stores,setStores]=useState<any[]>([])
   const [flash,setFlash]=useState('')
-  const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void}|null>(null)
+  const [confirmModal,setConfirmModal]=useState<{msg:string,onOk:()=>void,okLabel?:string,cancelLabel?:string,danger?:boolean}|null>(null)
 
   function confirm2(msg:string, onOk:()=>void){ setConfirmModal({msg,onOk}) }
   const [phoneFilter,setPhoneFilter]=useState('')
@@ -221,7 +221,8 @@ export default function DashPage() {
     if(digitsOnly.length>0&&(digitsOnly.length<7||digitsOnly.length>9)){
       setConfirmModal({
         msg:`Утасны дугаар "${oPhone}" хэвийн бус урттай (${digitsOnly.length} орон) байна. Магадгүй 2 өөр дугаар наалдаж бичигдсэн байж болзошгүй. Ийм хэвээр үргэлжлүүлэх үү?`,
-        onOk:()=>checkDuplicateThenSubmit()
+        onOk:()=>checkDuplicateThenSubmit(),
+        okLabel:'Тийм, үргэлжлүүлэх', cancelLabel:'Үгүй, засах', danger:false
       })
       return
     }
@@ -235,7 +236,8 @@ export default function DashPage() {
     if(already){
       setConfirmModal({
         msg:`"${oPhone}" дугаартай захиалга ${dateKey} өдөрт аль хэдийн бүртгэгдсэн байна. Дахин бүртгэх үү (жишээ нь ижил хүн 2 дахь удаагаа захиалсан)?`,
-        onOk:()=>doSubmitOrder()
+        onOk:()=>doSubmitOrder(),
+        okLabel:'Тийм, үргэлжлүүлэх', cancelLabel:'Үгүй, алгасах', danger:false
       })
       return
     }
@@ -434,9 +436,9 @@ export default function DashPage() {
             <p className="text-sm text-gray-700 text-center mb-5">{confirmModal?.msg}</p>
             <div className="flex gap-3">
               <button onClick={()=>setConfirmModal(null)}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Болих</button>
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">{confirmModal?.cancelLabel||'Болих'}</button>
               <button onClick={()=>{const ok=confirmModal?.onOk; setConfirmModal(null); ok&&ok()}}
-                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600">Устгах</button>
+                className={`flex-1 py-2.5 rounded-xl text-white text-sm font-medium ${confirmModal?.danger===false?'bg-emerald-600 hover:bg-emerald-700':'bg-red-500 hover:bg-red-600'}`}>{confirmModal?.okLabel||'Устгах'}</button>
             </div>
           </div>
         </div>
