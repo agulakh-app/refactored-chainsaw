@@ -42,6 +42,11 @@ export default function HistoryPage() {
   const [importProdList, setImportProdList] = useState<any[]>([])
   const [importGlobalDate, setImportGlobalDate] = useState(new Date().toISOString().slice(0,10))
   const [forceAllDelivered, setForceAllDelivered] = useState(false)
+  const [allowDuplicates, setAllowDuplicates] = useState(false)
+  // "⚠️ Давхар import" мэдэгдлийг зөвшөөрсөн үед блоклохгүй болгож бодит "хаагдах ёстой" алдааг ялгах helper
+  function blockingErrors(errs:string[]){
+    return allowDuplicates ? errs.filter(e=>!e.startsWith('⚠️ Давхар import')) : errs
+  }
   const [defaultDelivery, setDefaultDelivery] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -457,7 +462,7 @@ export default function HistoryPage() {
     setImporting(true)
     let cnt=0
     for(const row of importPreview){
-      if(row.errors.length>0) continue
+      if(blockingErrors(row.errors).length>0) continue
       const { data: ord } = await supabase.from('orders').insert({
         user_id:targetId,date:row.date,day_seq:1,
         phone:row.phone,address:row.paid?'[PAID]'+(row.address?' '+row.address:''):row.address||'-',
@@ -579,7 +584,7 @@ export default function HistoryPage() {
   // Нэг мөрийг зурах — showDateInline=true үед л мөрийн хажууд огноо засах талбар харагдана (буруу/тодорхойгүй огнооны мөрүүдэд)
   function renderRow(row:any, i:number, showDateInline:boolean){
     return (
-      <div key={i} className={`px-5 py-3 ${row.errors.length>0?'bg-red-50/40':''}`}>
+      <div key={i} className={`px-5 py-3 ${blockingErrors(row.errors).length>0?'bg-red-50/40':row.errors.length>0?'bg-orange-50/40':''}`}>
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-wrap flex-1">
             {row.phone?(
@@ -912,6 +917,14 @@ export default function HistoryPage() {
                   className={`px-2.5 py-1 rounded-lg text-xs font-medium ${!forceAllDelivered?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
                 <span className="text-[10px] text-gray-300">{forceAllDelivered?'(бүгд Хүргэгдсэн болно)':'(Төлбөр баганаас автоматаар тодорхойлно)'}</span>
               </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="text-xs text-gray-500">Давхардсан мэт (ижил утас+огноо) захиалгыг зөвшөөрөх үү?</span>
+                <button onClick={()=>setAllowDuplicates(true)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${allowDuplicates?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
+                <button onClick={()=>setAllowDuplicates(false)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${!allowDuplicates?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
+                <span className="text-[10px] text-gray-300">{allowDuplicates?'(давхардсан мэт мөрийг ч импортлоно)':'(давхардсан мэт мөрийг блоклоно)'}</span>
+              </div>
             </div>
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
               {importGroups&&importGroups.invalid.length>0&&(
@@ -956,7 +969,7 @@ export default function HistoryPage() {
               <div className="flex gap-2">
                 <button onClick={()=>setImportPreview(null)}
                   className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600">Болих</button>
-                <button onClick={confirmImport} disabled={importing||importPreview.filter((r:any)=>r.errors.length===0).length===0}
+                <button onClick={confirmImport} disabled={importing||importPreview.filter((r:any)=>blockingErrors(r.errors).length===0).length===0}
                   className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-medium disabled:opacity-50">
                   {importing?'Бүртгэж байна...':'✓ Бүртгэх'}
                 </button>
