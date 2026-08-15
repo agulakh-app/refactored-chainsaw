@@ -384,30 +384,14 @@ export default function HistoryPage() {
         rawRows.push({date,phone,address,delv,isTolson,rowPrice,parsedItems,rawDate,hasOwnDate,dateValid})
       }
 
-      // 2-р үе шат: ижил (огноо + утас)-тай хэд хэдэн мөр байвал НЭГ захиалга болгож нэгтгэнэ
-      // (жишээ нь экспорт/засварласан файлд нэг захиалгын 2 бараа тус тусдаа мөр болж орсон бол дахин нэгтгэж, тусдаа захиалга үүсэхээс сэргийлнэ)
-      const merged:RawRow[]=[]
-      const keyToIdx:Record<string,number>={}
-      for(const rr of rawRows){
-        const canMerge=rr.dateValid&&!!rr.phone
-        const key=`${rr.date}__${rr.phone}`
-        if(canMerge&&keyToIdx[key]!==undefined){
-          const ex=merged[keyToIdx[key]]
-          ex.parsedItems=[...ex.parsedItems, ...rr.parsedItems]
-          if(!ex.address&&rr.address) ex.address=rr.address
-          if(rr.delv>ex.delv) ex.delv=rr.delv
-          if(rr.isTolson) ex.isTolson=true
-          if(rr.rowPrice&&!ex.rowPrice) ex.rowPrice=rr.rowPrice
-        } else {
-          if(canMerge) keyToIdx[key]=merged.length
-          merged.push({...rr})
-        }
-      }
-
-      // 3-р үе шат: бараа тааруулах, алдаа шалгах, preview бэлдэх
+      // 2-р үе шат: бараа тааруулах, алдаа шалгах, preview бэлдэх
+      // Санамж: мөр бүрийг ТУСДАА захиалга гэж үзнэ — автоматаар нэгтгэхгүй (ижил утас+огноотой ч гэсэн
+      // жинхэнэ 2 өөр захиалга байж болзошгүй тул). Ижил утас+огноотой мөр илэрвэл "Давхардсан мэт" гэж
+      // сануулж, хэрэглэгч Тийм/Үгүй-ээр өөрөө шийднэ (доор харна уу).
       const preview:any[]=[]
-      for(const rr of merged){
+      for(const rr of rawRows){
         const {date,phone,address,delv,isTolson,rowPrice,parsedItems,rawDate,hasOwnDate,dateValid}=rr
+
         const status=isTolson?'delivered':'pending'
         const isDuplicate=dateValid&&phone&&existingSet.has(`${date}__${phone}`)
 
