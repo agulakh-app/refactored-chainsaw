@@ -893,23 +893,32 @@ export default function HistoryPage() {
                   })()}
                 </div>
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-gray-500">Бүх захиалгыг "Хүргэгдсэн" гэж бүртгэх үү?</span>
-                <button onClick={()=>setForceAllDelivered(true)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${forceAllDelivered?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
-                <button onClick={()=>setForceAllDelivered(false)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${!forceAllDelivered?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
-                <span className="text-[10px] text-gray-300">{forceAllDelivered?'(бүгд Хүргэгдсэн болно)':'(Төлбөр баганаас автоматаар тодорхойлно)'}</span>
-              </div>
-              <div className="mt-1.5 flex items-center gap-2">
-                <span className="text-xs text-gray-500">Давхардсан мэт (ижил утас+огноо) захиалгыг зөвшөөрөх үү?</span>
-                <button onClick={()=>setAllowDuplicates(true)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${allowDuplicates?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
-                <button onClick={()=>setAllowDuplicates(false)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium ${!allowDuplicates?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
-                <span className="text-[10px] text-gray-300">{allowDuplicates?'(давхардсан мэт мөрийг ч импортлоно)':'(давхардсан мэт мөрийг блоклоно)'}</span>
+              <div className="mt-3 border border-gray-100 rounded-xl overflow-hidden">
+                <div className="grid items-center gap-3 px-3 py-2 border-b border-gray-100 bg-gray-50/50" style={{gridTemplateColumns:'1fr auto'}}>
+                  <span className="text-xs text-gray-600">Бүх захиалгыг "Хүргэгдсэн" гэж бүртгэх үү?
+                    <span className="block text-[10px] text-gray-300 mt-0.5">{forceAllDelivered?'Бүгд Хүргэгдсэн болно':'Төлбөр баганаас автоматаар тодорхойлно'}</span>
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button onClick={()=>setForceAllDelivered(true)}
+                      className={`w-14 py-1 rounded-lg text-xs font-medium ${forceAllDelivered?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
+                    <button onClick={()=>setForceAllDelivered(false)}
+                      className={`w-14 py-1 rounded-lg text-xs font-medium ${!forceAllDelivered?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
+                  </div>
+                </div>
+                <div className="grid items-center gap-3 px-3 py-2 bg-gray-50/50" style={{gridTemplateColumns:'1fr auto'}}>
+                  <span className="text-xs text-gray-600">Давхардсан мэт (ижил утас+огноо) захиалгыг зөвшөөрөх үү?
+                    <span className="block text-[10px] text-gray-300 mt-0.5">{allowDuplicates?'Давхардсан мэт мөрийг ч импортлоно':'Давхардсан мэт мөрийг блоклоно'}</span>
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button onClick={()=>setAllowDuplicates(true)}
+                      className={`w-14 py-1 rounded-lg text-xs font-medium ${allowDuplicates?'bg-emerald-600 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Тийм</button>
+                    <button onClick={()=>setAllowDuplicates(false)}
+                      className={`w-14 py-1 rounded-lg text-xs font-medium ${!allowDuplicates?'bg-gray-700 text-white':'bg-white border border-gray-200 text-gray-500'}`}>Үгүй</button>
+                  </div>
+                </div>
               </div>
             </div>
+
             <div className="max-h-[60vh] overflow-y-auto divide-y divide-gray-100">
               {importGroups&&importGroups.invalid.length>0&&(
                 <div>
