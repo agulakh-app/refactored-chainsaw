@@ -617,12 +617,12 @@ export default function HistoryPage() {
         </div>
         <div className="mt-1.5 space-y-1">
           {row.items.map((it:any, j:number)=>(
-            <div key={j} className="text-xs flex items-center gap-2">
+            <div key={j} className="grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px 1fr 60px 90px'}}>
               {!it.product?(
                 <>
                   <span className="text-red-400">🔴</span>
                   <input
-                    className="border border-red-200 rounded px-2 py-0.5 text-xs text-gray-700 bg-red-50 flex-1 min-w-0"
+                    className="border border-red-200 rounded px-2 py-0.5 text-xs text-gray-700 bg-red-50 min-w-0"
                     value={it.name}
                     placeholder="Барааны нэр засах..."
                     onChange={e=>{
@@ -642,47 +642,51 @@ export default function HistoryPage() {
                       })
                     }}
                   />
-                  <span className="text-red-400 text-[10px] whitespace-nowrap">× {it.qty}</span>
+                  <span className="text-red-400 text-[10px] whitespace-nowrap text-right">× {it.qty}</span>
+                  <span></span>
                 </>
               ):(
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <>
                   <span className="text-emerald-600">✅</span>
-                  <span className="text-gray-600">{it.product.name}</span>
-                  <span className="text-gray-400">×</span>
-                  <input type="number" min="1"
-                    className="w-12 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-center"
-                    value={it.qty}
-                    onChange={e=>{
-                      const qty=Math.max(1,parseInt(e.target.value)||1)
-                      setImportPreview((prev:any)=>{
-                        if(!prev) return prev
-                        const next=[...prev]
-                        const newItems=[...next[i].items]
-                        newItems[j]={...newItems[j],qty}
-                        next[i]={...next[i],items:newItems}
-                        return next
-                      })
-                    }}
-                  />
-                  <span className="text-gray-400 text-[10px]">ш</span>
-                  <input type="text" inputMode="numeric"
-                    className="w-24 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right ml-1"
-                    placeholder="Үнэ ₮"
-                    value={it.price?Number(it.price).toLocaleString():''}
-                    onChange={e=>{
-                      const price=e.target.value.replace(/[^0-9]/g,'')
-                      setImportPreview((prev:any)=>{
-                        if(!prev) return prev
-                        const next=[...prev]
-                        const newItems=[...next[i].items]
-                        newItems[j]={...newItems[j],price}
-                        next[i]={...next[i],items:newItems}
-                        return next
-                      })
-                    }}
-                  />
-                  <span className="text-gray-400 text-[10px]">₮</span>
-                </div>
+                  <span className="text-gray-600 truncate" title={it.product.name}>{it.product.name}</span>
+                  <div className="flex items-center gap-1 justify-end">
+                    <input type="number" min="1"
+                      className="w-11 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-center"
+                      value={it.qty}
+                      onChange={e=>{
+                        const qty=Math.max(1,parseInt(e.target.value)||1)
+                        setImportPreview((prev:any)=>{
+                          if(!prev) return prev
+                          const next=[...prev]
+                          const newItems=[...next[i].items]
+                          newItems[j]={...newItems[j],qty}
+                          next[i]={...next[i],items:newItems}
+                          return next
+                        })
+                      }}
+                    />
+                    <span className="text-gray-400 text-[10px]">ш</span>
+                  </div>
+                  <div className="flex items-center gap-1 justify-end">
+                    <input type="text" inputMode="numeric"
+                      className="w-16 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right"
+                      placeholder="Үнэ"
+                      value={it.price?Number(it.price).toLocaleString():''}
+                      onChange={e=>{
+                        const price=e.target.value.replace(/[^0-9]/g,'')
+                        setImportPreview((prev:any)=>{
+                          if(!prev) return prev
+                          const next=[...prev]
+                          const newItems=[...next[i].items]
+                          newItems[j]={...newItems[j],price}
+                          next[i]={...next[i],items:newItems}
+                          return next
+                        })
+                      }}
+                    />
+                    <span className="text-gray-400 text-[10px]">₮</span>
+                  </div>
+                </>
               )}
             </div>
           ))}
@@ -691,16 +695,20 @@ export default function HistoryPage() {
           <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
         ))}
         {row.errors.length===0&&(
-          <div className="mt-1.5 flex items-center gap-3">
-            <label className="text-xs text-gray-400">Хүргэлт:</label>
-            <input type="number"
-              className="w-20 border border-gray-200 rounded px-2 py-0.5 text-xs text-right"
-              value={row.delv}
-              onChange={e=>{
-                const v=parseInt(e.target.value)||0
-                setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
-              }}/>
-            <span className="text-xs text-gray-400">₮</span>
+          <div className="mt-1.5 grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px 1fr 60px 90px'}}>
+            <span></span>
+            <label className="text-gray-400">Хүргэлт</label>
+            <span></span>
+            <div className="flex items-center gap-1 justify-end">
+              <input type="number"
+                className="w-16 border border-gray-200 rounded px-1.5 py-0.5 text-xs text-right"
+                value={row.delv}
+                onChange={e=>{
+                  const v=parseInt(e.target.value)||0
+                  setImportPreview((prev:any)=>prev?.map((r:any,ri:number)=>ri===i?{...r,delv:v}:r)||null)
+                }}/>
+              <span className="text-gray-400 text-[10px]">₮</span>
+            </div>
           </div>
         )}
       </div>
