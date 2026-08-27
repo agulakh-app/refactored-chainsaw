@@ -617,7 +617,7 @@ export default function HistoryPage() {
         </div>
         <div className="mt-1.5 space-y-1">
           {row.items.map((it:any, j:number)=>(
-            <div key={j} className="grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px 1fr 60px 90px'}}>
+            <div key={j} className="grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px minmax(0,220px) 60px 90px'}}>
               {!it.product?(
                 <>
                   <span className="text-red-400">🔴</span>
@@ -695,7 +695,7 @@ export default function HistoryPage() {
           <div key={j} className="mt-1 text-xs text-red-500">{e}</div>
         ))}
         {row.errors.length===0&&(
-          <div className="mt-1.5 grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px 1fr 60px 90px'}}>
+          <div className="mt-1.5 grid items-center gap-2 text-xs" style={{gridTemplateColumns:'16px minmax(0,220px) 60px 90px'}}>
             <span></span>
             <label className="text-gray-400">Хүргэлт</label>
             <span></span>
