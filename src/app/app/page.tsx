@@ -122,10 +122,10 @@ export default function DashPage() {
     // Log-оос тооцоолсон stock
     if(prods&&prods.length>0){
       const pids=(prods||[]).map((p:any)=>p.id)
-      // restock_log татах
+      // restock_log татах (in=Цэнэглэсэн, out=Гараар хасалт) — Барааны хөдөлгөөн хуудастай яг ижил filter
       const {data:rlogs}=await (activeStoreId
-        ? supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('store_id',activeStoreId).eq('type','in')
-        : supabase.from('restock_log').select('product_id,variant_label,quantity').eq('user_id',targetId).eq('type','in'))
+        ? supabase.from('restock_log').select('product_id,variant_label,quantity,type').eq('user_id',targetId).eq('store_id',activeStoreId).neq('note','Захиалга')
+        : supabase.from('restock_log').select('product_id,variant_label,quantity,type').eq('user_id',targetId).neq('note','Захиалга'))
       // delivered order_items татах — pagination
       const allDelivIds:string[]=[]
       let pg=0
@@ -153,11 +153,13 @@ export default function DashPage() {
         }
       }
       const rstMap:any={}
+      const manualOutMap:any={}
       for(const l of (rlogs||[])){
         const k=l.product_id+'|||'+(l.variant_label||'')
-        rstMap[k]=(rstMap[k]||0)+l.quantity
+        if(l.type==='in') rstMap[k]=(rstMap[k]||0)+l.quantity
+        else if(l.type==='out') manualOutMap[k]=(manualOutMap[k]||0)+l.quantity
       }
-      const calcStock=(pid:string,vl:string='')=>(rstMap[pid+'|||'+vl]||0)-(soldMap[pid+'|||'+vl]||0)
+      const calcStock=(pid:string,vl:string='')=>(rstMap[pid+'|||'+vl]||0)-(soldMap[pid+'|||'+vl]||0)-(manualOutMap[pid+'|||'+vl]||0)
       setProducts((prods||[]).map((p:any)=>{
         const pvs=p.variants||[]
         if(pvs.length>0){
