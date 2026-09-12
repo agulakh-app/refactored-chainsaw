@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { RestockLog } from '@/lib/types'
 import { useGuestRole, useOwnerId, useActiveStore } from '../client-layout'
+import { fetchStockMaps, calcExpectedStock, stockKey } from '@/lib/stockCalc'
 
 const TODAY = new Date().toISOString().slice(0,10)
 function fmtD(d: string) { if(!d) return ''; const [y,m,day]=d.split('-'); return `${y}/${m}/${day}` }
@@ -121,59 +122,14 @@ export default function StockPage() {
     if (prods&&prods.length>0&&rProd&&!prods.find((p:any)=>p.id===rProd)) setRProd(prods[0].id)
     // Аудитын захиалгууд татах
     if(targetId){
-      // Pagination-аар бүх delivered order ID татна
-      const allDelivIds:string[]=[]
-      let page=0
-      while(true){
-        const {data:pageOrds} = activeStoreId
-          ? await supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','delivered').range(page*1000,(page+1)*1000-1)
-          : await supabase.from('orders').select('id').eq('user_id',targetId).eq('status','delivered').range(page*1000,(page+1)*1000-1)
-        if(!pageOrds||pageOrds.length===0) break
-        allDelivIds.push(...pageOrds.map((o:any)=>o.id))
-        if(pageOrds.length<1000) break
-        page++
-      }
-      // product_id болон order_id batch-аар order_items татна
-      const _sm2:any={}
-      if(_existingIds.length>0 && allDelivIds.length>0){
-        const pidBatch=200, oidBatch=500
-        for(let i=0;i<_existingIds.length;i+=pidBatch){
-          const pids=_existingIds.slice(i,i+pidBatch)
-          for(let j=0;j<allDelivIds.length;j+=oidBatch){
-            const oids=allDelivIds.slice(j,j+oidBatch)
-            const {data:oiData}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('product_id',pids).in('order_id',oids).limit(5000)
-            for(const it2 of (oiData||[])){
-              if(!_sm2[it2.product_id]) _sm2[it2.product_id]={}
-              const vl2=(it2.variant_label&&it2.variant_label.trim())||'__total__'
-              _sm2[it2.product_id][vl2]=(_sm2[it2.product_id][vl2]||0)+it2.quantity
-            }
-          }
-        }
-      }
+      setAuditOrders([])
       const {data: supData} = _existingIds.length>0
         ? await supabase.from('supply_log').select('id,product_id,variant_label,type,quantity,date,note').eq('user_id',targetId).in('product_id',_existingIds).order('date',{ascending:false}).limit(5000)
         : {data:[]}
-      setAuditOrders([])
       const _sup2=supData||[]
       setSupply(_sup2)
-      // pending захиалгын map
-      const _pm2:any={}
-      const {data:pendOrds}=await (activeStoreId
-        ? supabase.from('orders').select('id').eq('user_id',targetId).eq('store_id',activeStoreId).eq('status','pending').limit(2000)
-        : supabase.from('orders').select('id').eq('user_id',targetId).eq('status','pending').limit(2000))
-      if((pendOrds||[]).length>0){
-        const poids=(pendOrds||[]).map((o:any)=>o.id)
-        for(let j=0;j<poids.length;j+=500){
-          const ob=poids.slice(j,j+500)
-          const {data:poi}=await supabase.from('order_items').select('product_id,variant_label,quantity').in('order_id',ob).limit(5000)
-          for(const it of (poi||[])){
-            if(!_pm2[it.product_id]) _pm2[it.product_id]={}
-            const vl=(it.variant_label&&it.variant_label.trim())||'__total__'
-            _pm2[it.product_id][vl]=(_pm2[it.product_id][vl]||0)+it.quantity
-          }
-        }
-      }
-      // _sm2 аль хэдийн тооцоологдсон
+      // Барааны үлдэгдэл — НЭГ ЛГАН хуваалцсан функцээр (lib/stockCalc.ts, Шинэ захиалга хуудастай яг ижил эх сурвалж)
+      const _maps=await fetchStockMaps(targetId,activeStoreId,_existingIds)
       const _pks2:any[]=[]; const _prods2=prods||[]; const _ls2=ls||[]
       for(const _p2 of _prods2){
         const _pvs2=_p2.variants||[]
@@ -182,18 +138,16 @@ export default function StockPage() {
       }
       const _getSS2=(_pk2:any)=>{
         const _ms2=(_s2:any)=>_s2.product_id===_pk2.id&&(_pk2.variant?_s2.variant_label===_pk2.variant:!_s2.variant_label||_s2.variant_label==='')
-        const _ml2=(_l2:any)=>_l2.product_id===_pk2.id&&(_pk2.variant?_l2.variant_label===_pk2.variant:!_l2.variant_label||_l2.variant_label==='')
         const _ord2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='ordered').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
         const _rec2=_sup2.filter((_s2:any)=>_ms2(_s2)&&_s2.type==='received').reduce((_a2:number,_s2:any)=>_a2+_s2.quantity,0)
-        const _rst2=_ls2.filter((_l2:any)=>_l2.type==='in'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _manualOut2=_ls2.filter((_l2:any)=>_l2.type==='out'&&_ml2(_l2)).reduce((_a2:number,_l2:any)=>_a2+_l2.quantity,0)
-        const _vkey=(_pk2.variant&&_pk2.variant.trim())||'__total__'
-        // variant-тай бараанд: тухайн variant-ийн тоо л авна (давхардахгүй)
-        const _sold2=((_sm2[_pk2.id]&&_sm2[_pk2.id][_vkey])||0)
-        const _pending2=((_pm2[_pk2.id]&&_pm2[_pk2.id][_vkey])||0)
+        const _k2=stockKey(_pk2.id,_pk2.variant)
+        const _rst2=_maps.rstMap[_k2]||0
+        const _manualOut2=_maps.manualOutMap[_k2]||0
+        const _sold2=_maps.soldMap[_k2]||0
+        const _pending2=_maps.pendingMap[_k2]||0
         const _prod2=_prods2.find((_p2:any)=>_p2.id===_pk2.id)
         const _stk2=_pk2.variant?(_prod2&&_prod2.variants||[]).find((_v2:any)=>[_v2.size,_v2.color].filter(Boolean).join(' / ')===_pk2.variant)?.stock||0:_prod2?.stock||0
-        const _expectedStk=_rst2-_sold2-_manualOut2
+        const _expectedStk=calcExpectedStock(_maps,_pk2.id,_pk2.variant)
         return {ordered:_ord2,received:_rec2,restocked:_rst2,sold:_sold2,manualOut:_manualOut2,pending:_pending2,stock:_expectedStk,expected:_expectedStk,zoruu:0}
       }
       const _getSD2=(_pk2:any)=>{
