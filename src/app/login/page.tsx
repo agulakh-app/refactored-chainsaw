@@ -56,6 +56,11 @@ export default function LoginPage() {
       const { data: access } = await supabase.from('shared_access')
         .select('id,owner_id,role,store_id').eq('username',guestUsername.trim()).eq('pin',guestPin.trim()).single()
       if (!access) { setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return }
+      // Зочинд бодит (нэрээ нуусан) Supabase Auth session өгнө — ингэснээр RLS
+      // cookie-д итгэлгүйгээр, бодит auth.uid()-аар зөвшөөрлийг шалгах боломжтой болно.
+      const { data: anonAuth, error: anonErr } = await supabase.auth.signInAnonymously()
+      if (anonErr || !anonAuth.user) { setError('Нэвтрэхэд алдаа гарлаа. Дахин оролдоно уу'); setLoading(false); return }
+      await supabase.from('shared_access').update({ session_uid: anonAuth.user.id }).eq('id', access.id)
       document.cookie = `guest_access=${encodeURIComponent(JSON.stringify({
         owner_id:access.owner_id, role:access.role, username:guestUsername.trim(), store_id:access.store_id||null
       }))}; path=/; max-age=86400`
