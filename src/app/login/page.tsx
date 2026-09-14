@@ -53,8 +53,9 @@ export default function LoginPage() {
       if (!guestUsername.trim()||!guestPin.trim()) {
         setError('Нэвтрэх нэр болон PIN оруулна уу'); setLoading(false); return
       }
-      const { data: access } = await supabase.from('shared_access')
-        .select('id,owner_id,role,store_id').eq('username',guestUsername.trim()).eq('pin',guestPin.trim()).single()
+      const { data: access } = await supabase.rpc('guest_login', {
+        p_username: guestUsername.trim(), p_pin: guestPin.trim()
+      }).single()
       if (!access) { setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return }
       // Зочинд бодит (нэрээ нуусан) Supabase Auth session өгнө — ингэснээр RLS
       // cookie-д итгэлгүйгээр, бодит auth.uid()-аар зөвшөөрлийг шалгах боломжтой болно.
