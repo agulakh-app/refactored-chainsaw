@@ -125,6 +125,11 @@ create policy "payments_own" on public.payments
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer as $$
 begin
+  -- Зочин (anonymous) хэрэглэгчид profiles мөр үүсгэхгүй — тэдэнд имэйл байдаггүй
+  if coalesce(new.is_anonymous, false) then
+    return new;
+  end if;
+
   insert into public.profiles (id, email, full_name, business_name)
   values (
     new.id,
