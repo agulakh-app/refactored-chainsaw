@@ -53,15 +53,14 @@ export default function LoginPage() {
       if (!guestUsername.trim()||!guestPin.trim()) {
         setError('Нэвтрэх нэр болон PIN оруулна уу'); setLoading(false); return
       }
+      // Эхлээд бодит (нэрээ нуусан) Supabase Auth session авна — RPC дотор auth.uid() ашиглагдана
+      const { data: anonAuth, error: anonErr } = await supabase.auth.signInAnonymously()
+      if (anonErr || !anonAuth.user) { setError('Нэвтрэхэд алдаа гарлаа: '+(anonErr?.message||'тодорхойгүй алдаа')); setLoading(false); return }
+      // RPC нь username/pin шалгаад, session_uid-г SECURITY DEFINER-ээр (RLS-г тойрон) тохируулна
       const { data: access } = await supabase.rpc('guest_login', {
         p_username: guestUsername.trim(), p_pin: guestPin.trim()
       }).single()
       if (!access) { setError('Нэвтрэх нэр эсвэл PIN буруу байна'); setLoading(false); return }
-      // Зочинд бодит (нэрээ нуусан) Supabase Auth session өгнө — ингэснээр RLS
-      // cookie-д итгэлгүйгээр, бодит auth.uid()-аар зөвшөөрлийг шалгах боломжтой болно.
-      const { data: anonAuth, error: anonErr } = await supabase.auth.signInAnonymously()
-      if (anonErr || !anonAuth.user) { setError('Нэвтрэхэд алдаа гарлаа: '+(anonErr?.message||'тодорхойгүй алдаа')); setLoading(false); return }
-      await supabase.from('shared_access').update({ session_uid: anonAuth.user.id }).eq('id', access.id)
       document.cookie = `guest_access=${encodeURIComponent(JSON.stringify({
         owner_id:access.owner_id, role:access.role, username:guestUsername.trim(), store_id:access.store_id||null
       }))}; path=/; max-age=86400`
